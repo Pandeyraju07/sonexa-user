@@ -382,6 +382,13 @@ fun HomeScreen(
                 onOpenAlbum = onOpenAlbum,
                 onOpenArtist = onOpenArtist,
                 onOpenPodcast = { onOpenPodcasts() },
+                onPlayDownloadedEpisode = { downloaded ->
+                    playbackViewModel.play(
+                        com.sonexa.app.data.local.PodcastDownloadManager.toTrack(downloaded),
+                        downloaded.podcastTitle
+                    )
+                    onOpenFullPlayer()
+                },
                 onOpenProfile = { showProfileDrawer = true }
             )
 

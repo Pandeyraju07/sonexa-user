@@ -25,6 +25,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         RetrofitClient.init(SessionManager.getInstance(this))
         com.sonexa.app.data.local.LikedSongsStore.init(this)
+        com.sonexa.app.data.local.PodcastDownloadManager.init(this)
         setupCoil()
         handleSocialCallback(intent)
         enableEdgeToEdge()

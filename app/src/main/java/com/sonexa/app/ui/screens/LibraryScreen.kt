@@ -51,6 +51,8 @@ fun LibraryScreen(
     onOpenAlbum: (String) -> Unit = {},
     onOpenArtist: (String) -> Unit = {},
     onOpenPodcast: (String) -> Unit = {},
+    onOpenEpisode: (String) -> Unit = {},
+    onPlayDownloadedEpisode: (com.sonexa.app.data.local.DownloadedEpisode) -> Unit = {},
     onOpenProfile: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
@@ -70,9 +72,10 @@ fun LibraryScreen(
 
     val likedSongs by LikedSongsStore.likedSongs.collectAsState()
     val likedCount = likedSongs.size
+    val downloadedEpisodes by com.sonexa.app.data.local.PodcastDownloadManager.downloadedEpisodes.collectAsState()
 
-    val libraryItems = remember(likedCount, userDisplayName) {
-        listOf(
+    val libraryItems = remember(likedCount, userDisplayName, downloadedEpisodes) {
+        val baseList = mutableListOf(
             LibraryListItem(
                 id = "pl_liked",
                 title = "Liked Songs",
@@ -99,19 +102,14 @@ fun LibraryScreen(
                 id = "pl_10s",
                 title = "<10s",
                 subtitle = "Playlist • Yash Kashyap",
-                imageUrl = "https://c.saavncdn.com/152/Jodi-Punjabi-2023-20230509183424-500x500.jpg"
+                imageUrl = "https://c.saavncdn.com/832/Gully-Boy-Hindi-2019-20190124110321-500x500.jpg"
             ),
             LibraryListItem(
-                id = "pl_our",
-                title = "My Playlist #1",
-                subtitle = "Playlist • $userDisplayName",
-                imageUrl = "https://c.saavncdn.com/artists/Arijit_Singh_002_20230323062147_500x500.jpg"
-            ),
-            LibraryListItem(
-                id = "pl_peace",
-                title = "Peace 🖤",
-                subtitle = "Playlist • Yash Kashyap",
-                imageUrl = "https://c.saavncdn.com/492/Chand-Mera-Dil-Hindi-2024-20241021111624-500x500.jpg"
+                id = "alb_chand",
+                title = "Chand Mera Dil",
+                subtitle = "Album • Pritam",
+                imageUrl = "https://c.saavncdn.com/492/Chand-Mera-Dil-Hindi-2024-20241021111624-500x500.jpg",
+                type = "album"
             ),
             LibraryListItem(
                 id = "pod_1542452346",
@@ -129,12 +127,28 @@ fun LibraryScreen(
                 type = "artist"
             )
         )
+
+        // Add downloaded episodes
+        downloadedEpisodes.forEach { ep ->
+            baseList.add(
+                LibraryListItem(
+                    id = ep.id,
+                    title = ep.title,
+                    subtitle = "Downloaded • ${ep.podcastTitle} • ${ep.durationLabel}",
+                    imageUrl = ep.coverUrl,
+                    type = "downloaded_podcast"
+                )
+            )
+        }
+
+        baseList
     }
 
     val filteredItems = remember(selectedFilter, libraryItems) {
         when (selectedFilter) {
             "Playlists" -> libraryItems.filter { it.type == "playlist" || it.isLikedSongs }
-            "Podcasts" -> libraryItems.filter { it.type == "podcast" }
+            "Podcasts" -> libraryItems.filter { it.type == "podcast" || it.type == "downloaded_podcast" }
+            "Downloaded" -> libraryItems.filter { it.type == "downloaded_podcast" }
             "Albums" -> libraryItems.filter { it.type == "album" }
             "Artists" -> libraryItems.filter { it.type == "artist" }
             else -> libraryItems
@@ -204,12 +218,12 @@ fun LibraryScreen(
                 }
             }
 
-            // Filter Chips: Playlists, Podcasts, Albums, Artists
+            // Filter Chips: Playlists, Podcasts, Downloaded, Albums, Artists
             LazyRow(
                 contentPadding = PaddingValues(horizontal = 16.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                val filters = listOf("All", "Playlists", "Podcasts", "Albums", "Artists")
+                val filters = listOf("All", "Playlists", "Podcasts", "Downloaded", "Albums", "Artists")
                 items(filters) { filter ->
                     val isSelected = selectedFilter == filter
                     Box(
@@ -287,6 +301,14 @@ fun LibraryScreen(
                                 "album" -> onOpenAlbum(item.id)
                                 "artist" -> onOpenArtist(item.title)
                                 "podcast" -> onOpenPodcast(item.id)
+                                "downloaded_podcast" -> {
+                                    val found = downloadedEpisodes.find { it.id == item.id }
+                                    if (found != null) {
+                                        onPlayDownloadedEpisode(found)
+                                    } else {
+                                        onOpenPodcast(item.id)
+                                    }
+                                }
                                 else -> onOpenPlaylist(item.id)
                             }
                         }

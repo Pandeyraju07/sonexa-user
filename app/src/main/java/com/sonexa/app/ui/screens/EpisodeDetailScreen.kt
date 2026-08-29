@@ -69,6 +69,8 @@ fun EpisodeDetailScreen(
     val context = LocalContext.current
     val detailState by podcastViewModel.detail.collectAsState()
     val playbackState by playbackViewModel.uiState.collectAsState()
+    val downloadedEpisodes by com.sonexa.app.data.local.PodcastDownloadManager.downloadedEpisodes.collectAsState()
+    val downloadingIds by com.sonexa.app.data.local.PodcastDownloadManager.downloadingIds.collectAsState()
 
     val detailData = (detailState as? CatalogUiState.Ready)?.data
     val podcast = detailData?.podcast
@@ -77,13 +79,16 @@ fun EpisodeDetailScreen(
     var isSaved by remember { mutableStateOf(false) }
 
     fun playEpisode() {
-        if (episode == null || episode.audioUrl.isBlank()) {
+        if (episode == null) return
+        val localAudio = com.sonexa.app.data.local.PodcastDownloadManager.getLocalAudioUrl(episode.id)
+        val streamUrl = localAudio ?: episode.audioUrl
+        if (streamUrl.isBlank()) {
             Toast.makeText(context, "Episode stream unavailable", Toast.LENGTH_SHORT).show()
             return
         }
         val showTitle = podcast?.title ?: "Podcast"
         val host = podcast?.host ?: "Host"
-        playbackViewModel.play(episode.toTrack(showTitle, host), showTitle)
+        playbackViewModel.play(episode.toTrack(showTitle, host).copy(audioUrl = streamUrl), showTitle)
         onOpenFullPlayer()
     }
 
@@ -248,14 +253,43 @@ fun EpisodeDetailScreen(
                                 )
                             }
 
-                            IconButton(
-                                onClick = { Toast.makeText(context, "Downloading episode for offline listening...", Toast.LENGTH_SHORT).show() },
-                                modifier = Modifier
-                                    .size(48.dp)
-                                    .clip(CircleShape)
-                                    .background(Color(0xFF1F1A28))
-                            ) {
-                                Icon(Icons.Outlined.Download, contentDescription = "Download", tint = Color.White)
+                            val isDownloaded = downloadedEpisodes.any { it.id == episode.id }
+                            val isDownloading = downloadingIds.contains(episode.id)
+
+                            if (isDownloading) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(48.dp)
+                                        .clip(CircleShape)
+                                        .background(Color(0xFF1F1A28)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    CircularProgressIndicator(color = BrandPurple, strokeWidth = 2.dp, modifier = Modifier.size(20.dp))
+                                }
+                            } else if (isDownloaded) {
+                                IconButton(
+                                    onClick = {
+                                        com.sonexa.app.data.local.PodcastDownloadManager.deleteDownloadedEpisode(context, episode.id)
+                                    },
+                                    modifier = Modifier
+                                        .size(48.dp)
+                                        .clip(CircleShape)
+                                        .background(Color(0xFF1F1A28))
+                                ) {
+                                    Icon(Icons.Default.CheckCircle, contentDescription = "Downloaded", tint = BrandPurple)
+                                }
+                            } else {
+                                IconButton(
+                                    onClick = {
+                                        com.sonexa.app.data.local.PodcastDownloadManager.downloadEpisode(context, episode, podcast)
+                                    },
+                                    modifier = Modifier
+                                        .size(48.dp)
+                                        .clip(CircleShape)
+                                        .background(Color(0xFF1F1A28))
+                                ) {
+                                    Icon(Icons.Outlined.Download, contentDescription = "Download", tint = Color.White)
+                                }
                             }
                         }
                     }

@@ -73,6 +73,8 @@ fun PodcastDetailScreen(
     val detailState by podcastViewModel.detail.collectAsState()
     val followedPodcasts by podcastViewModel.followedPodcasts.collectAsState()
     val playbackState by playbackViewModel.uiState.collectAsState()
+    val downloadedEpisodes by com.sonexa.app.data.local.PodcastDownloadManager.downloadedEpisodes.collectAsState()
+    val downloadingIds by com.sonexa.app.data.local.PodcastDownloadManager.downloadingIds.collectAsState()
 
     var selectedFilter by remember { mutableStateOf("Newest") }
     val filterOptions = listOf("Newest", "Oldest", "Most Popular", "Unplayed")
@@ -103,11 +105,16 @@ fun PodcastDetailScreen(
     val isFollowed = followedPodcasts.contains(podcast.id) || podcast.isFollowed
 
     fun playEpisode(ep: PodcastEpisodeDto) {
-        if (ep.audioUrl.isBlank()) {
+        val localAudio = com.sonexa.app.data.local.PodcastDownloadManager.getLocalAudioUrl(ep.id)
+        val streamUrl = localAudio ?: ep.audioUrl
+        if (streamUrl.isBlank()) {
             Toast.makeText(context, "Episode stream unavailable", Toast.LENGTH_SHORT).show()
             return
         }
-        val queue = episodes.map { it.toTrack(podcast) }
+        val queue = episodes.map {
+            val epLocal = com.sonexa.app.data.local.PodcastDownloadManager.getLocalAudioUrl(it.id)
+            it.toTrack(podcast).copy(audioUrl = epLocal ?: it.audioUrl)
+        }
         val index = queue.indexOfFirst { it.id == ep.id }.coerceAtLeast(0)
         playbackViewModel.playQueue(queue, index, podcast.title)
         onOpenFullPlayer()
@@ -426,11 +433,31 @@ fun PodcastDetailScreen(
                                 }
 
                                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                                    IconButton(
-                                        onClick = { Toast.makeText(context, "Episode saved for offline listening", Toast.LENGTH_SHORT).show() },
-                                        modifier = Modifier.size(32.dp)
-                                    ) {
-                                        Icon(Icons.Outlined.Download, contentDescription = "Download", tint = TextMuted, modifier = Modifier.size(18.dp))
+                                    val isDownloaded = downloadedEpisodes.any { it.id == ep.id }
+                                    val isDownloading = downloadingIds.contains(ep.id)
+
+                                    if (isDownloading) {
+                                        Box(modifier = Modifier.size(32.dp), contentAlignment = Alignment.Center) {
+                                            CircularProgressIndicator(color = BrandPurple, strokeWidth = 2.dp, modifier = Modifier.size(16.dp))
+                                        }
+                                    } else if (isDownloaded) {
+                                        IconButton(
+                                            onClick = {
+                                                com.sonexa.app.data.local.PodcastDownloadManager.deleteDownloadedEpisode(context, ep.id)
+                                            },
+                                            modifier = Modifier.size(32.dp)
+                                        ) {
+                                            Icon(Icons.Default.CheckCircle, contentDescription = "Downloaded", tint = BrandPurple, modifier = Modifier.size(20.dp))
+                                        }
+                                    } else {
+                                        IconButton(
+                                            onClick = {
+                                                com.sonexa.app.data.local.PodcastDownloadManager.downloadEpisode(context, ep, podcast)
+                                            },
+                                            modifier = Modifier.size(32.dp)
+                                        ) {
+                                            Icon(Icons.Outlined.Download, contentDescription = "Download", tint = TextMuted, modifier = Modifier.size(18.dp))
+                                        }
                                     }
 
                                     // Play Button

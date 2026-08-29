@@ -170,6 +170,9 @@ class NativeAudioPlaybackProvider(
         fun resolveMediaUrl(raw: String?): String {
             val url = raw?.trim().orEmpty()
             if (url.isEmpty()) return ""
+            if (url.startsWith("file://") || url.startsWith("/storage/") || url.startsWith("/data/")) {
+                return url
+            }
             val origin = apiOrigin()
             val mediaIndex = url.indexOf("/media/")
             if (mediaIndex >= 0) {
