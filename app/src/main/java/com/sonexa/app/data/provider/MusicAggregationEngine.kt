@@ -14,12 +14,14 @@ data class UnifiedSearchResult(
 )
 
 class MusicAggregationEngine(
+    val audiusProvider: AudiusMusicProvider = AudiusMusicProvider(),
     val jiosaavnProvider: JioSaavnMusicProvider = JioSaavnMusicProvider(),
     val sonexaProvider: SonexaNativeProvider = SonexaNativeProvider(),
     val jamendoProvider: JamendoProvider = JamendoProvider(),
     val audiomackProvider: AudiomackProvider = AudiomackProvider()
 ) {
     val allProviders: List<MusicProvider> = listOf(
+        audiusProvider,
         jiosaavnProvider,
         sonexaProvider,
         jamendoProvider,
@@ -39,6 +41,7 @@ class MusicAggregationEngine(
         // Filter providers based on category tab
         val targetProviders = when (selectedCategory) {
             ProviderCategory.ALL -> allProviders.filter { it.isEnabled }
+            ProviderCategory.AUDIUS -> listOf(audiusProvider)
             ProviderCategory.JIOSAAVN -> listOf(jiosaavnProvider)
             ProviderCategory.SONEXA -> listOf(sonexaProvider)
             ProviderCategory.JAMENDO -> listOf(jamendoProvider)
