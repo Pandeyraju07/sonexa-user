@@ -190,21 +190,49 @@ class PlaylistDetailViewModel(
 }
 
 class PodcastViewModel(
-    private val musicRepository: MusicRepository = MusicRepository()
+    private val musicRepository: MusicRepository = MusicRepository(),
+    private val podcastProvider: com.sonexa.app.data.provider.PodcastProvider = com.sonexa.app.data.provider.PodcastProvider()
 ) : ViewModel() {
     private val _uiState = MutableStateFlow<CatalogUiState<PodcastListResponse>>(CatalogUiState.Loading)
     val uiState: StateFlow<CatalogUiState<PodcastListResponse>> = _uiState.asStateFlow()
     private val _detail = MutableStateFlow<CatalogUiState<PodcastDetailResponse>>(CatalogUiState.Loading)
     val detail: StateFlow<CatalogUiState<PodcastDetailResponse>> = _detail.asStateFlow()
+    private val _selectedCategory = MutableStateFlow("All")
+    val selectedCategory: StateFlow<String> = _selectedCategory.asStateFlow()
 
-    init { load() }
+    init { load("All") }
 
-    fun load() {
+    fun load(category: String = "All") {
+        _selectedCategory.value = category
         viewModelScope.launch {
             _uiState.value = CatalogUiState.Loading
-            musicRepository.getPodcasts().fold(
-                onSuccess = { _uiState.value = CatalogUiState.Ready(it) },
-                onFailure = { e -> _uiState.value = CatalogUiState.Error(e.message ?: "Failed") }
+            podcastProvider.getPodcastsByCategory(category).fold(
+                onSuccess = { list ->
+                    _uiState.value = CatalogUiState.Ready(PodcastListResponse(true, list))
+                    if (list.isNotEmpty() && _detail.value !is CatalogUiState.Ready) {
+                        loadDetail(list.first().id)
+                    }
+                },
+                onFailure = {
+                    musicRepository.getPodcasts().fold(
+                        onSuccess = { res -> _uiState.value = CatalogUiState.Ready(res) },
+                        onFailure = { e -> _uiState.value = CatalogUiState.Error(e.message ?: "Failed to load podcasts") }
+                    )
+                }
+            )
+        }
+    }
+
+    fun searchPodcasts(query: String) {
+        if (query.isBlank()) {
+            load(_selectedCategory.value)
+            return
+        }
+        viewModelScope.launch {
+            _uiState.value = CatalogUiState.Loading
+            podcastProvider.getPodcastsByCategory(query, 30).fold(
+                onSuccess = { list -> _uiState.value = CatalogUiState.Ready(PodcastListResponse(true, list)) },
+                onFailure = { e -> _uiState.value = CatalogUiState.Error(e.message ?: "Search failed") }
             )
         }
     }
@@ -212,9 +240,14 @@ class PodcastViewModel(
     fun loadDetail(id: String) {
         viewModelScope.launch {
             _detail.value = CatalogUiState.Loading
-            musicRepository.getPodcast(id.ifBlank { "pod_1" }).fold(
-                onSuccess = { _detail.value = CatalogUiState.Ready(it) },
-                onFailure = { e -> _detail.value = CatalogUiState.Error(e.message ?: "Failed") }
+            podcastProvider.getPodcastEpisodes(id).fold(
+                onSuccess = { res -> _detail.value = CatalogUiState.Ready(res) },
+                onFailure = {
+                    musicRepository.getPodcast(id).fold(
+                        onSuccess = { res -> _detail.value = CatalogUiState.Ready(res) },
+                        onFailure = { e -> _detail.value = CatalogUiState.Error(e.message ?: "Failed to load episode details") }
+                    )
+                }
             )
         }
     }

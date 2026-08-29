@@ -235,7 +235,12 @@ fun HomeScreen(
                                     modifier = Modifier
                                         .clip(RoundedCornerShape(16.dp))
                                         .background(if (isSelected) SpotifyGreen else Color(0xFF282828))
-                                        .clickable { selectedFeedCategory = cat }
+                                        .clickable {
+                                            selectedFeedCategory = cat
+                                            if (cat == "Podcasts") {
+                                                onOpenPodcasts()
+                                            }
+                                        }
                                         .padding(horizontal = 14.dp, vertical = 6.dp)
                                 ) {
                                     Text(
