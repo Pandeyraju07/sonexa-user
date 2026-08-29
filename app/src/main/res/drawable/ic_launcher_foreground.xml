@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    
+    <!-- Sound wave equalizer bars -->
+    <path
+        android:pathData="M38,46v16M42,40v28M46,34v40M50,42v24M54,48v12"
+        android:strokeWidth="2.5"
+        android:strokeLineCap="round">
+        <aapt:attr name="android:strokeColor">
+            <gradient
+                android:startX="38"
+                android:startY="34"
+                android:endX="54"
+                android:endY="74"
+                android:type="linear">
+                <item android:color="#FFB062FF" android:offset="0.0" />
+                <item android:color="#FFE534B2" android:offset="1.0" />
+            </gradient>
+        </aapt:attr>
+    </path>
+    
+    <!-- Stylized S Curve -->
+    <path
+        android:pathData="M68,38C58,34 52,44 60,52C68,60 62,72 48,68"
+        android:strokeWidth="4"
+        android:strokeLineCap="round">
+        <aapt:attr name="android:strokeColor">
+            <gradient
+                android:startX="48"
+                android:startY="34"
+                android:endX="68"
+                android:endY="72"
+                android:type="linear">
+                <item android:color="#FF6B3CE9" android:offset="0.0" />
+                <item android:color="#FFE534B2" android:offset="1.0" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- Glowing Headphones Arc -->
+    <path
+        android:pathData="M34,54 A20,20 0 0,1 74,54"
+        android:strokeWidth="3.5"
+        android:strokeLineCap="round">
+        <aapt:attr name="android:strokeColor">
+            <gradient
+                android:startX="34"
+                android:startY="34"
+                android:endX="74"
+                android:endY="54"
+                android:type="linear">
+                <item android:color="#FFB062FF" android:offset="0.0" />
+                <item android:color="#FF5935E5" android:offset="1.0" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- Headphones Ear Cups -->
+    <path
+        android:pathData="M31,50h5v10h-5a2.5,2.5 0 0,1 -2.5,-2.5v-5a2.5,2.5 0 0,1 2.5,-2.5z"
+        android:fillColor="#FFB062FF" />
+    <path
+        android:pathData="M72,50h5a2.5,2.5 0 0,1 2.5,2.5v5a2.5,2.5 0 0,1 -2.5,2.5h-5z"
+        android:fillColor="#FFE534B2" />
+</vector>
