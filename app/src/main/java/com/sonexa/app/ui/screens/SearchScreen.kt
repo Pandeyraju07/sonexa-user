@@ -44,19 +44,14 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.sonexa.app.data.model.TrackDto
 import com.sonexa.app.ui.theme.*
+import com.sonexa.app.ui.viewmodel.BrowseCategoryItem
+import com.sonexa.app.ui.viewmodel.DiscoverItem
 import com.sonexa.app.ui.viewmodel.PlaybackViewModel
 import com.sonexa.app.ui.viewmodel.RecentSearchItem
 import com.sonexa.app.ui.viewmodel.SearchUiState
 import com.sonexa.app.ui.viewmodel.SearchViewModel
 
 private val SpotifyGreen = Color(0xFF1ED760)
-
-data class BrowseCategory(
-    val title: String,
-    val color: Color,
-    val imageUrl: String,
-    val query: String
-)
 
 @Composable
 fun SearchScreen(
@@ -77,32 +72,9 @@ fun SearchScreen(
     val searchState by searchViewModel.uiState.collectAsState()
     val recents by searchViewModel.recents.collectAsState()
 
-    val heroCategories = listOf(
-        BrowseCategory("Music", Color(0xFFE91E63), "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=300", "Top Songs"),
-        BrowseCategory("Podcasts", Color(0xFF006450), "https://images.unsplash.com/photo-1590602847861-f357a9332bbc?w=300", "Podcasts"),
-        BrowseCategory("Live Events", Color(0xFF8400E7), "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=300", "Live Concert Hits"),
-        BrowseCategory("Home of I-Pop", Color(0xFF1E3264), "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=300", "Indian Pop Hits")
-    )
-
-    val discoverNewItems = listOf(
-        Pair("#hindi pop", "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=400"),
-        Pair("#hindi lofi", "https://images.unsplash.com/photo-1518609878373-06d740f60d8b?w=400"),
-        Pair("#pink princess", "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400"),
-        Pair("#punjabi wave", "https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?w=400")
-    )
-
-    val browseAllCategories = listOf(
-        BrowseCategory("Made For You", Color(0xFF7B2CBF), "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=300", "Made For You Mix"),
-        BrowseCategory("Upcoming releases", Color(0xFF007F5F), "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=300", "New Releases 2024"),
-        BrowseCategory("Bollywood", Color(0xFFE76F51), "https://images.unsplash.com/photo-1487180144351-b8472da7d491?w=300", "Bollywood Hits"),
-        BrowseCategory("Punjabi", Color(0xFFF4A261), "https://images.unsplash.com/photo-1465847899084-d164df4dedc6?w=300", "Punjabi Top Hits"),
-        BrowseCategory("Bhojpuri", Color(0xFFE63946), "https://images.unsplash.com/photo-1501386761578-eac5c94b800a?w=300", "Bhojpuri Hits"),
-        BrowseCategory("Pop", Color(0xFFD81159), "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=300", "Global Pop"),
-        BrowseCategory("Romance", Color(0xFF8338EC), "https://images.unsplash.com/photo-1518895949257-7621c3c786d7?w=300", "Romantic Hits"),
-        BrowseCategory("Chill & Lo-Fi", Color(0xFF2A9D8F), "https://images.unsplash.com/photo-1518609878373-06d740f60d8b?w=300", "Lo-Fi Beats"),
-        BrowseCategory("Workout", Color(0xFFD90429), "https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=300", "Workout Energetic"),
-        BrowseCategory("Devotional", Color(0xFFFFB703), "https://images.unsplash.com/photo-1507676184212-d03ab07a01bf?w=300", "Bhakti Songs")
-    )
+    val heroCategories by searchViewModel.heroCategories.collectAsState()
+    val discoverItems by searchViewModel.discoverItems.collectAsState()
+    val browseAllCategories by searchViewModel.browseAllCategories.collectAsState()
 
     fun playTrackList(tracks: List<TrackDto>, startIndex: Int, title: String) {
         if (tracks.isEmpty() || playbackViewModel == null) return
@@ -117,7 +89,7 @@ fun SearchScreen(
             ?: "Listener"
     }
     val avatarInitial = remember(userDisplayName) {
-        userDisplayName.firstOrNull()?.uppercase() ?: "U"
+        userDisplayName.firstOrNull()?.uppercase() ?: "Y"
     }
 
     Box(
@@ -144,23 +116,23 @@ fun SearchScreen(
                         // User Avatar
                         Box(
                             modifier = Modifier
-                                .size(34.dp)
+                                .size(36.dp)
                                 .clip(CircleShape)
-                                .background(Color(0xFFC4B5FD))
+                                .background(Color(0xFFE8590C))
                                 .clickable { onOpenProfile() },
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
                                 text = avatarInitial,
-                                color = Color(0xFF1B1629),
-                                fontSize = 16.sp,
+                                color = Color.Black,
+                                fontSize = 17.sp,
                                 fontWeight = FontWeight.ExtraBold
                             )
                         }
                         Spacer(modifier = Modifier.width(14.dp))
                         Text(
                             text = "Search",
-                            fontSize = 24.sp,
+                            fontSize = 26.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color.White
                         )
@@ -171,7 +143,7 @@ fun SearchScreen(
                             Icons.Outlined.CameraAlt,
                             contentDescription = "Camera",
                             tint = Color.White,
-                            modifier = Modifier.size(24.dp)
+                            modifier = Modifier.size(26.dp)
                         )
                     }
                 }
@@ -200,7 +172,7 @@ fun SearchScreen(
                             text = "What do you want to listen to?",
                             fontSize = 15.sp,
                             fontWeight = FontWeight.SemiBold,
-                            color = Color(0xFF555555)
+                            color = Color(0xFF242424)
                         )
                     }
                 }
@@ -294,34 +266,25 @@ fun SearchScreen(
                     // 1. 2x2 Hero Category Cards
                     item {
                         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(10.dp)
-                            ) {
-                                BrowseHeroCard(heroCategories[0], Modifier.weight(1f)) {
-                                    isSearchActive = true
-                                    query = it.query
-                                    searchViewModel.searchCategoryDirect(it.query)
-                                }
-                                BrowseHeroCard(heroCategories[1], Modifier.weight(1f)) {
-                                    isSearchActive = true
-                                    query = it.query
-                                    searchViewModel.searchCategoryDirect(it.query)
-                                }
-                            }
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(10.dp)
-                            ) {
-                                BrowseHeroCard(heroCategories[2], Modifier.weight(1f)) {
-                                    isSearchActive = true
-                                    query = it.query
-                                    searchViewModel.searchCategoryDirect(it.query)
-                                }
-                                BrowseHeroCard(heroCategories[3], Modifier.weight(1f)) {
-                                    isSearchActive = true
-                                    query = it.query
-                                    searchViewModel.searchCategoryDirect(it.query)
+                            heroCategories.chunked(2).forEach { rowPair ->
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                ) {
+                                    BrowseHeroCard(rowPair[0], Modifier.weight(1f)) { cat ->
+                                        searchViewModel.playCategoryOrTagDirect(cat.query, cat.title.replace("\n", " ")) { tracks, idx, title ->
+                                            playTrackList(tracks, idx, title)
+                                        }
+                                    }
+                                    if (rowPair.size > 1) {
+                                        BrowseHeroCard(rowPair[1], Modifier.weight(1f)) { cat ->
+                                            searchViewModel.playCategoryOrTagDirect(cat.query, cat.title.replace("\n", " ")) { tracks, idx, title ->
+                                                playTrackList(tracks, idx, title)
+                                            }
+                                        }
+                                    } else {
+                                        Spacer(modifier = Modifier.weight(1f))
+                                    }
                                 }
                             }
                         }
@@ -332,28 +295,32 @@ fun SearchScreen(
                         Column {
                             Text(
                                 text = "Discover something new",
-                                fontSize = 18.sp,
+                                fontSize = 20.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = Color.White,
                                 modifier = Modifier.padding(vertical = 8.dp)
                             )
                             LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                items(discoverNewItems) { (tag, imgUrl) ->
+                                items(discoverItems) { item ->
                                     Box(
                                         modifier = Modifier
-                                            .width(135.dp)
-                                            .height(210.dp)
+                                            .width(140.dp)
+                                            .height(215.dp)
                                             .clip(RoundedCornerShape(12.dp))
                                             .background(Color(0xFF242424))
                                             .clickable {
-                                                isSearchActive = true
-                                                query = tag.replace("#", "")
-                                                searchViewModel.searchCategoryDirect(query)
+                                                if (item.track != null) {
+                                                    playTrackList(listOf(item.track), 0, item.tag)
+                                                } else {
+                                                    searchViewModel.playCategoryOrTagDirect(item.query, item.tag) { tracks, idx, title ->
+                                                        playTrackList(tracks, idx, title)
+                                                    }
+                                                }
                                             }
                                     ) {
                                         AsyncImage(
-                                            model = ImageRequest.Builder(context).data(imgUrl).crossfade(true).build(),
-                                            contentDescription = tag,
+                                            model = ImageRequest.Builder(context).data(item.imageUrl).crossfade(true).build(),
+                                            contentDescription = item.tag,
                                             contentScale = ContentScale.Crop,
                                             modifier = Modifier.fillMaxSize()
                                         )
@@ -362,18 +329,18 @@ fun SearchScreen(
                                                 .fillMaxSize()
                                                 .background(
                                                     Brush.verticalGradient(
-                                                        listOf(Color.Transparent, Color.Black.copy(alpha = 0.85f))
+                                                        listOf(Color.Transparent, Color.Black.copy(alpha = 0.88f))
                                                     )
                                                 )
                                         )
                                         Text(
-                                            text = tag,
-                                            fontSize = 14.sp,
-                                            fontWeight = FontWeight.Bold,
+                                            text = item.tag,
+                                            fontSize = 15.sp,
+                                            fontWeight = FontWeight.ExtraBold,
                                             color = Color.White,
                                             modifier = Modifier
                                                 .align(Alignment.BottomStart)
-                                                .padding(10.dp)
+                                                .padding(12.dp)
                                         )
                                     }
                                 }
@@ -385,7 +352,7 @@ fun SearchScreen(
                     item {
                         Text(
                             text = "Browse all",
-                            fontSize = 18.sp,
+                            fontSize = 20.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color.White,
                             modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
@@ -398,16 +365,16 @@ fun SearchScreen(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
-                            BrowseCategoryCard(pair[0], Modifier.weight(1f)) {
-                                isSearchActive = true
-                                query = it.query
-                                searchViewModel.searchCategoryDirect(it.query)
+                            BrowseCategoryCard(pair[0], Modifier.weight(1f)) { cat ->
+                                searchViewModel.playCategoryOrTagDirect(cat.query, cat.title.replace("\n", " ")) { tracks, idx, title ->
+                                    playTrackList(tracks, idx, title)
+                                }
                             }
                             if (pair.size > 1) {
-                                BrowseCategoryCard(pair[1], Modifier.weight(1f)) {
-                                    isSearchActive = true
-                                    query = it.query
-                                    searchViewModel.searchCategoryDirect(it.query)
+                                BrowseCategoryCard(pair[1], Modifier.weight(1f)) { cat ->
+                                    searchViewModel.playCategoryOrTagDirect(cat.query, cat.title.replace("\n", " ")) { tracks, idx, title ->
+                                        playTrackList(tracks, idx, title)
+                                    }
                                 }
                             } else {
                                 Spacer(modifier = Modifier.weight(1f))
@@ -627,23 +594,24 @@ fun SearchScreen(
 
 @Composable
 private fun BrowseHeroCard(
-    category: BrowseCategory,
+    category: BrowseCategoryItem,
     modifier: Modifier = Modifier,
-    onClick: (BrowseCategory) -> Unit
+    onClick: (BrowseCategoryItem) -> Unit
 ) {
     Box(
         modifier = modifier
-            .height(88.dp)
+            .height(90.dp)
             .clip(RoundedCornerShape(8.dp))
-            .background(category.color)
+            .background(Color(category.colorHex))
             .clickable { onClick(category) }
             .padding(12.dp)
     ) {
         Text(
             text = category.title,
-            fontSize = 16.sp,
+            fontSize = 17.sp,
             fontWeight = FontWeight.Bold,
             color = Color.White,
+            lineHeight = 20.sp,
             modifier = Modifier.align(Alignment.TopStart)
         )
         AsyncImage(
@@ -651,7 +619,7 @@ private fun BrowseHeroCard(
             contentDescription = null,
             contentScale = ContentScale.Crop,
             modifier = Modifier
-                .size(54.dp)
+                .size(56.dp)
                 .align(Alignment.BottomEnd)
                 .offset(x = 10.dp, y = 10.dp)
                 .rotate(24f)
@@ -662,15 +630,15 @@ private fun BrowseHeroCard(
 
 @Composable
 private fun BrowseCategoryCard(
-    category: BrowseCategory,
+    category: BrowseCategoryItem,
     modifier: Modifier = Modifier,
-    onClick: (BrowseCategory) -> Unit
+    onClick: (BrowseCategoryItem) -> Unit
 ) {
     Box(
         modifier = modifier
             .height(96.dp)
             .clip(RoundedCornerShape(8.dp))
-            .background(category.color)
+            .background(Color(category.colorHex))
             .clickable { onClick(category) }
             .padding(12.dp)
     ) {
@@ -679,6 +647,7 @@ private fun BrowseCategoryCard(
             fontSize = 16.sp,
             fontWeight = FontWeight.Bold,
             color = Color.White,
+            lineHeight = 20.sp,
             modifier = Modifier.align(Alignment.TopStart)
         )
         AsyncImage(
