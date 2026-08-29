@@ -12,6 +12,7 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -73,6 +74,8 @@ fun HomeScreen(
     onOpenArtist: (String) -> Unit = {},
     onOpenAiSignature: () -> Unit = {},
     onOpenPodcasts: () -> Unit = {},
+    onOpenLiveEvents: () -> Unit = {},
+    onOpenIPop: () -> Unit = {},
     onOpenNotifications: () -> Unit = {},
     onOpenPremium: () -> Unit = {},
     onOpenProfile: () -> Unit = {},
@@ -227,9 +230,12 @@ fun HomeScreen(
 
                         Spacer(modifier = Modifier.width(12.dp))
 
-                        // Filter Chips: All, Music, Podcasts
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            listOf("All", "Music", "Podcasts").forEach { cat ->
+                        // Filter Chips: All, Music, Podcasts, Live Events, I-Pop
+                        Row(
+                            modifier = Modifier.horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            listOf("All", "Music", "Podcasts", "Live Events", "I-Pop").forEach { cat ->
                                 val isSelected = selectedFeedCategory == cat
                                 Box(
                                     modifier = Modifier
@@ -237,8 +243,10 @@ fun HomeScreen(
                                         .background(if (isSelected) SpotifyGreen else Color(0xFF282828))
                                         .clickable {
                                             selectedFeedCategory = cat
-                                            if (cat == "Podcasts") {
-                                                onOpenPodcasts()
+                                            when (cat) {
+                                                "Podcasts" -> onOpenPodcasts()
+                                                "Live Events" -> onOpenLiveEvents()
+                                                "I-Pop" -> onOpenIPop()
                                             }
                                         }
                                         .padding(horizontal = 14.dp, vertical = 6.dp)
@@ -373,6 +381,8 @@ fun HomeScreen(
                 onOpenArtistProfile = onOpenArtist,
                 onOpenPlaylistDetail = onOpenPlaylist,
                 onOpenPodcasts = onOpenPodcasts,
+                onOpenLiveEvents = onOpenLiveEvents,
+                onOpenIPop = onOpenIPop,
                 onOpenProfile = { showProfileDrawer = true }
             )
 

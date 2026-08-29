@@ -43,6 +43,9 @@ enum class AppStep {
     PODCAST_DETAIL,
     EPISODE_DETAIL,
     LANGUAGE_DISCOVERY,
+    LIVE_EVENTS_HUB,
+    LIVE_EVENT_DETAIL,
+    IPOP_HUB,
     NOTIFICATION_CENTER,
     PREMIUM,
     PROFILE_HUB,
@@ -211,6 +214,8 @@ fun SonexaAppFlow() {
                     },
                     onOpenAiSignature = { currentStep = AppStep.AI_SIGNATURE_HUB },
                     onOpenPodcasts = { currentStep = AppStep.PODCAST_HUB },
+                    onOpenLiveEvents = { currentStep = AppStep.LIVE_EVENTS_HUB },
+                    onOpenIPop = { currentStep = AppStep.IPOP_HUB },
                     onOpenNotifications = { currentStep = AppStep.NOTIFICATION_CENTER },
                     onOpenPremium = { currentStep = AppStep.PREMIUM },
                     onOpenProfile = { currentStep = AppStep.PROFILE_HUB },
@@ -288,6 +293,29 @@ fun SonexaAppFlow() {
                         currentStep = AppStep.PODCAST_DETAIL
                     },
                     onOpenFullPlayer = { currentStep = AppStep.FULL_PLAYER },
+                    playbackViewModel = playbackViewModel
+                )
+                AppStep.LIVE_EVENTS_HUB -> LiveEventsHubScreen(
+                    onNavigateBack = ::goHome,
+                    onOpenEventDetail = { id ->
+                        detailId = id
+                        currentStep = AppStep.LIVE_EVENT_DETAIL
+                    },
+                    playbackViewModel = playbackViewModel
+                )
+                AppStep.LIVE_EVENT_DETAIL -> LiveEventDetailScreen(
+                    eventId = detailId,
+                    onNavigateBack = { currentStep = AppStep.LIVE_EVENTS_HUB },
+                    onOpenFullPlayer = { currentStep = AppStep.FULL_PLAYER },
+                    playbackViewModel = playbackViewModel
+                )
+                AppStep.IPOP_HUB -> IPopHubScreen(
+                    onNavigateBack = ::goHome,
+                    onOpenFullPlayer = { currentStep = AppStep.FULL_PLAYER },
+                    onOpenArtist = { name ->
+                        detailId = name
+                        currentStep = AppStep.ARTIST_PROFILE
+                    },
                     playbackViewModel = playbackViewModel
                 )
                 AppStep.NOTIFICATION_CENTER -> NotificationCenterScreen(

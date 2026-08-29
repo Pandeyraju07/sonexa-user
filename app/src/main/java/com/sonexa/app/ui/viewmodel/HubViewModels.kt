@@ -633,3 +633,103 @@ class AiSignatureHubViewModel(
         }
     }
 }
+
+class LiveEventsViewModel(
+    private val liveEventsProvider: com.sonexa.app.data.provider.LiveEventsProvider = com.sonexa.app.data.provider.LiveEventsProvider()
+) : ViewModel() {
+    private val _feedState = MutableStateFlow<CatalogUiState<LiveEventsFeedResponse>>(CatalogUiState.Loading)
+    val feedState: StateFlow<CatalogUiState<LiveEventsFeedResponse>> = _feedState.asStateFlow()
+
+    private val _detailState = MutableStateFlow<CatalogUiState<LiveEventDetailResponse>>(CatalogUiState.Loading)
+    val detailState: StateFlow<CatalogUiState<LiveEventDetailResponse>> = _detailState.asStateFlow()
+
+    private val _selectedCity = MutableStateFlow("All")
+    val selectedCity: StateFlow<String> = _selectedCity.asStateFlow()
+
+    private val _selectedCategory = MutableStateFlow("All")
+    val selectedCategory: StateFlow<String> = _selectedCategory.asStateFlow()
+
+    private val _remindedEvents = MutableStateFlow<Set<String>>(emptySet())
+    val remindedEvents: StateFlow<Set<String>> = _remindedEvents.asStateFlow()
+
+    init {
+        loadFeed("All", "All")
+    }
+
+    fun loadFeed(city: String = _selectedCity.value, category: String = _selectedCategory.value) {
+        _selectedCity.value = city
+        _selectedCategory.value = category
+        viewModelScope.launch {
+            _feedState.value = CatalogUiState.Loading
+            try {
+                val feed = liveEventsProvider.getLiveEventsFeed(city, category)
+                _feedState.value = CatalogUiState.Ready(feed)
+            } catch (e: Exception) {
+                _feedState.value = CatalogUiState.Error(e.message ?: "Failed to load live events")
+            }
+        }
+    }
+
+    fun loadDetail(id: String) {
+        viewModelScope.launch {
+            _detailState.value = CatalogUiState.Loading
+            try {
+                val detail = liveEventsProvider.getLiveEventDetail(id)
+                _detailState.value = CatalogUiState.Ready(detail)
+            } catch (e: Exception) {
+                _detailState.value = CatalogUiState.Error(e.message ?: "Failed to load event details")
+            }
+        }
+    }
+
+    fun toggleReminder(id: String) {
+        viewModelScope.launch {
+            val isNowReminded = liveEventsProvider.toggleReminder(id)
+            val current = _remindedEvents.value.toMutableSet()
+            if (isNowReminded) current.add(id) else current.remove(id)
+            _remindedEvents.value = current
+        }
+    }
+}
+
+class IPopViewModel(
+    private val iPopProvider: com.sonexa.app.data.provider.IPopProvider = com.sonexa.app.data.provider.IPopProvider()
+) : ViewModel() {
+    private val _homeState = MutableStateFlow<CatalogUiState<IPopHomeResponse>>(CatalogUiState.Loading)
+    val homeState: StateFlow<CatalogUiState<IPopHomeResponse>> = _homeState.asStateFlow()
+
+    private val _playlistState = MutableStateFlow<CatalogUiState<IPopPlaylistDto>>(CatalogUiState.Loading)
+    val playlistState: StateFlow<CatalogUiState<IPopPlaylistDto>> = _playlistState.asStateFlow()
+
+    private val _selectedSubgenre = MutableStateFlow("All")
+    val selectedSubgenre: StateFlow<String> = _selectedSubgenre.asStateFlow()
+
+    init {
+        loadHome("All")
+    }
+
+    fun loadHome(subgenre: String = _selectedSubgenre.value) {
+        _selectedSubgenre.value = subgenre
+        viewModelScope.launch {
+            _homeState.value = CatalogUiState.Loading
+            try {
+                val feed = iPopProvider.getHomeFeed(subgenre)
+                _homeState.value = CatalogUiState.Ready(feed)
+            } catch (e: Exception) {
+                _homeState.value = CatalogUiState.Error(e.message ?: "Failed to load I-Pop")
+            }
+        }
+    }
+
+    fun loadPlaylist(id: String) {
+        viewModelScope.launch {
+            _playlistState.value = CatalogUiState.Loading
+            try {
+                val pl = iPopProvider.getPlaylist(id)
+                _playlistState.value = CatalogUiState.Ready(pl)
+            } catch (e: Exception) {
+                _playlistState.value = CatalogUiState.Error(e.message ?: "Failed to load playlist")
+            }
+        }
+    }
+}

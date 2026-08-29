@@ -384,3 +384,92 @@ data class AiChatResponse(
     @SerializedName("success") val success: Boolean = false,
     @SerializedName("reply") val reply: String = ""
 )
+
+// LIVE EVENTS MODELS
+data class EventSetlistTrackDto(
+    @SerializedName("id") val id: String = "",
+    @SerializedName("title") val title: String = "",
+    @SerializedName("artist") val artist: String = "",
+    @SerializedName("audioUrl") val audioUrl: String = "",
+    @SerializedName("coverUrl") val coverUrl: String = "",
+    @SerializedName("durationLabel") val durationLabel: String = "3:30",
+    @SerializedName("durationMs") val durationMs: Long = 210000L
+)
+
+data class EventTicketTierDto(
+    @SerializedName("id") val id: String = "",
+    @SerializedName("name") val name: String = "",
+    @SerializedName("price") val price: String = "",
+    @SerializedName("description") val description: String = "",
+    @SerializedName("perks") val perks: List<String> = emptyList(),
+    @SerializedName("isAvailable") val isAvailable: Boolean = true
+)
+
+data class LiveEventDto(
+    @SerializedName("id") val id: String = "",
+    @SerializedName("title") val title: String = "",
+    @SerializedName("artistName") val artistName: String = "",
+    @SerializedName("artistImageUrl") val artistImageUrl: String = "",
+    @SerializedName("bannerUrl") val bannerUrl: String = "",
+    @SerializedName("venue") val venue: String = "",
+    @SerializedName("city") val city: String = "",
+    @SerializedName("date") val date: String = "",
+    @SerializedName("time") val time: String = "",
+    @SerializedName("priceStarting") val priceStarting: String = "",
+    @SerializedName("status") val status: String = "UPCOMING",
+    @SerializedName("category") val category: String = "Stadium Tour",
+    @SerializedName("bookingUrl") val bookingUrl: String = "",
+    @SerializedName("isReminderSet") val isReminderSet: Boolean = false,
+    @SerializedName("lineup") val lineup: List<String> = emptyList(),
+    @SerializedName("setlist") val setlist: List<EventSetlistTrackDto> = emptyList()
+)
+
+data class LiveEventsFeedResponse(
+    @SerializedName("success") val success: Boolean = false,
+    @SerializedName("title") val title: String = "Live Concerts & Tours",
+    @SerializedName("cities") val cities: List<String> = emptyList(),
+    @SerializedName("categories") val categories: List<String> = emptyList(),
+    @SerializedName("featuredTours") val featuredTours: List<LiveEventDto> = emptyList(),
+    @SerializedName("events") val events: List<LiveEventDto> = emptyList()
+)
+
+data class LiveEventDetailResponse(
+    @SerializedName("success") val success: Boolean = false,
+    @SerializedName("event") val event: LiveEventDto? = null,
+    @SerializedName("ticketTiers") val ticketTiers: List<EventTicketTierDto> = emptyList(),
+    @SerializedName("nearbyEvents") val nearbyEvents: List<LiveEventDto> = emptyList()
+)
+
+// HOME OF I-POP MODELS
+data class IPopArtistDto(
+    @SerializedName("id") val id: String = "",
+    @SerializedName("name") val name: String = "",
+    @SerializedName("imageUrl") val imageUrl: String = "",
+    @SerializedName("followers") val followers: String = "",
+    @SerializedName("topSongTitle") val topSongTitle: String = "",
+    @SerializedName("isVerified") val isVerified: Boolean = true
+)
+
+data class IPopPlaylistDto(
+    @SerializedName("id") val id: String = "",
+    @SerializedName("title") val title: String = "",
+    @SerializedName("description") val description: String = "",
+    @SerializedName("coverUrl") val coverUrl: String = "",
+    @SerializedName("badge") val badge: String = "🔥 TRENDING",
+    @SerializedName("trackCount") val trackCount: Int = 0,
+    @SerializedName("tracks") val tracks: List<TrackDto> = emptyList()
+)
+
+data class IPopHomeResponse(
+    @SerializedName("success") val success: Boolean = false,
+    @SerializedName("title") val title: String = "Home of I-Pop",
+    @SerializedName("subtitle") val subtitle: String = "",
+    @SerializedName("spotlightBannerUrl") val spotlightBannerUrl: String = "",
+    @SerializedName("spotlightTitle") val spotlightTitle: String = "",
+    @SerializedName("spotlightSubtitle") val spotlightSubtitle: String = "",
+    @SerializedName("subgenres") val subgenres: List<String> = emptyList(),
+    @SerializedName("trendingTracks") val trendingTracks: List<TrackDto> = emptyList(),
+    @SerializedName("featuredPlaylists") val featuredPlaylists: List<IPopPlaylistDto> = emptyList(),
+    @SerializedName("spotlightArtists") val spotlightArtists: List<IPopArtistDto> = emptyList(),
+    @SerializedName("newReleases") val newReleases: List<TrackDto> = emptyList()
+)

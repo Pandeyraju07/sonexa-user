@@ -62,6 +62,8 @@ fun SearchScreen(
     onOpenArtistProfile: (String) -> Unit = {},
     onOpenPlaylistDetail: (String) -> Unit = {},
     onOpenPodcasts: () -> Unit = {},
+    onOpenLiveEvents: () -> Unit = {},
+    onOpenIPop: () -> Unit = {},
     onOpenProfile: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {

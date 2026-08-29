@@ -57,4 +57,27 @@ interface MusicApiService {
 
     @GET("podcasts/{id}")
     suspend fun getPodcast(@Path("id") id: String): Response<PodcastDetailResponse>
+
+    // Live Events
+    @GET("live-events/feed")
+    suspend fun getLiveEventsFeed(
+        @Query("city") city: String? = null,
+        @Query("category") category: String? = null
+    ): Response<LiveEventsFeedResponse>
+
+    @GET("live-events/{id}")
+    suspend fun getLiveEventDetail(@Path("id") id: String): Response<LiveEventDetailResponse>
+
+    @retrofit2.http.POST("live-events/{id}/remind")
+    suspend fun toggleLiveEventReminder(@Path("id") id: String): Response<Map<String, Any>>
+
+    // Home of I-Pop
+    @GET("ipop/feed")
+    suspend fun getIPopFeed(@Query("subgenre") subgenre: String? = null): Response<IPopHomeResponse>
+
+    @GET("ipop/playlist/{id}")
+    suspend fun getIPopPlaylist(@Path("id") id: String): Response<IPopPlaylistDto>
+
+    @GET("ipop/artists")
+    suspend fun getIPopArtists(): Response<List<IPopArtistDto>>
 }
