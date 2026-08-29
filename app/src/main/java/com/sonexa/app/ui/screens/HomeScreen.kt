@@ -381,6 +381,7 @@ fun HomeScreen(
                 onOpenPlaylist = onOpenPlaylist,
                 onOpenAlbum = onOpenAlbum,
                 onOpenArtist = onOpenArtist,
+                onOpenPodcast = { onOpenPodcasts() },
                 onOpenProfile = { showProfileDrawer = true }
             )
 

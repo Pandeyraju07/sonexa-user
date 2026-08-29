@@ -40,6 +40,9 @@ enum class AppStep {
     ARTIST_PROFILE,
     PLAYLIST_DETAIL,
     PODCAST_HUB,
+    PODCAST_DETAIL,
+    EPISODE_DETAIL,
+    LANGUAGE_DISCOVERY,
     NOTIFICATION_CENTER,
     PREMIUM,
     PROFILE_HUB,
@@ -243,6 +246,47 @@ fun SonexaAppFlow() {
                 )
                 AppStep.PODCAST_HUB -> PodcastHubScreen(
                     onNavigateBack = ::goHome,
+                    onOpenFullPlayer = { currentStep = AppStep.FULL_PLAYER },
+                    onOpenPodcastDetail = { id ->
+                        detailId = id
+                        currentStep = AppStep.PODCAST_DETAIL
+                    },
+                    onOpenEpisodeDetail = { id ->
+                        detailId = id
+                        currentStep = AppStep.EPISODE_DETAIL
+                    },
+                    onOpenLanguageDiscovery = { lang ->
+                        detailId = lang
+                        currentStep = AppStep.LANGUAGE_DISCOVERY
+                    },
+                    onSwitchToMusic = ::goHome,
+                    onOpenProfile = { currentStep = AppStep.PROFILE_HUB },
+                    onOpenNotifications = { currentStep = AppStep.NOTIFICATION_CENTER },
+                    playbackViewModel = playbackViewModel
+                )
+                AppStep.PODCAST_DETAIL -> PodcastDetailScreen(
+                    podcastId = detailId,
+                    onNavigateBack = ::goHome,
+                    onOpenFullPlayer = { currentStep = AppStep.FULL_PLAYER },
+                    onOpenEpisodeDetail = { id ->
+                        detailId = id
+                        currentStep = AppStep.EPISODE_DETAIL
+                    },
+                    playbackViewModel = playbackViewModel
+                )
+                AppStep.EPISODE_DETAIL -> EpisodeDetailScreen(
+                    episodeId = detailId,
+                    onNavigateBack = ::goHome,
+                    onOpenFullPlayer = { currentStep = AppStep.FULL_PLAYER },
+                    playbackViewModel = playbackViewModel
+                )
+                AppStep.LANGUAGE_DISCOVERY -> LanguageDiscoveryScreen(
+                    languageCode = detailId,
+                    onNavigateBack = ::goHome,
+                    onOpenPodcastDetail = { id ->
+                        detailId = id
+                        currentStep = AppStep.PODCAST_DETAIL
+                    },
                     onOpenFullPlayer = { currentStep = AppStep.FULL_PLAYER },
                     playbackViewModel = playbackViewModel
                 )

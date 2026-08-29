@@ -97,6 +97,10 @@ class PlaybackManager(
         }
     }
 
+    fun setPlaybackSpeed(speed: Float) {
+        nativeProvider.setPlaybackSpeed(speed)
+    }
+
     fun stop() {
         nativeProvider.stop()
         youtubeProvider.stop()

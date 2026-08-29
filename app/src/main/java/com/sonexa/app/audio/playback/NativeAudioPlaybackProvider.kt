@@ -143,10 +143,14 @@ class NativeAudioPlaybackProvider(
     }
 
     override fun seekTo(positionMs: Long) {
-        val dur = player.duration.takeIf { it > 0 } ?: _state.value.durationMs
-        val target = if (dur > 0) positionMs.coerceIn(0, dur) else positionMs
-        player.seekTo(target)
-        _state.update { it.copy(positionMs = target) }
+        player.seekTo(positionMs)
+        _state.update { it.copy(positionMs = positionMs) }
+    }
+
+    fun setPlaybackSpeed(speed: Float) {
+        try {
+            player.setPlaybackSpeed(speed.coerceIn(0.25f, 3.0f))
+        } catch (e: Exception) {}
     }
 
     override fun stop() {

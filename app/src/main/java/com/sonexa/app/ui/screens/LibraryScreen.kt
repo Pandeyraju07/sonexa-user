@@ -50,6 +50,7 @@ fun LibraryScreen(
     onOpenPlaylist: (String) -> Unit = {},
     onOpenAlbum: (String) -> Unit = {},
     onOpenArtist: (String) -> Unit = {},
+    onOpenPodcast: (String) -> Unit = {},
     onOpenProfile: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
@@ -113,9 +114,17 @@ fun LibraryScreen(
                 imageUrl = "https://c.saavncdn.com/492/Chand-Mera-Dil-Hindi-2024-20241021111624-500x500.jpg"
             ),
             LibraryListItem(
+                id = "pod_1542452346",
+                title = "The Ranveer Show (TRS हिंदी)",
+                subtitle = "Podcast • BeerBiceps • New episode today",
+                imageUrl = "https://is1-ssl.mzstatic.com/image/thumb/Podcasts126/v4/4a/12/f9/4a12f915-0557-0a2a-281b-5e60d2ecb3fb/mza_16382103562699898858.jpg/600x600bb.jpg",
+                isPinned = true,
+                type = "podcast"
+            ),
+            LibraryListItem(
                 id = "art_arijit",
                 title = "Arijit Singh",
-                subtitle = "Artist • 4.8M followers",
+                subtitle = "Artist",
                 imageUrl = "https://c.saavncdn.com/artists/Arijit_Singh_002_20230323062147_500x500.jpg",
                 type = "artist"
             )
@@ -125,6 +134,7 @@ fun LibraryScreen(
     val filteredItems = remember(selectedFilter, libraryItems) {
         when (selectedFilter) {
             "Playlists" -> libraryItems.filter { it.type == "playlist" || it.isLikedSongs }
+            "Podcasts" -> libraryItems.filter { it.type == "podcast" }
             "Albums" -> libraryItems.filter { it.type == "album" }
             "Artists" -> libraryItems.filter { it.type == "artist" }
             else -> libraryItems
@@ -194,12 +204,12 @@ fun LibraryScreen(
                 }
             }
 
-            // Filter Chips: Playlists, Albums, Artists
+            // Filter Chips: Playlists, Podcasts, Albums, Artists
             LazyRow(
                 contentPadding = PaddingValues(horizontal = 16.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                val filters = listOf("All", "Playlists", "Albums", "Artists")
+                val filters = listOf("All", "Playlists", "Podcasts", "Albums", "Artists")
                 items(filters) { filter ->
                     val isSelected = selectedFilter == filter
                     Box(
@@ -276,6 +286,7 @@ fun LibraryScreen(
                             when (item.type) {
                                 "album" -> onOpenAlbum(item.id)
                                 "artist" -> onOpenArtist(item.title)
+                                "podcast" -> onOpenPodcast(item.id)
                                 else -> onOpenPlaylist(item.id)
                             }
                         }

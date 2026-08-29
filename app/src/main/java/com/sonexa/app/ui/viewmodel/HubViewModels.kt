@@ -193,14 +193,38 @@ class PodcastViewModel(
     private val musicRepository: MusicRepository = MusicRepository(),
     private val podcastProvider: com.sonexa.app.data.provider.PodcastProvider = com.sonexa.app.data.provider.PodcastProvider()
 ) : ViewModel() {
+    private val _homeState = MutableStateFlow<CatalogUiState<PodcastHomeResponse>>(CatalogUiState.Loading)
+    val homeState: StateFlow<CatalogUiState<PodcastHomeResponse>> = _homeState.asStateFlow()
+
     private val _uiState = MutableStateFlow<CatalogUiState<PodcastListResponse>>(CatalogUiState.Loading)
     val uiState: StateFlow<CatalogUiState<PodcastListResponse>> = _uiState.asStateFlow()
+
     private val _detail = MutableStateFlow<CatalogUiState<PodcastDetailResponse>>(CatalogUiState.Loading)
     val detail: StateFlow<CatalogUiState<PodcastDetailResponse>> = _detail.asStateFlow()
+
+    private val _selectedLanguage = MutableStateFlow("hindi")
+    val selectedLanguage: StateFlow<String> = _selectedLanguage.asStateFlow()
+
     private val _selectedCategory = MutableStateFlow("Hindi (हिंदी)")
     val selectedCategory: StateFlow<String> = _selectedCategory.asStateFlow()
 
-    init { load("Hindi (हिंदी)") }
+    private val _followedPodcasts = MutableStateFlow<Set<String>>(setOf("pod_1542452346"))
+    val followedPodcasts: StateFlow<Set<String>> = _followedPodcasts.asStateFlow()
+
+    init {
+        loadHomeFeed()
+        load("Hindi (हिंदी)")
+    }
+
+    fun loadHomeFeed() {
+        viewModelScope.launch {
+            _homeState.value = CatalogUiState.Loading
+            podcastProvider.getPodcastHomeFeed().fold(
+                onSuccess = { res -> _homeState.value = CatalogUiState.Ready(res) },
+                onFailure = { e -> _homeState.value = CatalogUiState.Error(e.message ?: "Failed to load podcast home feed") }
+            )
+        }
+    }
 
     fun load(category: String = "Hindi (हिंदी)") {
         _selectedCategory.value = category
@@ -221,6 +245,33 @@ class PodcastViewModel(
                 }
             )
         }
+    }
+
+    fun selectLanguage(langCode: String) {
+        _selectedLanguage.value = langCode
+        val langName = when (langCode.lowercase()) {
+            "hindi" -> "Hindi (हिंदी)"
+            "tamil" -> "Tamil (தமிழ்)"
+            "telugu" -> "Telugu (తెలుగు)"
+            "bengali" -> "Bengali (বাংলা)"
+            "marathi" -> "Marathi (मराठी)"
+            "punjabi" -> "Punjabi (ਪੰਜਾਬੀ)"
+            "spanish" -> "Spanish (Español)"
+            "german" -> "German (Deutsch)"
+            "japanese" -> "Japanese (日本語)"
+            else -> langCode.replaceFirstChar { it.uppercase() }
+        }
+        load(langName)
+    }
+
+    fun toggleFollow(podcastId: String) {
+        val current = _followedPodcasts.value.toMutableSet()
+        if (current.contains(podcastId)) {
+            current.remove(podcastId)
+        } else {
+            current.add(podcastId)
+        }
+        _followedPodcasts.value = current
     }
 
     fun searchPodcasts(query: String) {

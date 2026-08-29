@@ -90,22 +90,67 @@ data class MoodDto(
     @SerializedName("colorHex") val colorHex: String = "#8B5CF6"
 )
 
+data class PodcastChapterDto(
+    @SerializedName("title") val title: String = "",
+    @SerializedName("startTimeSeconds") val startTimeSeconds: Long = 0,
+    @SerializedName("endTimeSeconds") val endTimeSeconds: Long = 0
+)
+
+data class PodcastLanguageDto(
+    @SerializedName("code") val code: String = "",
+    @SerializedName("name") val name: String = "",
+    @SerializedName("nativeName") val nativeName: String = "",
+    @SerializedName("coverUrl") val coverUrl: String = "",
+    @SerializedName("showCount") val showCount: Int = 0
+)
+
+data class PodcastCategoryDto(
+    @SerializedName("id") val id: String = "",
+    @SerializedName("name") val name: String = "",
+    @SerializedName("icon") val icon: String = "🎙️",
+    @SerializedName("colorHex") val colorHex: String = "#7C3AED",
+    @SerializedName("gradientFrom") val gradientFrom: String = "#2E1065",
+    @SerializedName("gradientTo") val gradientTo: String = "#0F172A"
+)
+
 data class PodcastDto(
     @SerializedName("id") val id: String = "",
     @SerializedName("title") val title: String = "",
     @SerializedName("host") val host: String = "",
     @SerializedName("description") val description: String = "",
     @SerializedName("coverUrl") val coverUrl: String = "",
-    @SerializedName("category") val category: String = ""
+    @SerializedName("category") val category: String = "General",
+    @SerializedName("language") val language: String = "Hindi",
+    @SerializedName("followerCount") val followerCount: String = "150K",
+    @SerializedName("episodeCount") val episodeCount: Int = 25,
+    @SerializedName("isFollowed") val isFollowed: Boolean = false
 )
 
 data class PodcastEpisodeDto(
     @SerializedName("id") val id: String = "",
+    @SerializedName("podcastId") val podcastId: String = "",
     @SerializedName("title") val title: String = "",
     @SerializedName("description") val description: String = "",
-    @SerializedName("durationLabel") val durationLabel: String = "",
+    @SerializedName("durationLabel") val durationLabel: String = "30 min",
+    @SerializedName("durationMs") val durationMs: Long = 1800000L,
     @SerializedName("audioUrl") val audioUrl: String = "",
-    @SerializedName("episodeNumber") val episodeNumber: Int = 0
+    @SerializedName("coverUrl") val coverUrl: String = "",
+    @SerializedName("episodeNumber") val episodeNumber: Int = 1,
+    @SerializedName("publishedAt") val publishedAt: String = "Recently added",
+    @SerializedName("progressPercent") val progressPercent: Int = 0,
+    @SerializedName("isPlayed") val isPlayed: Boolean = false,
+    @SerializedName("isDownloaded") val isDownloaded: Boolean = false,
+    @SerializedName("chapters") val chapters: List<PodcastChapterDto> = emptyList()
+)
+
+data class PodcastHomeResponse(
+    @SerializedName("success") val success: Boolean = true,
+    @SerializedName("continueListening") val continueListening: List<PodcastEpisodeDto> = emptyList(),
+    @SerializedName("languages") val languages: List<PodcastLanguageDto> = emptyList(),
+    @SerializedName("trendingPodcasts") val trendingPodcasts: List<PodcastDto> = emptyList(),
+    @SerializedName("madeForYou") val madeForYou: List<PodcastDto> = emptyList(),
+    @SerializedName("popularShows") val popularShows: List<PodcastDto> = emptyList(),
+    @SerializedName("categories") val categories: List<PodcastCategoryDto> = emptyList()
 )
 
 data class NotificationDto(

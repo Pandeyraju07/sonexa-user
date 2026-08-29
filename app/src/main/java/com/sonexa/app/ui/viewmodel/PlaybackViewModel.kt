@@ -28,6 +28,7 @@ data class PlaybackUiState(
     val shuffle: Boolean = false,
     val repeatMode: RepeatMode = RepeatMode.OFF,
     val sleepTimerRemainingMs: Long? = null,
+    val playbackSpeed: Float = 1.0f,
     val connectedDevice: String = "This device",
     val deviceConnected: Boolean = true,
     val equalizer: SonexaEqualizerEngine.Snapshot = SonexaEqualizerEngine.Snapshot(),
@@ -129,18 +130,6 @@ class PlaybackViewModel : AndroidViewModel {
         playbackManager.togglePlayPause(currentTrack)
     }
 
-    fun seekFraction(fraction: Float) {
-        val duration = _uiState.value.durationMs
-        if (duration <= 0) return
-        playbackManager.seekTo((duration * fraction.coerceIn(0f, 1f)).toLong())
-    }
-
-    fun seekToMs(positionMs: Long) {
-        val duration = _uiState.value.durationMs
-        if (duration <= 0) return
-        playbackManager.seekTo(positionMs.coerceIn(0L, duration))
-    }
-
     fun skipNext() {
         val state = _uiState.value
         if (state.queue.isEmpty()) return
@@ -215,6 +204,44 @@ class PlaybackViewModel : AndroidViewModel {
                 // Keep local like state smoothly without intrusive error toasts
             }
         }
+    }
+
+    fun setPlaybackSpeed(speed: Float) {
+        val clamped = speed.coerceIn(0.25f, 3.0f)
+        _uiState.update { it.copy(playbackSpeed = clamped) }
+        playbackManager.setPlaybackSpeed(clamped)
+    }
+
+    fun seekToMs(positionMs: Long) {
+        val dur = _uiState.value.durationMs
+        val target = if (dur > 0) positionMs.coerceIn(0L, dur) else positionMs.coerceAtLeast(0L)
+        playbackManager.seekTo(target)
+        _uiState.update { it.copy(positionMs = target) }
+    }
+
+    fun seekFraction(fraction: Float) {
+        val dur = _uiState.value.durationMs
+        if (dur > 0) {
+            val target = (dur * fraction.coerceIn(0f, 1f)).toLong()
+            seekToMs(target)
+        }
+    }
+
+    fun seekForward30() {
+        val current = _uiState.value.positionMs
+        val dur = _uiState.value.durationMs
+        val target = (current + 30_000L).coerceAtMost(if (dur > 0) dur else Long.MAX_VALUE)
+        seekToMs(target)
+    }
+
+    fun seekBackward10() {
+        val current = _uiState.value.positionMs
+        val target = (current - 10_000L).coerceAtLeast(0L)
+        seekToMs(target)
+    }
+
+    fun seekToChapter(startTimeSeconds: Long) {
+        seekToMs(startTimeSeconds * 1000L)
     }
 
     fun setSleepTimerMinutes(minutes: Int?) {

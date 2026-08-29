@@ -72,6 +72,7 @@ fun FullPlayerScreen(
     val scope = rememberCoroutineScope()
 
     var showTimerDialog by remember { mutableStateOf(false) }
+    var showSpeedDialog by remember { mutableStateOf(false) }
     var showQualityDialog by remember { mutableStateOf(false) }
     var showLyricsSheet by remember { mutableStateOf(false) }
     var showQueueSheet by remember { mutableStateOf(false) }
@@ -348,7 +349,9 @@ fun FullPlayerScreen(
                 }
             }
 
-            // 5. MAIN PLAYBACK CONTROLS (Shuffle, Prev, HERO PURE WHITE PLAY/PAUSE, Next, Repeat)
+            val isPodcast = track?.provider == "podcast" || track?.album?.equals("Podcast", ignoreCase = true) == true || track?.providerType == "podcast"
+
+            // 5. MAIN PLAYBACK CONTROLS (Shuffle/10s Back, Prev, HERO PURE WHITE PLAY/PAUSE, Next, Repeat/30s Forward)
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -356,16 +359,33 @@ fun FullPlayerScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                IconButton(
-                    onClick = { playbackViewModel.toggleShuffle() },
-                    modifier = Modifier.size(40.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Shuffle,
-                        contentDescription = "Shuffle",
-                        tint = if (playbackState.shuffle) SpotifyGreen else TextMutedPurple,
-                        modifier = Modifier.size(24.dp)
-                    )
+                if (isPodcast) {
+                    IconButton(
+                        onClick = { playbackViewModel.seekBackward10() },
+                        modifier = Modifier.size(40.dp)
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(
+                                imageVector = Icons.Default.Replay,
+                                contentDescription = "10s Back",
+                                tint = Color.White,
+                                modifier = Modifier.size(22.dp)
+                            )
+                            Text("-10s", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                        }
+                    }
+                } else {
+                    IconButton(
+                        onClick = { playbackViewModel.toggleShuffle() },
+                        modifier = Modifier.size(40.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Shuffle,
+                            contentDescription = "Shuffle",
+                            tint = if (playbackState.shuffle) SpotifyGreen else TextMutedPurple,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
                 }
 
                 IconButton(
@@ -389,7 +409,7 @@ fun FullPlayerScreen(
                         .background(Color.White)
                         .clickable {
                             if (track != null) playbackViewModel.togglePlayPause()
-                            else Toast.makeText(context, "Pick a song first", Toast.LENGTH_SHORT).show()
+                            else Toast.makeText(context, "Pick a track first", Toast.LENGTH_SHORT).show()
                         },
                     contentAlignment = Alignment.Center
                 ) {
@@ -413,30 +433,47 @@ fun FullPlayerScreen(
                     )
                 }
 
-                IconButton(
-                    onClick = { playbackViewModel.cycleRepeatMode() },
-                    modifier = Modifier.size(40.dp)
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(
-                            imageVector = if (playbackState.repeatMode == RepeatMode.ONE) Icons.Default.RepeatOne else Icons.Default.Repeat,
-                            contentDescription = "Repeat",
-                            tint = if (playbackState.repeatMode != RepeatMode.OFF) SpotifyGreen else TextMutedPurple,
-                            modifier = Modifier.size(24.dp)
-                        )
-                        if (playbackState.repeatMode != RepeatMode.OFF) {
-                            Box(
-                                modifier = Modifier
-                                    .size(3.dp)
-                                    .clip(CircleShape)
-                                    .background(SpotifyGreen)
+                if (isPodcast) {
+                    IconButton(
+                        onClick = { playbackViewModel.seekForward30() },
+                        modifier = Modifier.size(40.dp)
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(
+                                imageVector = Icons.Default.Forward,
+                                contentDescription = "30s Forward",
+                                tint = Color.White,
+                                modifier = Modifier.size(22.dp)
                             )
+                            Text("+30s", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                        }
+                    }
+                } else {
+                    IconButton(
+                        onClick = { playbackViewModel.cycleRepeatMode() },
+                        modifier = Modifier.size(40.dp)
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(
+                                imageVector = if (playbackState.repeatMode == RepeatMode.ONE) Icons.Default.RepeatOne else Icons.Default.Repeat,
+                                contentDescription = "Repeat",
+                                tint = if (playbackState.repeatMode != RepeatMode.OFF) SpotifyGreen else TextMutedPurple,
+                                modifier = Modifier.size(24.dp)
+                            )
+                            if (playbackState.repeatMode != RepeatMode.OFF) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(3.dp)
+                                        .clip(CircleShape)
+                                        .background(SpotifyGreen)
+                                    )
+                            }
                         }
                     }
                 }
             }
 
-            // 6. UTILITY ACTION BAR (Lyrics, Queue, Device, More with Labels)
+            // 6. UTILITY ACTION BAR (Speed / Lyrics, Timer, Queue, Device)
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -444,24 +481,64 @@ fun FullPlayerScreen(
                 horizontalArrangement = Arrangement.SpaceAround,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // 1. Lyrics
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier
-                        .clickable { showLyricsSheet = true }
-                        .padding(horizontal = 10.dp, vertical = 4.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.ChatBubbleOutline,
-                        contentDescription = "Lyrics",
-                        tint = if (lyricsData != null) Color.White else TextMutedPurple,
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text("Lyrics", fontSize = 11.sp, color = TextMutedPurple)
+                if (isPodcast) {
+                    // 1. Playback Speed
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier
+                            .clickable { showSpeedDialog = true }
+                            .padding(horizontal = 10.dp, vertical = 4.dp)
+                    ) {
+                        Text(
+                            text = "${playbackState.playbackSpeed}x",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = if (playbackState.playbackSpeed != 1.0f) SpotifyGreen else Color.White
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text("Speed", fontSize = 11.sp, color = TextMutedPurple)
+                    }
+
+                    // 2. Sleep Timer
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier
+                            .clickable { showTimerDialog = true }
+                            .padding(horizontal = 10.dp, vertical = 4.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Timer,
+                            contentDescription = "Sleep Timer",
+                            tint = if (playbackState.sleepTimerRemainingMs != null) SpotifyGreen else TextMutedPurple,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = if (playbackState.sleepTimerRemainingMs != null) "${playbackState.sleepTimerRemainingMs!! / 60000}m" else "Timer",
+                            fontSize = 11.sp,
+                            color = if (playbackState.sleepTimerRemainingMs != null) SpotifyGreen else TextMutedPurple
+                        )
+                    }
+                } else {
+                    // 1. Lyrics
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier
+                            .clickable { showLyricsSheet = true }
+                            .padding(horizontal = 10.dp, vertical = 4.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.ChatBubbleOutline,
+                            contentDescription = "Lyrics",
+                            tint = if (lyricsData != null) Color.White else TextMutedPurple,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text("Lyrics", fontSize = 11.sp, color = TextMutedPurple)
+                    }
                 }
 
-                // 2. Queue
+                // Queue
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier
@@ -475,7 +552,7 @@ fun FullPlayerScreen(
                         modifier = Modifier.size(20.dp)
                     )
                     Spacer(modifier = Modifier.height(4.dp))
-                    Text("Queue", fontSize = 11.sp, color = TextMutedPurple)
+                    Text(if (isPodcast) "Episodes" else "Queue", fontSize = 11.sp, color = TextMutedPurple)
                 }
 
                 // 3. Device
@@ -691,6 +768,39 @@ fun FullPlayerScreen(
                 },
                 confirmButton = {
                     TextButton(onClick = { showQualityDialog = false }) {
+                        Text("Close", color = SpotifyGreen)
+                    }
+                }
+            )
+        }
+
+        if (showSpeedDialog) {
+            AlertDialog(
+                onDismissRequest = { showSpeedDialog = false },
+                containerColor = SonexaCardDark,
+                title = { Text("Playback Speed", color = SonexaTextWhite, fontWeight = FontWeight.Bold) },
+                text = {
+                    Column {
+                        listOf(0.5f, 0.75f, 1.0f, 1.25f, 1.5f, 1.75f, 2.0f).forEach { speed ->
+                            val isSelected = playbackState.playbackSpeed == speed
+                            Text(
+                                text = "${speed}x ${if (speed == 1.0f) "(Normal)" else ""}",
+                                color = if (isSelected) SpotifyGreen else SonexaTextWhite,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        playbackViewModel.setPlaybackSpeed(speed)
+                                        Toast.makeText(context, "Speed set to ${speed}x", Toast.LENGTH_SHORT).show()
+                                        showSpeedDialog = false
+                                    }
+                                    .padding(vertical = 10.dp)
+                            )
+                        }
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = { showSpeedDialog = false }) {
                         Text("Close", color = SpotifyGreen)
                     }
                 }
