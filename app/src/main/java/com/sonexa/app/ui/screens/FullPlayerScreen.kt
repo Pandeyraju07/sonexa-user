@@ -3,6 +3,11 @@ package com.sonexa.app.ui.screens
 import android.content.Context
 import android.media.AudioManager
 import android.widget.Toast
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -15,7 +20,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.QueueMusic
-import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material.icons.outlined.MoreHoriz
@@ -41,7 +45,6 @@ import com.sonexa.app.data.model.TrackDto
 import com.sonexa.app.data.repository.MusicRepository
 import com.sonexa.app.ui.theme.SonexaCardDark
 import com.sonexa.app.ui.theme.SonexaTextMuted
-import com.sonexa.app.ui.theme.SonexaTextSubtle
 import com.sonexa.app.ui.theme.SonexaTextWhite
 import com.sonexa.app.ui.viewmodel.PlaybackViewModel
 import com.sonexa.app.ui.viewmodel.RepeatMode
@@ -50,10 +53,12 @@ import java.util.Locale
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.launch
 
-private val DeviceGreen = Color(0xFF22C55E)
-private val BrandPurple = Color(0xFFA855F7)
-private val DarkSliderTrack = Color(0xFF2D273D)
+private val SpotifyGreen = Color(0xFF1ED760)
+private val TextMutedPurple = Color(0xFF9E98AB)
+private val DarkCardSurface = Color(0xFF181324)
+private val DarkCardBorder = Color(0xFF282038)
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FullPlayerScreen(
     onMinimize: () -> Unit,
@@ -66,13 +71,6 @@ fun FullPlayerScreen(
     val settingsState by settingsViewModel.uiState.collectAsState()
     val scope = rememberCoroutineScope()
 
-    // System Audio Manager for volume slider
-    val audioManager = remember { context.getSystemService(Context.AUDIO_SERVICE) as AudioManager }
-    val maxVolume = remember { audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC).toFloat().coerceAtLeast(1f) }
-    var currentVolume by remember {
-        mutableFloatStateOf(audioManager.getStreamVolume(AudioManager.STREAM_MUSIC).toFloat() / maxVolume)
-    }
-
     var showTimerDialog by remember { mutableStateOf(false) }
     var showQualityDialog by remember { mutableStateOf(false) }
     var showLyricsSheet by remember { mutableStateOf(false) }
@@ -82,14 +80,6 @@ fun FullPlayerScreen(
     var lyricsData by remember { mutableStateOf<LyricsResponse?>(null) }
     var lyricsLoading by remember { mutableStateOf(false) }
     var lyricsError by remember { mutableStateOf<String?>(null) }
-
-    val qualityOptions = listOf(
-        "Normal" to "Normal (96 kbps)",
-        "High" to "High (160 kbps)",
-        "Very High" to "Very High (320 kbps)",
-        "Lossless" to "Hi-Fi Lossless (320kbps Master)"
-    )
-    var selectedQuality by remember { mutableStateOf("Hi-Fi Lossless (320kbps Master)") }
 
     val track = playbackState.track
 
@@ -117,7 +107,7 @@ fun FullPlayerScreen(
     val trackTitle = track?.title ?: "Nothing playing"
     val trackArtist = track?.artist ?: "Select a song"
     val playlistName = playbackState.sourceTitle.ifBlank {
-        track?.album?.ifBlank { "Now Playing" } ?: "Now Playing"
+        track?.album?.ifBlank { "Daily Mix 1" } ?: "Daily Mix 1"
     }
     val isPlaying = playbackState.isPlaying
     val durationMs = playbackState.durationMs.coerceAtLeast(0)
@@ -142,34 +132,35 @@ fun FullPlayerScreen(
         }
     }
 
-    // Exact Spotify & modern premium layout
+    // Exact Premium Vignette Dark Canvas
     Box(
         modifier = modifier
             .fillMaxSize()
             .background(
                 Brush.verticalGradient(
                     colors = listOf(
-                        Color(0xFF221633),
-                        Color(0xFF130E1F),
-                        Color(0xFF0B0912),
-                        Color(0xFF07050A)
+                        Color(0xFF170C28),
+                        Color(0xFF10071C),
+                        Color(0xFF0C0515),
+                        Color(0xFF07030C)
                     )
                 )
             )
             .statusBarsPadding()
             .navigationBarsPadding()
-            .padding(horizontal = 22.dp, vertical = 6.dp)
     ) {
         Column(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 22.dp, vertical = 6.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.SpaceBetween
         ) {
-            // 1. TOP BAR (Chevron, "PLAYING FROM" + Title + Dots, More options)
+            // 1. TOP BAR (Chevron, "PLAYING FROM" + Source Title, 3-Dots Menu)
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(48.dp),
+                    .height(44.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -178,7 +169,7 @@ fun FullPlayerScreen(
                     modifier = Modifier.size(36.dp)
                 ) {
                     Icon(
-                        Icons.Default.KeyboardArrowDown,
+                        imageVector = Icons.Default.KeyboardArrowDown,
                         contentDescription = "Minimize",
                         tint = Color.White,
                         modifier = Modifier.size(28.dp)
@@ -194,7 +185,7 @@ fun FullPlayerScreen(
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Bold,
                         letterSpacing = 1.2.sp,
-                        color = Color(0xFFB3ADBF)
+                        color = TextMutedPurple
                     )
                     Text(
                         text = playlistName,
@@ -204,33 +195,6 @@ fun FullPlayerScreen(
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    // Pager indicator dots: — • •
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        val totalDots = queue.size.coerceAtMost(5).coerceAtLeast(1)
-                        val activeDot = (pagerState.currentPage % totalDots).coerceIn(0, totalDots - 1)
-                        for (i in 0 until totalDots) {
-                            if (i == activeDot) {
-                                Box(
-                                    modifier = Modifier
-                                        .width(14.dp)
-                                        .height(3.dp)
-                                        .clip(RoundedCornerShape(2.dp))
-                                        .background(Color.White)
-                                )
-                            } else {
-                                Box(
-                                    modifier = Modifier
-                                        .size(3.dp)
-                                        .clip(CircleShape)
-                                        .background(Color.White.copy(alpha = 0.35f))
-                                )
-                            }
-                        }
-                    }
                 }
 
                 IconButton(
@@ -238,7 +202,7 @@ fun FullPlayerScreen(
                     modifier = Modifier.size(36.dp)
                 ) {
                     Icon(
-                        Icons.Default.MoreVert,
+                        imageVector = Icons.Default.MoreVert,
                         contentDescription = "Options",
                         tint = Color.White,
                         modifier = Modifier.size(22.dp)
@@ -246,17 +210,17 @@ fun FullPlayerScreen(
                 }
             }
 
-            // 2. ALBUM ARTWORK (Square with rounded corners ~20dp, soft shadow, responsive height)
+            // 2. ALBUM ARTWORK (Centered Square with rounded corners 24dp & Ambient Shadow)
             Box(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth()
-                    .padding(vertical = 10.dp),
+                    .padding(vertical = 12.dp),
                 contentAlignment = Alignment.Center
             ) {
                 HorizontalPager(
                     state = pagerState,
-                    contentPadding = PaddingValues(horizontal = 4.dp),
+                    contentPadding = PaddingValues(horizontal = 2.dp),
                     pageSpacing = 16.dp,
                     modifier = Modifier.fillMaxSize()
                 ) { page ->
@@ -272,13 +236,13 @@ fun FullPlayerScreen(
                                 .fillMaxHeight(0.96f)
                                 .aspectRatio(1f)
                                 .shadow(
-                                    elevation = 20.dp,
-                                    shape = RoundedCornerShape(20.dp),
-                                    ambientColor = Color.Black.copy(alpha = 0.6f),
+                                    elevation = 24.dp,
+                                    shape = RoundedCornerShape(24.dp),
+                                    ambientColor = Color.Black.copy(alpha = 0.8f),
                                     spotColor = Color.Black
                                 )
-                                .clip(RoundedCornerShape(20.dp))
-                                .background(Color(0xFF1B1626))
+                                .clip(RoundedCornerShape(24.dp))
+                                .background(Color(0xFF1F182E))
                         ) {
                             if (cover.isNotBlank()) {
                                 AsyncImage(
@@ -294,18 +258,18 @@ fun FullPlayerScreen(
                                 Icon(
                                     Icons.Default.MusicNote,
                                     contentDescription = null,
-                                    tint = BrandPurple,
+                                    tint = SpotifyGreen,
                                     modifier = Modifier
                                         .size(72.dp)
                                         .align(Alignment.Center)
-                                )
+                                        )
                             }
                         }
                     }
                 }
             }
 
-            // 3. TRACK TITLE, ARTIST, BADGE, AND LIKE / CHECK ICONS
+            // 3. TRACK TITLE, ARTIST, AND VIBRANT GREEN HEART
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -315,7 +279,7 @@ fun FullPlayerScreen(
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = trackTitle,
-                        fontSize = 19.sp,
+                        fontSize = 22.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color.White,
                         maxLines = 1,
@@ -324,60 +288,28 @@ fun FullPlayerScreen(
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
                         text = trackArtist,
-                        fontSize = 14.sp,
+                        fontSize = 15.sp,
                         fontWeight = FontWeight.Normal,
-                        color = Color(0xFFA19BAE),
+                        color = Color(0xFFAFA9BB),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
-                    Spacer(modifier = Modifier.height(6.dp))
-                    // LOSSLESS 320K pill badge
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(4.dp))
-                            .background(Color(0xFF281545))
-                            .border(1.dp, Color(0xFF6B3CE9), RoundedCornerShape(4.dp))
-                            .clickable { showQualityDialog = true }
-                            .padding(horizontal = 6.dp, vertical = 2.dp)
-                    ) {
-                        Text(
-                            text = "LOSSLESS 320K",
-                            fontSize = 8.5.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color(0xFFC084FC),
-                            letterSpacing = 0.5.sp
-                        )
-                    }
                 }
 
-                // Heart & Checkmark in library icons
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                IconButton(
+                    onClick = { playbackViewModel.toggleLike() },
+                    modifier = Modifier.size(40.dp)
                 ) {
-                    IconButton(
-                        onClick = { playbackViewModel.toggleLike() },
-                        modifier = Modifier.size(38.dp)
-                    ) {
-                        Icon(
-                            if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                            contentDescription = "Favorite",
-                            tint = if (isFavorite) Color(0xFF22C55E) else Color(0xFFA19BAE),
-                            modifier = Modifier.size(24.dp)
-                        )
-                    }
-
-                    // Green Checkmark icon
                     Icon(
-                        Icons.Default.CheckCircle,
-                        contentDescription = "Saved in Library",
-                        tint = Color(0xFF22C55E),
-                        modifier = Modifier.size(22.dp)
+                        imageVector = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                        contentDescription = "Favorite",
+                        tint = if (isFavorite) SpotifyGreen else Color(0xFFAFA9BB),
+                        modifier = Modifier.size(26.dp)
                     )
                 }
             }
 
-            // 4. SEEKBAR / PROGRESS SLIDER
+            // 4. SLEEK WHITE SCRUBBER & TIMESTAMPS
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -387,9 +319,9 @@ fun FullPlayerScreen(
                     value = currentProgress,
                     onValueChange = { playbackViewModel.seekFraction(it) },
                     colors = SliderDefaults.colors(
-                        thumbColor = Color(0xFFC084FC),
-                        activeTrackColor = BrandPurple,
-                        inactiveTrackColor = DarkSliderTrack
+                        thumbColor = Color.White,
+                        activeTrackColor = Color.White,
+                        inactiveTrackColor = Color.White.copy(alpha = 0.20f)
                     ),
                     modifier = Modifier
                         .fillMaxWidth()
@@ -403,20 +335,20 @@ fun FullPlayerScreen(
                 ) {
                     Text(
                         text = formatMs(positionMs),
-                        fontSize = 11.5.sp,
+                        fontSize = 12.sp,
                         fontWeight = FontWeight.Normal,
-                        color = Color(0xFF8E8899)
+                        color = TextMutedPurple
                     )
                     Text(
-                        text = "-" + formatMs((durationMs - positionMs).coerceAtLeast(0L)),
-                        fontSize = 11.5.sp,
+                        text = formatMs(durationMs),
+                        fontSize = 12.sp,
                         fontWeight = FontWeight.Normal,
-                        color = Color(0xFF8E8899)
+                        color = TextMutedPurple
                     )
                 }
             }
 
-            // 5. MAIN PLAYBACK CONTROLS ROW (Shuffle, Prev, HERO PURPLE PLAY, Next, Repeat)
+            // 5. MAIN PLAYBACK CONTROLS (Shuffle, Prev, HERO PURE WHITE PLAY/PAUSE, Next, Repeat)
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -429,10 +361,10 @@ fun FullPlayerScreen(
                     modifier = Modifier.size(40.dp)
                 ) {
                     Icon(
-                        Icons.Default.Shuffle,
+                        imageVector = Icons.Default.Shuffle,
                         contentDescription = "Shuffle",
-                        tint = if (playbackState.shuffle) BrandPurple else Color(0xFFA19BAE),
-                        modifier = Modifier.size(22.dp)
+                        tint = if (playbackState.shuffle) SpotifyGreen else TextMutedPurple,
+                        modifier = Modifier.size(24.dp)
                     )
                 }
 
@@ -441,20 +373,20 @@ fun FullPlayerScreen(
                     modifier = Modifier.size(44.dp)
                 ) {
                     Icon(
-                        Icons.Default.SkipPrevious,
+                        imageVector = Icons.Default.SkipPrevious,
                         contentDescription = "Previous",
                         tint = Color.White,
                         modifier = Modifier.size(34.dp)
                     )
                 }
 
-                // HERO SOLID PURPLE CIRCLE PLAY/PAUSE BUTTON
+                // HERO SOLID PURE WHITE CIRCLE PLAY/PAUSE BUTTON
                 Box(
                     modifier = Modifier
-                        .size(66.dp)
-                        .shadow(16.dp, CircleShape, ambientColor = BrandPurple.copy(alpha = 0.5f), spotColor = BrandPurple)
+                        .size(68.dp)
+                        .shadow(16.dp, CircleShape, ambientColor = Color.White.copy(alpha = 0.3f), spotColor = Color.White)
                         .clip(CircleShape)
-                        .background(BrandPurple)
+                        .background(Color.White)
                         .clickable {
                             if (track != null) playbackViewModel.togglePlayPause()
                             else Toast.makeText(context, "Pick a song first", Toast.LENGTH_SHORT).show()
@@ -464,8 +396,8 @@ fun FullPlayerScreen(
                     Icon(
                         imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
                         contentDescription = if (isPlaying) "Pause" else "Play",
-                        tint = Color.White,
-                        modifier = Modifier.size(32.dp)
+                        tint = Color.Black,
+                        modifier = Modifier.size(34.dp)
                     )
                 }
 
@@ -474,7 +406,7 @@ fun FullPlayerScreen(
                     modifier = Modifier.size(44.dp)
                 ) {
                     Icon(
-                        Icons.Default.SkipNext,
+                        imageVector = Icons.Default.SkipNext,
                         contentDescription = "Next",
                         tint = Color.White,
                         modifier = Modifier.size(34.dp)
@@ -485,16 +417,26 @@ fun FullPlayerScreen(
                     onClick = { playbackViewModel.cycleRepeatMode() },
                     modifier = Modifier.size(40.dp)
                 ) {
-                    Icon(
-                        imageVector = if (playbackState.repeatMode == RepeatMode.ONE) Icons.Default.RepeatOne else Icons.Default.Repeat,
-                        contentDescription = "Repeat",
-                        tint = if (playbackState.repeatMode != RepeatMode.OFF) BrandPurple else Color(0xFFA19BAE),
-                        modifier = Modifier.size(22.dp)
-                    )
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(
+                            imageVector = if (playbackState.repeatMode == RepeatMode.ONE) Icons.Default.RepeatOne else Icons.Default.Repeat,
+                            contentDescription = "Repeat",
+                            tint = if (playbackState.repeatMode != RepeatMode.OFF) SpotifyGreen else TextMutedPurple,
+                            modifier = Modifier.size(24.dp)
+                        )
+                        if (playbackState.repeatMode != RepeatMode.OFF) {
+                            Box(
+                                modifier = Modifier
+                                    .size(3.dp)
+                                    .clip(CircleShape)
+                                    .background(SpotifyGreen)
+                            )
+                        }
+                    }
                 }
             }
 
-            // 6. SECONDARY ACTIONS ROW (Lyrics, Queue, Cast, More)
+            // 6. UTILITY ACTION BAR (Lyrics, Queue, Device, More with Labels)
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -502,41 +444,41 @@ fun FullPlayerScreen(
                 horizontalArrangement = Arrangement.SpaceAround,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Lyrics
+                // 1. Lyrics
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier
                         .clickable { showLyricsSheet = true }
-                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                        .padding(horizontal = 10.dp, vertical = 4.dp)
                 ) {
                     Icon(
-                        Icons.Outlined.ChatBubbleOutline,
+                        imageVector = Icons.Outlined.ChatBubbleOutline,
                         contentDescription = "Lyrics",
-                        tint = if (lyricsData != null) Color.White else Color(0xFFA19BAE),
+                        tint = if (lyricsData != null) Color.White else TextMutedPurple,
                         modifier = Modifier.size(20.dp)
                     )
                     Spacer(modifier = Modifier.height(4.dp))
-                    Text("Lyrics", fontSize = 11.sp, color = Color(0xFFA19BAE))
+                    Text("Lyrics", fontSize = 11.sp, color = TextMutedPurple)
                 }
 
-                // Queue
+                // 2. Queue
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier
                         .clickable { showQueueSheet = true }
-                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                        .padding(horizontal = 10.dp, vertical = 4.dp)
                 ) {
                     Icon(
-                        Icons.AutoMirrored.Filled.QueueMusic,
+                        imageVector = Icons.AutoMirrored.Filled.QueueMusic,
                         contentDescription = "Queue",
-                        tint = Color(0xFFA19BAE),
+                        tint = TextMutedPurple,
                         modifier = Modifier.size(20.dp)
                     )
                     Spacer(modifier = Modifier.height(4.dp))
-                    Text("Queue", fontSize = 11.sp, color = Color(0xFFA19BAE))
+                    Text("Queue", fontSize = 11.sp, color = TextMutedPurple)
                 }
 
-                // Cast
+                // 3. Device
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier
@@ -546,107 +488,178 @@ fun FullPlayerScreen(
                                     flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
                                 }
                                 context.startActivity(intent)
-                                Toast.makeText(context, "Connect Cast / Bluetooth Speakers", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, "Scanning for Audio Devices / Cast...", Toast.LENGTH_SHORT).show()
                             } catch (e: Exception) {
-                                Toast.makeText(context, "Scanning for Cast and Bluetooth devices...", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, "Connected to: ${playbackState.connectedDevice.ifBlank { "Phone Speaker" }}", Toast.LENGTH_SHORT).show()
                             }
                         }
-                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                        .padding(horizontal = 10.dp, vertical = 4.dp)
                 ) {
                     Icon(
-                        Icons.Default.Cast,
-                        contentDescription = "Cast",
-                        tint = Color(0xFFA19BAE),
+                        imageVector = Icons.Default.Cast,
+                        contentDescription = "Device",
+                        tint = TextMutedPurple,
                         modifier = Modifier.size(20.dp)
                     )
                     Spacer(modifier = Modifier.height(4.dp))
-                    Text("Cast", fontSize = 11.sp, color = Color(0xFFA19BAE))
+                    Text("Device", fontSize = 11.sp, color = TextMutedPurple)
                 }
 
-                // More
+                // 4. More
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier
                         .clickable { showMoreSheet = true }
-                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                        .padding(horizontal = 10.dp, vertical = 4.dp)
                 ) {
                     Icon(
-                        Icons.Outlined.MoreHoriz,
+                        imageVector = Icons.Outlined.MoreHoriz,
                         contentDescription = "More",
-                        tint = Color(0xFFA19BAE),
+                        tint = TextMutedPurple,
                         modifier = Modifier.size(20.dp)
                     )
                     Spacer(modifier = Modifier.height(4.dp))
-                    Text("More", fontSize = 11.sp, color = Color(0xFFA19BAE))
+                    Text("More", fontSize = 11.sp, color = TextMutedPurple)
                 }
             }
 
-            // 7. BOTTOM CONNECTED DEVICE & VOLUME BAR
+            // 7. "UP NEXT" DOCKED BOTTOM CARD
+            val upNextItems = remember(playbackState.queueIndex, queue) {
+                if (queue.size > 1) {
+                    queue.drop(playbackState.queueIndex + 1).take(3).ifEmpty {
+                        queue.take(3)
+                    }
+                } else {
+                    emptyList()
+                }
+            }
+
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(18.dp))
-                    .background(Color(0xFF161222))
-                    .border(1.dp, Color(0xFF261F36), RoundedCornerShape(18.dp))
+                    .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp, bottomStart = 16.dp, bottomEnd = 16.dp))
+                    .background(DarkCardSurface)
+                    .border(
+                        1.dp,
+                        DarkCardBorder,
+                        RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp, bottomStart = 16.dp, bottomEnd = 16.dp)
+                    )
                     .padding(horizontal = 16.dp, vertical = 10.dp)
             ) {
                 Column {
-                    // Device Row
+                    // Header Row: ^ UP NEXT
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.clickable { showQualityDialog = true }
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { showQueueSheet = true }
+                            .padding(vertical = 2.dp)
                     ) {
                         Icon(
-                            Icons.Default.Headphones,
-                            contentDescription = null,
-                            tint = DeviceGreen,
+                            imageVector = Icons.Default.KeyboardArrowUp,
+                            contentDescription = "Expand Up Next",
+                            tint = TextMutedPurple,
                             modifier = Modifier.size(16.dp)
                         )
-                        Spacer(modifier = Modifier.width(8.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = playbackState.connectedDevice.ifBlank { "This Android phone" },
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = DeviceGreen
+                            text = "UP NEXT",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 1.2.sp,
+                            color = TextMutedPurple
                         )
                     }
 
-                    Spacer(modifier = Modifier.height(4.dp))
+                    Spacer(modifier = Modifier.height(6.dp))
 
-                    // Volume Slider Row with Speaker Icon
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Slider(
-                            value = currentVolume,
-                            onValueChange = { newVol ->
-                                currentVolume = newVol
-                                val targetVol = (newVol * maxVolume).toInt()
-                                audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, targetVol, 0)
-                            },
-                            colors = SliderDefaults.colors(
-                                thumbColor = Color.White,
-                                activeTrackColor = BrandPurple,
-                                inactiveTrackColor = DarkSliderTrack
-                            ),
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(16.dp)
+                    if (upNextItems.isEmpty()) {
+                        Text(
+                            text = "Add more songs to queue",
+                            fontSize = 12.sp,
+                            color = TextMutedPurple,
+                            modifier = Modifier.padding(vertical = 4.dp)
                         )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Icon(
-                            Icons.AutoMirrored.Filled.VolumeUp,
-                            contentDescription = "Volume",
-                            tint = Color(0xFFA19BAE),
-                            modifier = Modifier.size(18.dp)
-                        )
+                    } else {
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            upNextItems.forEachIndexed { idx, item ->
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable {
+                                            val targetIndex = queue.indexOfFirst { it.id == item.id }
+                                            if (targetIndex >= 0) {
+                                                playbackViewModel.playFromQueueIndex(targetIndex)
+                                            }
+                                        },
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    // Thumbnail
+                                    Box(
+                                        modifier = Modifier
+                                            .size(38.dp)
+                                            .clip(RoundedCornerShape(8.dp))
+                                            .background(Color(0xFF261F36))
+                                    ) {
+                                        if (item.effectiveCoverUrl.isNotBlank()) {
+                                            AsyncImage(
+                                                model = ImageRequest.Builder(context)
+                                                    .data(item.effectiveCoverUrl)
+                                                    .crossfade(true)
+                                                    .build(),
+                                                contentDescription = item.title,
+                                                contentScale = ContentScale.Crop,
+                                                modifier = Modifier.fillMaxSize()
+                                            )
+                                        }
+                                    }
+
+                                    Spacer(modifier = Modifier.width(12.dp))
+
+                                    // Title & Artist
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = item.title,
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = Color.White,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                        Text(
+                                            text = item.artist,
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Normal,
+                                            color = TextMutedPurple,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                    }
+
+                                    // Drag handle (=) & 3-dots
+                                    Icon(
+                                        imageVector = Icons.Default.DragHandle,
+                                        contentDescription = "Reorder",
+                                        tint = Color(0xFF6B6578),
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Icon(
+                                        imageVector = Icons.Default.MoreVert,
+                                        contentDescription = "Options",
+                                        tint = Color(0xFF6B6578),
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
             }
         }
 
         // Modals, Sheets & Dialogs
+        var selectedQuality by remember { mutableStateOf("Hi-Fi Lossless (320kbps Master)") }
         if (showQualityDialog) {
             AlertDialog(
                 onDismissRequest = { showQualityDialog = false },
@@ -654,10 +667,15 @@ fun FullPlayerScreen(
                 title = { Text("Audio Stream Quality", color = SonexaTextWhite, fontWeight = FontWeight.Bold) },
                 text = {
                     Column {
-                        qualityOptions.forEach { (apiValue, label) ->
+                        listOf(
+                            "Normal" to "Normal (96 kbps)",
+                            "High" to "High (160 kbps)",
+                            "Very High" to "Very High (320 kbps)",
+                            "Lossless" to "Hi-Fi Lossless (320kbps Master)"
+                        ).forEach { (apiValue, label) ->
                             Text(
                                 text = label,
-                                color = if (selectedQuality == label) BrandPurple else SonexaTextWhite,
+                                color = if (selectedQuality == label) SpotifyGreen else SonexaTextWhite,
                                 fontWeight = if (selectedQuality == label) FontWeight.Bold else FontWeight.Normal,
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -673,7 +691,7 @@ fun FullPlayerScreen(
                 },
                 confirmButton = {
                     TextButton(onClick = { showQualityDialog = false }) {
-                        Text("Close", color = BrandPurple)
+                        Text("Close", color = SpotifyGreen)
                     }
                 }
             )
@@ -705,7 +723,7 @@ fun FullPlayerScreen(
                 },
                 confirmButton = {
                     TextButton(onClick = { showTimerDialog = false }) {
-                        Text("Close", color = BrandPurple)
+                        Text("Close", color = SpotifyGreen)
                     }
                 }
             )
@@ -733,7 +751,7 @@ fun FullPlayerScreen(
                     if (queue.isEmpty()) {
                         Text("Queue is empty", color = SonexaTextMuted)
                     } else {
-                        LazyColumn(modifier = Modifier.height(280.dp)) {
+                        LazyColumn(modifier = Modifier.height(300.dp)) {
                             itemsIndexed(queue) { index, item ->
                                 val active = index == playbackState.queueIndex
                                 Row(
@@ -743,18 +761,46 @@ fun FullPlayerScreen(
                                             playbackViewModel.playFromQueueIndex(index)
                                             showQueueSheet = false
                                         }
-                                        .padding(vertical = 10.dp),
+                                        .padding(vertical = 8.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(36.dp)
+                                            .clip(RoundedCornerShape(6.dp))
+                                            .background(Color(0xFF261F36))
+                                    ) {
+                                        if (item.effectiveCoverUrl.isNotBlank()) {
+                                            AsyncImage(
+                                                model = ImageRequest.Builder(context)
+                                                    .data(item.effectiveCoverUrl)
+                                                    .crossfade(true)
+                                                    .build(),
+                                                contentDescription = item.title,
+                                                contentScale = ContentScale.Crop,
+                                                modifier = Modifier.fillMaxSize()
+                                            )
+                                        }
+                                    }
+                                    Spacer(modifier = Modifier.width(10.dp))
                                     Column(modifier = Modifier.weight(1f)) {
                                         Text(
                                             item.title,
-                                            color = if (active) BrandPurple else SonexaTextWhite,
+                                            color = if (active) SpotifyGreen else SonexaTextWhite,
                                             fontWeight = if (active) FontWeight.Bold else FontWeight.Normal,
                                             maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis
+                                            overflow = TextOverflow.Ellipsis,
+                                            fontSize = 14.sp
                                         )
                                         Text(item.artist, color = SonexaTextMuted, fontSize = 12.sp)
+                                    }
+                                    if (active) {
+                                        Icon(
+                                            Icons.Default.GraphicEq,
+                                            contentDescription = "Playing",
+                                            tint = SpotifyGreen,
+                                            modifier = Modifier.size(18.dp)
+                                        )
                                     }
                                 }
                             }
@@ -763,7 +809,7 @@ fun FullPlayerScreen(
                 },
                 confirmButton = {
                     TextButton(onClick = { showQueueSheet = false }) {
-                        Text("Close", color = BrandPurple)
+                        Text("Close", color = SpotifyGreen)
                     }
                 }
             )
@@ -786,7 +832,7 @@ fun FullPlayerScreen(
                                 },
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Icon(Icons.Default.Equalizer, contentDescription = null, tint = BrandPurple)
+                            Icon(Icons.Default.Equalizer, contentDescription = null, tint = SpotifyGreen)
                             Spacer(Modifier.width(12.dp))
                             Text("Audio Equalizer (5-Band DSP)", color = Color.White, fontSize = 15.sp)
                         }
@@ -800,7 +846,7 @@ fun FullPlayerScreen(
                                 },
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Icon(Icons.Default.NightsStay, contentDescription = null, tint = BrandPurple)
+                            Icon(Icons.Default.NightsStay, contentDescription = null, tint = SpotifyGreen)
                             Spacer(Modifier.width(12.dp))
                             Text("Sleep Timer", color = Color.White, fontSize = 15.sp)
                         }
@@ -814,7 +860,7 @@ fun FullPlayerScreen(
                                 },
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Icon(Icons.Default.GraphicEq, contentDescription = null, tint = BrandPurple)
+                            Icon(Icons.Default.GraphicEq, contentDescription = null, tint = SpotifyGreen)
                             Spacer(Modifier.width(12.dp))
                             Text("Audio Stream Quality (320kbps)", color = Color.White, fontSize = 15.sp)
                         }
@@ -837,7 +883,7 @@ fun FullPlayerScreen(
                                 },
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Icon(Icons.Default.Share, contentDescription = null, tint = BrandPurple)
+                            Icon(Icons.Default.Share, contentDescription = null, tint = SpotifyGreen)
                             Spacer(Modifier.width(12.dp))
                             Text("Share Song", color = Color.White, fontSize = 15.sp)
                         }
@@ -852,7 +898,7 @@ fun FullPlayerScreen(
                                 },
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Icon(if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder, contentDescription = null, tint = BrandPurple)
+                            Icon(if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder, contentDescription = null, tint = SpotifyGreen)
                             Spacer(Modifier.width(12.dp))
                             Text(if (isFavorite) "Remove from Liked Songs" else "Save to Liked Songs", color = Color.White, fontSize = 15.sp)
                         }
@@ -860,7 +906,7 @@ fun FullPlayerScreen(
                 },
                 confirmButton = {
                     TextButton(onClick = { showMoreSheet = false }) {
-                        Text("Close", color = BrandPurple)
+                        Text("Close", color = SpotifyGreen)
                     }
                 }
             )
