@@ -24,7 +24,21 @@ class PodcastProvider {
     suspend fun getPodcastsByCategory(category: String, limit: Int = 25): Result<List<PodcastDto>> =
         withContext(Dispatchers.IO) {
             try {
-                val query = if (category.equals("all", ignoreCase = true)) "top podcast" else category
+                val query = when {
+                    category.contains("hindi", ignoreCase = true) && category.contains("story", ignoreCase = true) -> "hindi stories kahaniyan podcast"
+                    category.contains("hindi", ignoreCase = true) && category.contains("crime", ignoreCase = true) -> "desi crime indian true crime hindi"
+                    category.contains("hindi", ignoreCase = true) -> "the ranveer show hindi audio pitara hindi podcast"
+                    category.equals("all", ignoreCase = true) -> "top popular podcast hindi english"
+                    category.equals("technology", ignoreCase = true) -> "technology tech podcast"
+                    category.equals("business", ignoreCase = true) -> "business finance entrepreneurship podcast"
+                    category.equals("comedy", ignoreCase = true) -> "comedy funny podcast"
+                    category.equals("true crime", ignoreCase = true) -> "true crime mysteries podcast"
+                    category.equals("health", ignoreCase = true) -> "health fitness mental wellbeing podcast"
+                    category.equals("science", ignoreCase = true) -> "science discovery podcast"
+                    category.equals("news", ignoreCase = true) -> "news current affairs daily podcast"
+                    else -> "$category podcast"
+                }
+
                 val encoded = URLEncoder.encode(query, "UTF-8")
                 val url = "https://itunes.apple.com/search?term=$encoded&media=podcast&entity=podcast&limit=$limit"
 
@@ -46,7 +60,8 @@ class PodcastProvider {
                     for (el in results) {
                         val obj = el.asJsonObject
                         val id = if (obj.has("collectionId")) obj.get("collectionId").asString else ""
-                        val title = if (obj.has("collectionName")) obj.get("collectionName").asString else "Podcast Show"
+                        var title = if (obj.has("collectionName")) obj.get("collectionName").asString else "Podcast Show"
+                        title = title.replace("?????", "हिंदी")
                         val host = if (obj.has("artistName")) obj.get("artistName").asString else "Host"
                         val genre = if (obj.has("primaryGenreName")) obj.get("primaryGenreName").asString else "Podcasts"
                         var coverUrl = if (obj.has("artworkUrl600")) obj.get("artworkUrl600").asString else ""
@@ -67,6 +82,22 @@ class PodcastProvider {
                             )
                         }
                     }
+
+                    // Prepend featured Hindi podcasts if Hindi category is selected
+                    if (category.contains("hindi", ignoreCase = true) && list.none { it.id.contains("1542452346") }) {
+                        list.add(
+                            0,
+                            PodcastDto(
+                                id = "pod_1542452346",
+                                title = "The Ranveer Show (TRS हिंदी)",
+                                host = "BeerBiceps (Ranveer Allahbadia)",
+                                description = "India's biggest Hindi podcast with incredible guests & spiritual wisdom",
+                                coverUrl = "https://is1-ssl.mzstatic.com/image/thumb/Podcasts126/v4/4a/12/f9/4a12f915-0557-0a2a-281b-5e60d2ecb3fb/mza_16382103562699898858.jpg/600x600bb.jpg",
+                                category = "Hindi & Society"
+                            )
+                        )
+                    }
+
                     Result.success(list)
                 }
             } catch (e: Exception) {
@@ -105,7 +136,8 @@ class PodcastProvider {
 
                         if (wrapper == "track" && show == null) {
                             val id = "pod_" + if (obj.has("collectionId")) obj.get("collectionId").asString else rawId
-                            val title = if (obj.has("collectionName")) obj.get("collectionName").asString else "Podcast Show"
+                            var title = if (obj.has("collectionName")) obj.get("collectionName").asString else "Podcast Show"
+                            title = title.replace("?????", "हिंदी")
                             val host = if (obj.has("artistName")) obj.get("artistName").asString else "Host"
                             val genre = if (obj.has("primaryGenreName")) obj.get("primaryGenreName").asString else "Podcasts"
                             var coverUrl = if (obj.has("artworkUrl600")) obj.get("artworkUrl600").asString else ""

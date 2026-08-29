@@ -197,12 +197,12 @@ class PodcastViewModel(
     val uiState: StateFlow<CatalogUiState<PodcastListResponse>> = _uiState.asStateFlow()
     private val _detail = MutableStateFlow<CatalogUiState<PodcastDetailResponse>>(CatalogUiState.Loading)
     val detail: StateFlow<CatalogUiState<PodcastDetailResponse>> = _detail.asStateFlow()
-    private val _selectedCategory = MutableStateFlow("All")
+    private val _selectedCategory = MutableStateFlow("Hindi (हिंदी)")
     val selectedCategory: StateFlow<String> = _selectedCategory.asStateFlow()
 
-    init { load("All") }
+    init { load("Hindi (हिंदी)") }
 
-    fun load(category: String = "All") {
+    fun load(category: String = "Hindi (हिंदी)") {
         _selectedCategory.value = category
         viewModelScope.launch {
             _uiState.value = CatalogUiState.Loading

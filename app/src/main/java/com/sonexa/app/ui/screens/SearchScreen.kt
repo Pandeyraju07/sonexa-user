@@ -61,6 +61,7 @@ fun SearchScreen(
     onOpenFullPlayer: () -> Unit = {},
     onOpenArtistProfile: (String) -> Unit = {},
     onOpenPlaylistDetail: (String) -> Unit = {},
+    onOpenPodcasts: () -> Unit = {},
     onOpenProfile: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
@@ -272,14 +273,22 @@ fun SearchScreen(
                                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                                 ) {
                                     BrowseHeroCard(rowPair[0], Modifier.weight(1f)) { cat ->
-                                        searchViewModel.playCategoryOrTagDirect(cat.query, cat.title.replace("\n", " ")) { tracks, idx, title ->
-                                            playTrackList(tracks, idx, title)
+                                        if (cat.id.contains("podcast", ignoreCase = true) || cat.title.contains("podcast", ignoreCase = true) || cat.query.contains("podcast", ignoreCase = true)) {
+                                            onOpenPodcasts()
+                                        } else {
+                                            searchViewModel.playCategoryOrTagDirect(cat.query, cat.title.replace("\n", " ")) { tracks, idx, title ->
+                                                playTrackList(tracks, idx, title)
+                                            }
                                         }
                                     }
                                     if (rowPair.size > 1) {
                                         BrowseHeroCard(rowPair[1], Modifier.weight(1f)) { cat ->
-                                            searchViewModel.playCategoryOrTagDirect(cat.query, cat.title.replace("\n", " ")) { tracks, idx, title ->
-                                                playTrackList(tracks, idx, title)
+                                            if (cat.id.contains("podcast", ignoreCase = true) || cat.title.contains("podcast", ignoreCase = true) || cat.query.contains("podcast", ignoreCase = true)) {
+                                                onOpenPodcasts()
+                                            } else {
+                                                searchViewModel.playCategoryOrTagDirect(cat.query, cat.title.replace("\n", " ")) { tracks, idx, title ->
+                                                    playTrackList(tracks, idx, title)
+                                                }
                                             }
                                         }
                                     } else {
@@ -309,7 +318,9 @@ fun SearchScreen(
                                             .clip(RoundedCornerShape(12.dp))
                                             .background(Color(0xFF242424))
                                             .clickable {
-                                                if (item.track != null) {
+                                                if (item.tag.contains("podcast", ignoreCase = true) || item.query.contains("podcast", ignoreCase = true)) {
+                                                    onOpenPodcasts()
+                                                } else if (item.track != null) {
                                                     playTrackList(listOf(item.track), 0, item.tag)
                                                 } else {
                                                     searchViewModel.playCategoryOrTagDirect(item.query, item.tag) { tracks, idx, title ->
@@ -366,14 +377,22 @@ fun SearchScreen(
                             horizontalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
                             BrowseCategoryCard(pair[0], Modifier.weight(1f)) { cat ->
-                                searchViewModel.playCategoryOrTagDirect(cat.query, cat.title.replace("\n", " ")) { tracks, idx, title ->
-                                    playTrackList(tracks, idx, title)
+                                if (cat.id.contains("podcast", ignoreCase = true) || cat.title.contains("podcast", ignoreCase = true) || cat.query.contains("podcast", ignoreCase = true)) {
+                                    onOpenPodcasts()
+                                } else {
+                                    searchViewModel.playCategoryOrTagDirect(cat.query, cat.title.replace("\n", " ")) { tracks, idx, title ->
+                                        playTrackList(tracks, idx, title)
+                                    }
                                 }
                             }
                             if (pair.size > 1) {
                                 BrowseCategoryCard(pair[1], Modifier.weight(1f)) { cat ->
-                                    searchViewModel.playCategoryOrTagDirect(cat.query, cat.title.replace("\n", " ")) { tracks, idx, title ->
-                                        playTrackList(tracks, idx, title)
+                                    if (cat.id.contains("podcast", ignoreCase = true) || cat.title.contains("podcast", ignoreCase = true) || cat.query.contains("podcast", ignoreCase = true)) {
+                                        onOpenPodcasts()
+                                    } else {
+                                        searchViewModel.playCategoryOrTagDirect(cat.query, cat.title.replace("\n", " ")) { tracks, idx, title ->
+                                            playTrackList(tracks, idx, title)
+                                        }
                                     }
                                 }
                             } else {

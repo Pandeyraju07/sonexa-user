@@ -84,7 +84,7 @@ fun PodcastHubScreen(
     var isSearching by remember { mutableStateOf(false) }
 
     val categories = listOf(
-        "All", "Technology", "Business", "Comedy", "True Crime", "Health", "Science", "News"
+        "Hindi (हिंदी)", "All", "Hindi Stories", "Hindi Crime", "Technology", "Business", "Comedy", "True Crime", "Health", "Science", "News"
     )
 
     fun playEpisode(episode: PodcastEpisodeDto, podcast: PodcastDto?) {
