@@ -1,7 +1,10 @@
 package com.sonexa.app.ui.viewmodel
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
 import com.sonexa.app.data.model.AlbumDto
 import com.sonexa.app.data.model.ArtistDto
 import com.sonexa.app.data.model.PlaylistDto
@@ -9,6 +12,7 @@ import com.sonexa.app.data.model.TrackDto
 import com.sonexa.app.data.provider.MusicAggregationEngine
 import com.sonexa.app.data.provider.ProviderCategory
 import com.sonexa.app.data.provider.UnifiedSearchResult
+import com.sonexa.app.data.repository.MusicRepository
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
@@ -61,144 +65,136 @@ sealed interface SearchUiState {
 }
 
 class SearchViewModel(
-    private val aggregationEngine: MusicAggregationEngine = MusicAggregationEngine()
+    private val aggregationEngine: MusicAggregationEngine = MusicAggregationEngine(),
+    private val musicRepository: MusicRepository = MusicRepository()
 ) : ViewModel() {
 
+    private val gson = Gson()
     private val _uiState = MutableStateFlow<SearchUiState>(SearchUiState.Idle)
     val uiState: StateFlow<SearchUiState> = _uiState.asStateFlow()
 
     private val _selectedCategory = MutableStateFlow(ProviderCategory.ALL)
     val selectedCategory: StateFlow<ProviderCategory> = _selectedCategory.asStateFlow()
 
-    // 1. Dynamic Hero Categories (2x2 Grid)
-    private val _heroCategories = MutableStateFlow<List<BrowseCategoryItem>>(
-        listOf(
-            BrowseCategoryItem("hero_music", "Music", 0xFFE1336E, "https://c.saavncdn.com/492/Chand-Mera-Dil-Hindi-2024-20241021111624-500x500.jpg", "Top Songs"),
-            BrowseCategoryItem("hero_podcasts", "Podcasts", 0xFF006450, "https://images.unsplash.com/photo-1590602847861-f357a9332bbc?w=300", "Podcasts"),
-            BrowseCategoryItem("hero_events", "Live\nEvents", 0xFF7358FF, "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=300", "Live Concert"),
-            BrowseCategoryItem("hero_ipop", "Home of\nI-Pop", 0xFF1E3264, "https://c.saavncdn.com/264/Love-Exit-Punjabi-2023-20230606132711-500x500.jpg", "Indian Pop Hits")
-        )
-    )
+    private val _heroCategories = MutableStateFlow<List<BrowseCategoryItem>>(emptyList())
     val heroCategories: StateFlow<List<BrowseCategoryItem>> = _heroCategories.asStateFlow()
 
-    // 2. Dynamic "Discover something new" Items
-    private val _discoverItems = MutableStateFlow<List<DiscoverItem>>(
-        listOf(
-            DiscoverItem("disc_1", "#hindi pop", "Saregama Open Stage Covers", "https://c.saavncdn.com/492/Chand-Mera-Dil-Hindi-2024-20241021111624-500x500.jpg", "Hindi Pop"),
-            DiscoverItem("disc_2", "#falak", "Falak Live & Acoustic", "https://c.saavncdn.com/712/Main-Vaapas-Aaunga-Hindi-2024-20240321154032-500x500.jpg", "Falak"),
-            DiscoverItem("disc_3", "#pop", "Pop Global Sensation", "https://c.saavncdn.com/152/Jodi-Punjabi-2023-20230509183424-500x500.jpg", "Global Pop Hits"),
-            DiscoverItem("disc_4", "#punjabi", "Punjabi Wave 2026", "https://c.saavncdn.com/264/Love-Exit-Punjabi-2023-20230606132711-500x500.jpg", "Punjabi Top Hits"),
-            DiscoverItem("disc_5", "#bollywood", "Bollywood Melodies", "https://c.saavncdn.com/177/Barsaat-Lagdi-Ae-Hindi-2023-20230713123847-500x500.jpg", "Bollywood Hits"),
-            DiscoverItem("disc_6", "#lofi", "Midnight Hindi Lo-Fi", "https://c.saavncdn.com/602/Dooron-Dooron-Punjabi-2022-20220914180808-500x500.jpg", "Hindi Lo-Fi Chill")
-        )
-    )
+    private val _discoverItems = MutableStateFlow<List<DiscoverItem>>(emptyList())
     val discoverItems: StateFlow<List<DiscoverItem>> = _discoverItems.asStateFlow()
 
-    // 3. Dynamic "Browse all" Categories (2-Column Grid)
-    private val _browseAllCategories = MutableStateFlow<List<BrowseCategoryItem>>(
-        listOf(
-            BrowseCategoryItem("cat_made_for_you", "Made\nFor You", 0xFF8C67AC, "https://c.saavncdn.com/001/Cocktail-2-Hindi-2024-20240214152011-500x500.jpg", "Made For You Mix"),
-            BrowseCategoryItem("cat_upcoming", "Upcoming\nreleases", 0xFF007F5F, "https://c.saavncdn.com/530/Ye-Baarish-Hindi-2023-20230628172810-500x500.jpg", "New Releases 2026"),
-            BrowseCategoryItem("cat_new_releases", "New\nReleases", 0xFF477D32, "https://c.saavncdn.com/393/Halki-Si-Barsaat-Hindi-2022-20220608143808-500x500.jpg", "Latest Songs 2026"),
-            BrowseCategoryItem("cat_monsoon", "Rain &\nMonsoon", 0xFF1E5BB0, "https://c.saavncdn.com/177/Barsaat-Lagdi-Ae-Hindi-2023-20230713123847-500x500.jpg", "Monsoon Rain Songs"),
-            BrowseCategoryItem("cat_bollywood", "Bollywood", 0xFFE76F51, "https://c.saavncdn.com/492/Chand-Mera-Dil-Hindi-2024-20241021111624-500x500.jpg", "Bollywood Hits"),
-            BrowseCategoryItem("cat_punjabi", "Punjabi", 0xFFF4A261, "https://c.saavncdn.com/264/Love-Exit-Punjabi-2023-20230606132711-500x500.jpg", "Punjabi Top Hits"),
-            BrowseCategoryItem("cat_bhojpuri", "Bhojpuri", 0xFFE63946, "https://c.saavncdn.com/artists/Neelkamal_Singh_000_20220616084050_500x500.jpg", "Bhojpuri Hits"),
-            BrowseCategoryItem("cat_pop", "Pop", 0xFFD81159, "https://c.saavncdn.com/152/Jodi-Punjabi-2023-20230509183424-500x500.jpg", "Global Pop"),
-            BrowseCategoryItem("cat_romance", "Romance", 0xFF8338EC, "https://c.saavncdn.com/712/Main-Vaapas-Aaunga-Hindi-2024-20240321154032-500x500.jpg", "Romantic Hits"),
-            BrowseCategoryItem("cat_chill", "Chill &\nLo-Fi", 0xFF2A9D8F, "https://c.saavncdn.com/602/Dooron-Dooron-Punjabi-2022-20220914180808-500x500.jpg", "Lo-Fi Beats"),
-            BrowseCategoryItem("cat_workout", "Workout", 0xFFD90429, "https://c.saavncdn.com/001/Cocktail-2-Hindi-2024-20240214152011-500x500.jpg", "Workout Energetic"),
-            BrowseCategoryItem("cat_devotional", "Devotional", 0xFFFFB703, "https://c.saavncdn.com/artists/Satinder_Sartaaj_500x500.jpg", "Bhakti Songs")
-        )
-    )
+    private val _browseAllCategories = MutableStateFlow<List<BrowseCategoryItem>>(emptyList())
     val browseAllCategories: StateFlow<List<BrowseCategoryItem>> = _browseAllCategories.asStateFlow()
 
-    private val _recents = MutableStateFlow<List<RecentSearchItem>>(
-        listOf(
-            RecentSearchItem("rec_1", "Love Exit", "Song • Jind Universe", "https://c.saavncdn.com/264/Love-Exit-Punjabi-2023-20230606132711-500x500.jpg", "song"),
-            RecentSearchItem("rec_2", "Darmiyaan (From \"Musaf...\")", "Song • Rekha Bhardwaj, Raghav...", "https://c.saavncdn.com/152/Jodi-Punjabi-2023-20230509183424-500x500.jpg", "song"),
-            RecentSearchItem("rec_3", "Barsaat Lagdi Ae", "Song • Darshan Raval, Simran...", "https://c.saavncdn.com/177/Barsaat-Lagdi-Ae-Hindi-2023-20230713123847-500x500.jpg", "song"),
-            RecentSearchItem("rec_4", "Neelkamal Singh", "Artist", "https://c.saavncdn.com/artists/Neelkamal_Singh_000_20220616084050_500x500.jpg", "artist"),
-            RecentSearchItem("rec_5", "Dooron Dooron", "Single • Paresh Pahuja, Shiv Ta...", "https://c.saavncdn.com/602/Dooron-Dooron-Punjabi-2022-20220914180808-500x500.jpg", "song"),
-            RecentSearchItem("rec_6", "Main Vaapas Aaunga", "Album • A.R. Rahman, Irshad K...", "https://c.saavncdn.com/712/Main-Vaapas-Aaunga-Hindi-2024-20240321154032-500x500.jpg", "album", isSaved = true),
-            RecentSearchItem("rec_7", "Chand Mera Dil", "Album • Sachin-Jigar, Amitabh...", "https://c.saavncdn.com/492/Chand-Mera-Dil-Hindi-2024-20241021111624-500x500.jpg", "album"),
-            RecentSearchItem("rec_8", "Tujhko - From \"Cocktail 2\"", "Song • Pritam, Arijit Singh, Suni...", "https://c.saavncdn.com/001/Cocktail-2-Hindi-2024-20240214152011-500x500.jpg", "song", isSaved = true),
-            RecentSearchItem("rec_9", "Ye Baarish", "Song • Darshan Raval", "https://c.saavncdn.com/530/Ye-Baarish-Hindi-2023-20230628172810-500x500.jpg", "song", isSaved = true),
-            RecentSearchItem("rec_10", "Halki Si Barsaat", "Song • Saaj Bhatt", "https://c.saavncdn.com/393/Halki-Si-Barsaat-Hindi-2022-20220608143808-500x500.jpg", "song", isSaved = true)
-        )
-    )
+    private val _recents = MutableStateFlow<List<RecentSearchItem>>(emptyList())
     val recents: StateFlow<List<RecentSearchItem>> = _recents.asStateFlow()
 
     private var currentQuery: String = ""
     private var searchJob: Job? = null
+    private var appContext: Context? = null
 
     init {
-        loadDynamicCategoriesAndDiscover()
+        loadDynamicCategories()
     }
 
-    private fun loadDynamicCategoriesAndDiscover() {
-        viewModelScope.launch {
+    fun init(context: Context) {
+        appContext = context.applicationContext
+        loadPersistedRecents(context)
+    }
+
+    private fun loadPersistedRecents(context: Context) {
+        val prefs = context.getSharedPreferences("sonexa_search_recents", Context.MODE_PRIVATE)
+        val json = prefs.getString("recent_items", null)
+        if (!json.isNullOrBlank()) {
             try {
-                // Fetch real live trending data from API
-                val trendingDeferred = async { aggregationEngine.jiosaavnProvider.getTrending(20) }
-                val hindiPopDeferred = async { aggregationEngine.jiosaavnProvider.search("Hindi Pop", limit = 10) }
-                val punjabiDeferred = async { aggregationEngine.jiosaavnProvider.search("Punjabi Top Hits", limit = 10) }
+                val type = object : TypeToken<List<RecentSearchItem>>() {}.type
+                val list: List<RecentSearchItem> = gson.fromJson(json, type)
+                _recents.value = list
+            } catch (_: Exception) {}
+        }
+    }
 
-                val trending = trendingDeferred.await().getOrDefault(emptyList())
-                val hindiPop = hindiPopDeferred.await().getOrDefault(emptyList())
-                val punjabi = punjabiDeferred.await().getOrDefault(emptyList())
+    private fun persistRecents(items: List<RecentSearchItem>) {
+        appContext?.let { ctx ->
+            val prefs = ctx.getSharedPreferences("sonexa_search_recents", Context.MODE_PRIVATE)
+            prefs.edit().putString("recent_items", gson.toJson(items)).apply()
+        }
+    }
 
-                if (trending.isNotEmpty()) {
-                    // Update Hero category covers dynamically with real API covers
-                    val musicCover = trending.firstOrNull()?.effectiveCoverUrl ?: _heroCategories.value[0].imageUrl
-                    val podcastCover = _heroCategories.value[1].imageUrl
-                    val eventCover = trending.getOrNull(2)?.effectiveCoverUrl ?: _heroCategories.value[2].imageUrl
-                    val ipopCover = hindiPop.firstOrNull()?.effectiveCoverUrl ?: _heroCategories.value[3].imageUrl
-
-                    _heroCategories.value = listOf(
-                        _heroCategories.value[0].copy(imageUrl = musicCover),
-                        _heroCategories.value[1].copy(imageUrl = podcastCover),
-                        _heroCategories.value[2].copy(imageUrl = eventCover),
-                        _heroCategories.value[3].copy(imageUrl = ipopCover)
-                    )
-
-                    // Update Discover items with live API tracks & covers
-                    val dynamicDiscover = mutableListOf<DiscoverItem>()
-                    hindiPop.firstOrNull()?.let {
-                        dynamicDiscover.add(DiscoverItem("disc_1", "#hindi pop", it.title, it.effectiveCoverUrl, "Hindi Pop", it))
-                    }
-                    trending.getOrNull(1)?.let {
-                        dynamicDiscover.add(DiscoverItem("disc_2", "#falak", it.title, it.effectiveCoverUrl, it.artist, it))
-                    }
-                    trending.getOrNull(3)?.let {
-                        dynamicDiscover.add(DiscoverItem("disc_3", "#pop", it.title, it.effectiveCoverUrl, "Pop Hits", it))
-                    }
-                    punjabi.firstOrNull()?.let {
-                        dynamicDiscover.add(DiscoverItem("disc_4", "#punjabi", it.title, it.effectiveCoverUrl, "Punjabi Hits", it))
-                    }
-                    trending.getOrNull(4)?.let {
-                        dynamicDiscover.add(DiscoverItem("disc_5", "#bollywood", it.title, it.effectiveCoverUrl, "Bollywood", it))
-                    }
-                    trending.getOrNull(5)?.let {
-                        dynamicDiscover.add(DiscoverItem("disc_6", "#lofi", it.title, it.effectiveCoverUrl, "Lo-Fi Chill", it))
-                    }
-
-                    if (dynamicDiscover.isNotEmpty()) {
-                        _discoverItems.value = dynamicDiscover
-                    }
+    fun loadDynamicCategories() {
+        viewModelScope.launch {
+            // 1. Try Backend API first
+            val categoriesResult = musicRepository.getSearchCategories()
+            if (categoriesResult.isSuccess && categoriesResult.getOrNull()?.heroCategories?.isNotEmpty() == true) {
+                val data = categoriesResult.getOrNull()!!
+                _heroCategories.value = data.heroCategories.map {
+                    BrowseCategoryItem(it.id, it.title, it.colorHex, it.imageUrl, it.query)
                 }
-            } catch (_: Exception) {
-                // Keep default high-res curated items if network is unavailable
+                _discoverItems.value = data.discoverTags.map {
+                    DiscoverItem(it.id, it.tag, it.title, it.imageUrl, it.query)
+                }
+                _browseAllCategories.value = data.browseCategories.map {
+                    BrowseCategoryItem(it.id, it.title, it.colorHex, it.imageUrl, it.query)
+                }
+                return@launch
             }
+
+            // 2. Dynamic Streaming Aggregation Engine Fallback
+            try {
+                val trending = aggregationEngine.jiosaavnProvider.getTrending(20).getOrDefault(emptyList())
+                val hindiPop = aggregationEngine.jiosaavnProvider.search("Hindi Pop Hits", limit = 10).getOrDefault(emptyList())
+
+                val musicCover = trending.firstOrNull()?.effectiveCoverUrl ?: "https://c.saavncdn.com/492/Chand-Mera-Dil-Hindi-2024-20241021111624-500x500.jpg"
+                val eventCover = trending.getOrNull(2)?.effectiveCoverUrl ?: "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=300"
+                val ipopCover = hindiPop.firstOrNull()?.effectiveCoverUrl ?: "https://c.saavncdn.com/264/Love-Exit-Punjabi-2023-20230606132711-500x500.jpg"
+
+                _heroCategories.value = listOf(
+                    BrowseCategoryItem("hero_music", "Music", 0xFFE1336E, musicCover, "Top Bollywood Songs"),
+                    BrowseCategoryItem("hero_podcasts", "Podcasts", 0xFF006450, "https://images.unsplash.com/photo-1590602847861-f357a9332bbc?w=300", "Top Podcasts"),
+                    BrowseCategoryItem("hero_events", "Live\nEvents", 0xFF7358FF, eventCover, "Live Concerts"),
+                    BrowseCategoryItem("hero_ipop", "Home of\nI-Pop", 0xFF1E3264, ipopCover, "Indian Pop Hits")
+                )
+
+                val dynamicDiscover = mutableListOf<DiscoverItem>()
+                trending.take(6).forEachIndexed { index, tr ->
+                    val tag = when (index) {
+                        0 -> "#hindipop"
+                        1 -> "#bollywood"
+                        2 -> "#punjabi"
+                        3 -> "#lofi"
+                        4 -> "#acoustic"
+                        else -> "#trending"
+                    }
+                    dynamicDiscover.add(DiscoverItem("disc_$index", tag, tr.title, tr.effectiveCoverUrl, tr.title, tr))
+                }
+                if (dynamicDiscover.isNotEmpty()) {
+                    _discoverItems.value = dynamicDiscover
+                }
+
+                _browseAllCategories.value = listOf(
+                    BrowseCategoryItem("cat_made_for_you", "Made\nFor You", 0xFF8C67AC, "https://c.saavncdn.com/001/Cocktail-2-Hindi-2024-20240214152011-500x500.jpg", "Made For You"),
+                    BrowseCategoryItem("cat_new_releases", "New\nReleases", 0xFFE8115B, "https://c.saavncdn.com/712/Main-Vaapas-Aaunga-Hindi-2024-20240321154032-500x500.jpg", "New Releases"),
+                    BrowseCategoryItem("cat_hindi", "Hindi", 0xFFE91429, "https://c.saavncdn.com/492/Chand-Mera-Dil-Hindi-2024-20241021111624-500x500.jpg", "Top Hindi Songs"),
+                    BrowseCategoryItem("cat_punjabi", "Punjabi", 0xFFB02897, "https://c.saavncdn.com/264/Love-Exit-Punjabi-2023-20230606132711-500x500.jpg", "Top Punjabi Hits"),
+                    BrowseCategoryItem("cat_charts", "Charts", 0xFF8D67AB, "https://c.saavncdn.com/832/Gully-Boy-Hindi-2019-20190124110321-500x500.jpg", "Top 50 India"),
+                    BrowseCategoryItem("cat_lofi", "Lo-Fi\nChill", 0xFF1E3264, "https://c.saavncdn.com/602/Dooron-Dooron-Punjabi-2022-20220914180808-500x500.jpg", "Lo-Fi Beats"),
+                    BrowseCategoryItem("cat_party", "Party &\nDance", 0xFF503750, "https://c.saavncdn.com/152/Jodi-Punjabi-2023-20230509183424-500x500.jpg", "Bollywood Party"),
+                    BrowseCategoryItem("cat_romance", "Romance", 0xFFE8115B, "https://c.saavncdn.com/492/Chand-Mera-Dil-Hindi-2024-20241021111624-500x500.jpg", "Romantic Hindi Songs"),
+                    BrowseCategoryItem("cat_bhakti", "Devotional", 0xFF477D95, "https://c.saavncdn.com/177/Barsaat-Lagdi-Ae-Hindi-2023-20230713123847-500x500.jpg", "Bhakti Songs"),
+                    BrowseCategoryItem("cat_workout", "Workout", 0xFF777777, "https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=300", "Workout Motivation")
+                )
+            } catch (_: Exception) {}
         }
     }
 
     fun removeRecent(id: String) {
-        _recents.value = _recents.value.filter { it.id != id }
+        val updated = _recents.value.filter { it.id != id }
+        _recents.value = updated
+        persistRecents(updated)
     }
 
     fun clearAllRecents() {
         _recents.value = emptyList()
+        persistRecents(emptyList())
     }
 
     fun addRecentTrack(track: TrackDto) {
@@ -211,7 +207,22 @@ class SearchViewModel(
             isSaved = track.isLiked,
             track = track
         )
-        _recents.value = listOf(newItem) + _recents.value.filter { it.id != track.id }.take(15)
+        val updated = listOf(newItem) + _recents.value.filter { it.id != track.id }.take(15)
+        _recents.value = updated
+        persistRecents(updated)
+    }
+
+    fun addRecentQuery(title: String, subtitle: String = "Search", imageUrl: String = "", type: String = "search") {
+        val newItem = RecentSearchItem(
+            id = "rec_" + title.lowercase().replace(" ", "_"),
+            title = title,
+            subtitle = subtitle,
+            imageUrl = imageUrl,
+            type = type
+        )
+        val updated = listOf(newItem) + _recents.value.filter { !it.title.equals(title, ignoreCase = true) }.take(15)
+        _recents.value = updated
+        persistRecents(updated)
     }
 
     fun onCategorySelected(category: ProviderCategory) {
@@ -225,130 +236,95 @@ class SearchViewModel(
     fun onSearchQueryChanged(query: String) {
         currentQuery = query
         searchJob?.cancel()
+
         if (query.isBlank()) {
             _uiState.value = SearchUiState.Idle
             return
         }
 
         searchJob = viewModelScope.launch {
-            delay(250) // Debounce user typing
+            delay(250) // Debounce typing
             executeSearch(query, _selectedCategory.value)
         }
     }
 
-    fun searchCategoryDirect(categoryQuery: String) {
-        currentQuery = categoryQuery
-        executeSearch(categoryQuery, ProviderCategory.ALL)
-    }
-
     fun playCategoryOrTagDirect(
         query: String,
-        fallbackTitle: String,
-        onReadyToPlay: (List<TrackDto>, Int, String) -> Unit
+        title: String,
+        onPlay: (List<TrackDto>, Int, String) -> Unit
     ) {
         viewModelScope.launch {
-            try {
-                val cleaned = query.replace("#", "").trim()
-                val result = aggregationEngine.searchAll(cleaned, limit = 25)
-                val tracks = result.tracks
-                if (tracks.isNotEmpty()) {
-                    onReadyToPlay(tracks, 0, "$fallbackTitle ($cleaned)")
-                } else {
-                    // Fallback to direct search
-                    searchCategoryDirect(cleaned)
-                }
-            } catch (e: Exception) {
-                searchCategoryDirect(query)
+            val result = aggregationEngine.searchAll(query = query, limit = 20)
+            if (result.tracks.isNotEmpty()) {
+                onPlay(result.tracks, 0, title)
             }
         }
     }
 
     private fun executeSearch(query: String, category: ProviderCategory) {
-        searchJob?.cancel()
-        searchJob = viewModelScope.launch {
+        viewModelScope.launch {
             _uiState.value = SearchUiState.Loading
-            try {
-                // Strip "playlist", "songs", "all songs" for broader singer/track resolution
-                val cleanedQuery = query.replace("playlist", "", ignoreCase = true)
-                    .replace("all songs", "", ignoreCase = true)
-                    .replace("songs", "", ignoreCase = true)
-                    .trim()
-                    .ifBlank { query.trim() }
 
-                val unified: UnifiedSearchResult = aggregationEngine.searchAll(
-                    query = cleanedQuery,
+            try {
+                // 1. Search using Unified Aggregation Engine
+                val result: UnifiedSearchResult = aggregationEngine.searchAll(
+                    query = query,
                     selectedCategory = category,
-                    limit = 40
+                    limit = 35
                 )
 
-                val tracks = unified.tracks
-                val distinctArtists = tracks.map { it.artist.split(",", "&", "feat.").first().trim() }.distinct()
+                // 2. Also query backend catalog for native tracks & albums
+                val backendSearch = musicRepository.searchMusic(query).getOrNull()
+                val nativeTracks = backendSearch?.tracks.orEmpty()
+                val matchingAlbums = backendSearch?.albums.orEmpty()
 
-                // Check if search matches an artist directly
-                var topArtist: ArtistDto? = null
-                val matchedArtistName = distinctArtists.firstOrNull {
-                    it.contains(cleanedQuery, ignoreCase = true) || cleanedQuery.contains(it, ignoreCase = true)
-                }
+                // Merge native tracks on top of streaming tracks
+                val mergedTracks = (nativeTracks + result.tracks).distinctBy { it.id }
 
-                if (matchedArtistName != null) {
-                    val artistTrack = tracks.firstOrNull { it.artist.contains(matchedArtistName, ignoreCase = true) }
-                    topArtist = ArtistDto(
-                        id = "art_${matchedArtistName.lowercase().replace(" ", "_")}",
-                        name = matchedArtistName,
-                        genre = "Artist",
-                        bio = "Top songs and latest releases from $matchedArtistName on Sonexa.",
-                        imageUrl = artistTrack?.effectiveCoverUrl.orEmpty(),
-                        followersCount = 4250000,
+                val topArtist = if (mergedTracks.isNotEmpty()) {
+                    val first = mergedTracks.first()
+                    ArtistDto(
+                        id = "art_" + first.artist.lowercase().replace(" ", "_"),
+                        name = first.artist,
+                        genre = "Top Artist",
+                        bio = "Top matching artist for $query",
+                        imageUrl = first.effectiveCoverUrl,
+                        followersCount = 1250000,
                         verified = true
                     )
-                }
+                } else null
 
-                // Create matching playlists/albums dynamically
-                val playlists = listOf(
+                // Construct matching dynamic playlists
+                val matchingPlaylists = listOf(
                     PlaylistDto(
-                        id = "pl_${cleanedQuery.lowercase().replace(" ", "_")}",
-                        title = "$cleanedQuery - Best Hits",
-                        subtitle = "Curated automatically for your vibe",
-                        artworkType = "gradient",
-                        coverUrl = tracks.firstOrNull()?.effectiveCoverUrl.orEmpty()
+                        id = "pl_srch_${query.lowercase().replace(" ", "_")}",
+                        title = "$query Radio",
+                        subtitle = "Playlist • Top tracks & artists related to $query",
+                        coverUrl = mergedTracks.firstOrNull()?.effectiveCoverUrl.orEmpty(),
+                        trackCount = mergedTracks.size
                     ),
                     PlaylistDto(
-                        id = "pl_radio_${cleanedQuery.lowercase().replace(" ", "_")}",
-                        title = "$cleanedQuery Radio",
-                        subtitle = "With related songs & similar artists",
-                        artworkType = "gradient",
-                        coverUrl = tracks.getOrNull(1)?.effectiveCoverUrl.orEmpty()
+                        id = "pl_best_${query.lowercase().replace(" ", "_")}",
+                        title = "Best of $query",
+                        subtitle = "Playlist • Essential Hits",
+                        coverUrl = mergedTracks.getOrNull(1)?.effectiveCoverUrl.orEmpty(),
+                        trackCount = mergedTracks.size
                     )
                 )
 
-                val albums = tracks.mapNotNull { it.album }
-                    .filter { it.isNotBlank() }
-                    .distinct()
-                    .take(4)
-                    .mapIndexed { idx, albName ->
-                        AlbumDto(
-                            id = "alb_${albName.lowercase().replace(" ", "_")}",
-                            title = albName,
-                            artist = tracks.firstOrNull { it.album == albName }?.artist ?: cleanedQuery,
-                            year = "2026",
-                            coverUrl = tracks.firstOrNull { it.album == albName }?.effectiveCoverUrl.orEmpty()
-                        )
-                    }
-
                 _uiState.value = SearchUiState.Success(
-                    tracks = tracks,
+                    tracks = mergedTracks,
                     topArtist = topArtist,
-                    matchingPlaylists = playlists,
-                    matchingAlbums = albums,
-                    artists = distinctArtists.take(6),
-                    providerCounts = unified.providerCounts,
-                    providerLatencies = unified.providerLatencies,
+                    matchingPlaylists = matchingPlaylists,
+                    matchingAlbums = matchingAlbums,
+                    artists = mergedTracks.map { it.artist }.distinct().take(5),
+                    providerCounts = result.providerCounts,
+                    providerLatencies = result.providerLatencies,
                     activeCategory = category
                 )
             } catch (e: Exception) {
-                _uiState.value = SearchUiState.Error(e.localizedMessage ?: "Search failed")
+                _uiState.value = SearchUiState.Error(e.message ?: "Search failed. Please try again.")
             }
         }
     }
 }
-

@@ -219,6 +219,14 @@ class MusicRepository(
     suspend fun getPodcasts(): Result<PodcastListResponse> = apiCall { apiService.getPodcasts() }
     suspend fun getPodcast(id: String): Result<PodcastDetailResponse> = apiCall { apiService.getPodcast(id) }
 
+    suspend fun getSearchCategories(): Result<SearchCategoriesResponse> = apiCall { apiService.getSearchCategories() }
+
+    suspend fun generateAiSignature(mood: String, genre: String, prompt: String): Result<AiSignatureResponse> =
+        apiCall { apiService.generateAiSignature(AiSignatureRequest(mood, genre, prompt)) }
+
+    suspend fun chatWithAi(message: String): Result<AiChatResponse> =
+        apiCall { apiService.chatWithAi(AiChatRequest(message)) }
+
     private suspend fun <T> apiCall(block: suspend () -> retrofit2.Response<T>): Result<T> =
         withContext(Dispatchers.IO) {
             try {

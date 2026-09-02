@@ -80,4 +80,15 @@ interface MusicApiService {
 
     @GET("ipop/artists")
     suspend fun getIPopArtists(): Response<List<IPopArtistDto>>
+
+    // Search Categories
+    @GET("search/categories")
+    suspend fun getSearchCategories(): Response<SearchCategoriesResponse>
+
+    // AI Signature & Studio
+    @retrofit2.http.POST("ai/signature")
+    suspend fun generateAiSignature(@retrofit2.http.Body request: AiSignatureRequest): Response<AiSignatureResponse>
+
+    @retrofit2.http.POST("ai/chat")
+    suspend fun chatWithAi(@retrofit2.http.Body request: AiChatRequest): Response<AiChatResponse>
 }

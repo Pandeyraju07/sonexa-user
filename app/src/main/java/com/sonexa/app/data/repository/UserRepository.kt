@@ -20,6 +20,36 @@ class UserRepository(private val apiService: UserApiService = RetrofitClient.use
 
     suspend fun getUserLibrary(): Result<UserLibraryResponse> = apiCall { apiService.getUserLibrary() }
 
+    suspend fun getUserPlaylists(): Result<UserPlaylistsResponse> = apiCall { apiService.getUserPlaylists() }
+
+    suspend fun createPlaylist(title: String, description: String = "", coverUrl: String = ""): Result<PlaylistDto> =
+        apiCall { apiService.createPlaylist(CreatePlaylistRequest(title, description, coverUrl)) }
+
+    suspend fun updatePlaylist(id: String, request: UpdatePlaylistRequest): Result<PlaylistDto> =
+        apiCall { apiService.updatePlaylist(id, request) }
+
+    suspend fun deletePlaylist(id: String): Result<SimpleSuccessResponse> =
+        apiCall { apiService.deletePlaylist(id) }
+
+    suspend fun addTrackToPlaylist(id: String, track: TrackDto): Result<SimpleSuccessResponse> =
+        apiCall {
+            apiService.addTrackToPlaylist(
+                id,
+                AddTrackToPlaylistRequest(
+                    trackId = track.id,
+                    title = track.title,
+                    artist = track.artist,
+                    album = track.album,
+                    durationMs = track.durationMs,
+                    audioUrl = track.audioUrl,
+                    coverUrl = track.effectiveCoverUrl
+                )
+            )
+        }
+
+    suspend fun removeTrackFromPlaylist(id: String, trackId: String): Result<SimpleSuccessResponse> =
+        apiCall { apiService.removeTrackFromPlaylist(id, trackId) }
+
     suspend fun toggleLikeSong(trackId: String): Result<ToggleLikeResponse> =
         apiCall { apiService.toggleLikeSong(ToggleLikeRequest(trackId)) }
 
@@ -34,6 +64,12 @@ class UserRepository(private val apiService: UserApiService = RetrofitClient.use
 
     suspend fun subscribe(planId: String): Result<SimpleSuccessResponse> =
         apiCall { apiService.subscribe(SubscribeRequest(planId)) }
+
+    suspend fun redeemCoupon(code: String): Result<RedeemCouponResponse> =
+        apiCall { apiService.redeemCoupon(RedeemCouponRequest(code)) }
+
+    suspend fun cancelPremium(): Result<SimpleSuccessResponse> =
+        apiCall { apiService.cancelPremium() }
 
     private suspend fun <T> apiCall(block: suspend () -> retrofit2.Response<T>): Result<T> =
         withContext(Dispatchers.IO) {

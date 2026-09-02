@@ -46,16 +46,97 @@ class LibraryViewModel(
     private val _uiState = MutableStateFlow<CatalogUiState<UserLibraryResponse>>(CatalogUiState.Loading)
     val uiState: StateFlow<CatalogUiState<UserLibraryResponse>> = _uiState.asStateFlow()
 
-    init { load() }
+    private val _selectedFilter = MutableStateFlow("All")
+    val selectedFilter: StateFlow<String> = _selectedFilter.asStateFlow()
 
-    fun load() {
+    private val _searchQuery = MutableStateFlow("")
+    val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
+
+    private val _sortOrder = MutableStateFlow("Recents") // "Recents", "Recently Added", "Alphabetical", "Creator"
+    val sortOrder: StateFlow<String> = _sortOrder.asStateFlow()
+
+    private val _isGridView = MutableStateFlow(false)
+    val isGridView: StateFlow<Boolean> = _isGridView.asStateFlow()
+
+    init {
+        load()
+    }
+
+    fun load(context: android.content.Context? = null) {
         viewModelScope.launch {
             _uiState.value = CatalogUiState.Loading
             userRepository.getUserLibrary().fold(
-                onSuccess = { _uiState.value = CatalogUiState.Ready(it) },
-                onFailure = { e -> _uiState.value = CatalogUiState.Error(e.message ?: "Failed") }
+                onSuccess = { res ->
+                    _uiState.value = CatalogUiState.Ready(res)
+                    if (context != null && res.playlists.isNotEmpty()) {
+                        com.sonexa.app.data.local.UserPlaylistStore.syncFromApi(context, res.playlists)
+                    }
+                },
+                onFailure = { e ->
+                    // Fallback to local user playlist store
+                    val localPlaylists = com.sonexa.app.data.local.UserPlaylistStore.playlists.value
+                    val likedSongs = com.sonexa.app.data.local.LikedSongsStore.getLikedTracks()
+                    val fallback = UserLibraryResponse(
+                        success = true,
+                        playlists = localPlaylists,
+                        likedSongs = likedSongs,
+                        likedCount = likedSongs.size,
+                        savedAlbums = emptyList(),
+                        followedArtists = emptyList(),
+                        recentHistory = emptyList()
+                    )
+                    _uiState.value = CatalogUiState.Ready(fallback)
+                }
             )
         }
+    }
+
+    fun setFilter(filter: String) {
+        _selectedFilter.value = filter
+    }
+
+    fun setSearchQuery(query: String) {
+        _searchQuery.value = query
+    }
+
+    fun setSortOrder(order: String) {
+        _sortOrder.value = order
+    }
+
+    fun toggleGridView() {
+        _isGridView.value = !_isGridView.value
+    }
+
+    fun createPlaylist(
+        context: android.content.Context,
+        title: String,
+        description: String = "",
+        coverUrl: String = "",
+        onCreated: (PlaylistDto) -> Unit = {}
+    ) {
+        viewModelScope.launch {
+            val created = com.sonexa.app.data.local.UserPlaylistStore.createPlaylist(
+                context = context,
+                title = title,
+                description = description,
+                coverUrl = coverUrl
+            )
+            userRepository.createPlaylist(title, description, coverUrl)
+            load(context)
+            onCreated(created)
+        }
+    }
+
+    fun deletePlaylist(context: android.content.Context, id: String) {
+        viewModelScope.launch {
+            com.sonexa.app.data.local.UserPlaylistStore.deletePlaylist(context, id)
+            userRepository.deletePlaylist(id)
+            load(context)
+        }
+    }
+
+    fun togglePin(context: android.content.Context, id: String) {
+        com.sonexa.app.data.local.UserPlaylistStore.togglePin(context, id)
     }
 }
 
@@ -129,6 +210,8 @@ class ArtistProfileViewModel(
 }
 
 class PlaylistDetailViewModel(
+    private val musicRepository: MusicRepository = MusicRepository(),
+    private val userRepository: UserRepository = UserRepository(),
     private val saavnProvider: com.sonexa.app.data.provider.JioSaavnMusicProvider = com.sonexa.app.data.provider.JioSaavnMusicProvider()
 ) : ViewModel() {
     private val _uiState = MutableStateFlow<CatalogUiState<PlaylistDetailResponse>>(CatalogUiState.Loading)
@@ -152,12 +235,45 @@ class PlaylistDetailViewModel(
                     title = "Liked Songs",
                     subtitle = "📌 Playlist • Liked Songs",
                     artworkType = "gradient",
-                    coverUrl = effectiveTracks.firstOrNull()?.effectiveCoverUrl.orEmpty()
+                    coverUrl = effectiveTracks.firstOrNull()?.effectiveCoverUrl.orEmpty(),
+                    trackCount = effectiveTracks.size,
+                    creatorName = "You",
+                    isUserCreated = true,
+                    isPinned = true
                 )
                 _uiState.value = CatalogUiState.Ready(PlaylistDetailResponse(true, playlist, effectiveTracks))
                 return@launch
             }
 
+            // Check if user-created custom playlist in local store
+            val localPl = com.sonexa.app.data.local.UserPlaylistStore.getPlaylist(id)
+            if (localPl != null) {
+                val localTracks = com.sonexa.app.data.local.UserPlaylistStore.getTracks(id)
+                // Also check backend API for synced tracks
+                val apiResult = musicRepository.getPlaylist(id)
+                val finalTracks = if (apiResult.isSuccess && apiResult.getOrNull()?.tracks?.isNotEmpty() == true) {
+                    apiResult.getOrNull()!!.tracks
+                } else {
+                    localTracks
+                }
+                _uiState.value = CatalogUiState.Ready(
+                    PlaylistDetailResponse(
+                        success = true,
+                        playlist = localPl.copy(trackCount = finalTracks.size),
+                        tracks = finalTracks
+                    )
+                )
+                return@launch
+            }
+
+            // Try backend API first
+            val serverResult = musicRepository.getPlaylist(id)
+            if (serverResult.isSuccess && serverResult.getOrNull()?.tracks?.isNotEmpty() == true) {
+                _uiState.value = CatalogUiState.Ready(serverResult.getOrNull()!!)
+                return@launch
+            }
+
+            // Fallback to Saavn provider
             try {
                 val query = when {
                     id.contains("peace", true) -> "Peaceful Acoustic & Lo-Fi"
@@ -179,12 +295,66 @@ class PlaylistDetailViewModel(
                     title = query,
                     subtitle = "Curated automatically for your vibe",
                     artworkType = "gradient",
-                    coverUrl = tracks.firstOrNull()?.effectiveCoverUrl.orEmpty()
+                    coverUrl = tracks.firstOrNull()?.effectiveCoverUrl.orEmpty(),
+                    trackCount = tracks.size,
+                    creatorName = "Sonexa",
+                    isUserCreated = false
                 )
                 _uiState.value = CatalogUiState.Ready(PlaylistDetailResponse(true, playlist, tracks))
             } catch (e: Exception) {
                 _uiState.value = CatalogUiState.Error(e.message ?: "Failed to load playlist")
             }
+        }
+    }
+
+    fun addTrack(context: android.content.Context, playlistId: String, track: TrackDto) {
+        viewModelScope.launch {
+            com.sonexa.app.data.local.UserPlaylistStore.addTrack(context, playlistId, track)
+            userRepository.addTrackToPlaylist(playlistId, track)
+            load(playlistId)
+        }
+    }
+
+    fun removeTrack(context: android.content.Context, playlistId: String, trackId: String) {
+        viewModelScope.launch {
+            com.sonexa.app.data.local.UserPlaylistStore.removeTrack(context, playlistId, trackId)
+            userRepository.removeTrackFromPlaylist(playlistId, trackId)
+            load(playlistId)
+        }
+    }
+
+    fun updatePlaylist(
+        context: android.content.Context,
+        id: String,
+        title: String,
+        description: String = "",
+        coverUrl: String = ""
+    ) {
+        viewModelScope.launch {
+            com.sonexa.app.data.local.UserPlaylistStore.updatePlaylist(
+                context = context,
+                id = id,
+                title = title,
+                description = description,
+                coverUrl = coverUrl
+            )
+            userRepository.updatePlaylist(
+                id,
+                UpdatePlaylistRequest(title = title, description = description, coverUrl = coverUrl)
+            )
+            load(id)
+        }
+    }
+
+    fun deletePlaylist(
+        context: android.content.Context,
+        id: String,
+        onDeleted: () -> Unit
+    ) {
+        viewModelScope.launch {
+            com.sonexa.app.data.local.UserPlaylistStore.deletePlaylist(context, id)
+            userRepository.deletePlaylist(id)
+            onDeleted()
         }
     }
 }
@@ -343,10 +513,36 @@ class PremiumViewModel(
         }
     }
 
-    fun subscribe(planId: String, onDone: () -> Unit = {}) {
+    fun subscribe(planId: String, onDone: (Boolean) -> Unit = {}) {
         viewModelScope.launch {
             _busy.value = true
-            userRepository.subscribe(planId)
+            val result = userRepository.subscribe(planId)
+            load()
+            _busy.value = false
+            onDone(result.isSuccess)
+        }
+    }
+
+    fun redeemCoupon(code: String, onResult: (Boolean, String) -> Unit) {
+        viewModelScope.launch {
+            _busy.value = true
+            val result = userRepository.redeemCoupon(code)
+            if (result.isSuccess) {
+                val res = result.getOrNull()
+                load()
+                _busy.value = false
+                onResult(res?.success == true, res?.message ?: "Coupon applied")
+            } else {
+                _busy.value = false
+                onResult(false, result.exceptionOrNull()?.message ?: "Invalid promo code")
+            }
+        }
+    }
+
+    fun cancelPremium(onDone: () -> Unit = {}) {
+        viewModelScope.launch {
+            _busy.value = true
+            userRepository.cancelPremium()
             load()
             _busy.value = false
             onDone()

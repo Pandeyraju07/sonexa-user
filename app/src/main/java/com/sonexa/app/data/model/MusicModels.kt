@@ -60,7 +60,41 @@ data class PlaylistDto(
     @SerializedName("title") val title: String = "",
     @SerializedName("subtitle") val subtitle: String = "",
     @SerializedName("artworkType") val artworkType: String = "",
+    @SerializedName("coverUrl") val coverUrl: String = "",
+    @SerializedName("trackCount") val trackCount: Int = 0,
+    @SerializedName("creatorName") val creatorName: String = "Sonexa",
+    @SerializedName("isUserCreated") val isUserCreated: Boolean = false,
+    @SerializedName("isPinned") val isPinned: Boolean = false
+)
+
+data class CreatePlaylistRequest(
+    @SerializedName("title") val title: String,
+    @SerializedName("description") val description: String = "",
+    @SerializedName("coverUrl") val coverUrl: String = "",
+    @SerializedName("isPrivate") val isPrivate: Boolean = false
+)
+
+data class UpdatePlaylistRequest(
+    @SerializedName("title") val title: String? = null,
+    @SerializedName("description") val description: String? = null,
+    @SerializedName("coverUrl") val coverUrl: String? = null,
+    @SerializedName("isPrivate") val isPrivate: Boolean? = null,
+    @SerializedName("isPinned") val isPinned: Boolean? = null
+)
+
+data class AddTrackToPlaylistRequest(
+    @SerializedName("trackId") val trackId: String,
+    @SerializedName("title") val title: String = "",
+    @SerializedName("artist") val artist: String = "",
+    @SerializedName("album") val album: String = "",
+    @SerializedName("durationMs") val durationMs: Long = 0L,
+    @SerializedName("audioUrl") val audioUrl: String = "",
     @SerializedName("coverUrl") val coverUrl: String = ""
+)
+
+data class UserPlaylistsResponse(
+    @SerializedName("success") val success: Boolean = false,
+    @SerializedName("playlists") val playlists: List<PlaylistDto> = emptyList()
 )
 
 data class ArtistDto(
@@ -284,8 +318,12 @@ data class UserProfileApiResponse(
 
 data class UserLibraryResponse(
     @SerializedName("success") val success: Boolean = false,
+    @SerializedName("playlists") val playlists: List<PlaylistDto> = emptyList(),
     @SerializedName("likedSongs") val likedSongs: List<TrackDto> = emptyList(),
-    @SerializedName("savedAlbums") val savedAlbums: List<AlbumDto> = emptyList()
+    @SerializedName("likedCount") val likedCount: Int = 0,
+    @SerializedName("savedAlbums") val savedAlbums: List<AlbumDto> = emptyList(),
+    @SerializedName("followedArtists") val followedArtists: List<ArtistDto> = emptyList(),
+    @SerializedName("recentHistory") val recentHistory: List<TrackDto> = emptyList()
 )
 
 data class ToggleLikeRequest(
@@ -329,11 +367,50 @@ data class PremiumPlanDto(
     @SerializedName("id") val id: String = "",
     @SerializedName("name") val name: String = "",
     @SerializedName("price") val price: String = "",
-    @SerializedName("description") val description: String = ""
+    @SerializedName("period") val period: String = "per month",
+    @SerializedName("description") val description: String = "",
+    @SerializedName("badge") val badge: String = "",
+    @SerializedName("color1") val color1: String = "#6B3CE9",
+    @SerializedName("color2") val color2: String = "#9825DD",
+    @SerializedName("features") val features: List<String> = emptyList()
 )
 
 data class SubscribeRequest(
     @SerializedName("planId") val planId: String
+)
+
+data class RedeemCouponRequest(
+    @SerializedName("code") val code: String
+)
+
+data class RedeemCouponResponse(
+    @SerializedName("success") val success: Boolean = false,
+    @SerializedName("message") val message: String = "",
+    @SerializedName("isPremium") val isPremium: Boolean = false,
+    @SerializedName("planName") val planName: String = ""
+)
+
+data class BrowseCategoryDto(
+    @SerializedName("id") val id: String = "",
+    @SerializedName("title") val title: String = "",
+    @SerializedName("colorHex") val colorHex: Long = 0xFF8C67AC,
+    @SerializedName("imageUrl") val imageUrl: String = "",
+    @SerializedName("query") val query: String = ""
+)
+
+data class DiscoverTagDto(
+    @SerializedName("id") val id: String = "",
+    @SerializedName("tag") val tag: String = "",
+    @SerializedName("title") val title: String = "",
+    @SerializedName("imageUrl") val imageUrl: String = "",
+    @SerializedName("query") val query: String = ""
+)
+
+data class SearchCategoriesResponse(
+    @SerializedName("success") val success: Boolean = false,
+    @SerializedName("heroCategories") val heroCategories: List<BrowseCategoryDto> = emptyList(),
+    @SerializedName("discoverTags") val discoverTags: List<DiscoverTagDto> = emptyList(),
+    @SerializedName("browseCategories") val browseCategories: List<BrowseCategoryDto> = emptyList()
 )
 
 data class SettingsResponse(

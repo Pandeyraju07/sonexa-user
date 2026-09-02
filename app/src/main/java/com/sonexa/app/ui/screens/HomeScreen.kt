@@ -102,6 +102,15 @@ fun HomeScreen(
 
     val isFavorite = playbackState.track?.isLiked == true
 
+    androidx.activity.compose.BackHandler(enabled = showProfileDrawer || showAccountDialog || selectedFeedCategory != "All" || selectedNavTab != "Home") {
+        when {
+            showProfileDrawer -> showProfileDrawer = false
+            showAccountDialog -> showAccountDialog = false
+            selectedFeedCategory != "All" -> selectedFeedCategory = "All"
+            selectedNavTab != "Home" -> selectedNavTab = "Home"
+        }
+    }
+
     LaunchedEffect(playbackState.errorMessage) {
         val msg = playbackState.errorMessage ?: return@LaunchedEffect
         Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
@@ -404,22 +413,11 @@ fun HomeScreen(
 
             "Premium" -> PremiumScreen(onNavigateBack = { selectedNavTab = "Home" })
 
-            "Create" -> {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(bottom = 125.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(Icons.Default.AddCircleOutline, contentDescription = null, tint = SpotifyGreen, modifier = Modifier.size(56.dp))
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Text("Create Playlist or AI Mix", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                        Spacer(modifier = Modifier.height(6.dp))
-                        Text("Personalized smart mixes curated for you", color = Color(0xFFA19BAE), fontSize = 13.sp)
-                    }
-                }
-            }
+            "Create" -> CreateHubScreen(
+                onOpenPlaylist = onOpenPlaylist,
+                onOpenFullPlayer = onOpenFullPlayer,
+                playbackViewModel = playbackViewModel
+            )
         }
 
         // Sticky Footer: Mini Player & Spotify 5-Tab Bar

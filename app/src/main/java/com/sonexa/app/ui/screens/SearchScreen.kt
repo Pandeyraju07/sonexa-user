@@ -79,6 +79,21 @@ fun SearchScreen(
     val discoverItems by searchViewModel.discoverItems.collectAsState()
     val browseAllCategories by searchViewModel.browseAllCategories.collectAsState()
 
+    LaunchedEffect(Unit) {
+        searchViewModel.init(context)
+        searchViewModel.loadDynamicCategories()
+    }
+
+    androidx.activity.compose.BackHandler(enabled = isSearchActive || query.isNotBlank()) {
+        if (query.isNotBlank()) {
+            query = ""
+            searchViewModel.onSearchQueryChanged("")
+        } else {
+            isSearchActive = false
+            focusManager.clearFocus()
+        }
+    }
+
     fun playTrackList(tracks: List<TrackDto>, startIndex: Int, title: String) {
         if (tracks.isEmpty() || playbackViewModel == null) return
         playbackViewModel.playQueue(tracks, startIndex, title)
@@ -138,15 +153,6 @@ fun SearchScreen(
                             fontSize = 26.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color.White
-                        )
-                    }
-
-                    IconButton(onClick = { Toast.makeText(context, "Scan Spotify Code", Toast.LENGTH_SHORT).show() }) {
-                        Icon(
-                            Icons.Outlined.CameraAlt,
-                            contentDescription = "Camera",
-                            tint = Color.White,
-                            modifier = Modifier.size(26.dp)
                         )
                     }
                 }
