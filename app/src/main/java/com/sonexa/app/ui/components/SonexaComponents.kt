@@ -48,116 +48,89 @@ fun SonexaHeaderLogo(
         modifier = modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Logo Graphic Mark (Stylized 'S' + Soundwave Equalizer)
+        // Zynera Graphic Mark (Stylized 'Z' + Core Equalizer Bars)
         Box(
-            modifier = Modifier.size(64.dp),
+            modifier = Modifier.size(68.dp),
             contentAlignment = Alignment.Center
         ) {
             Canvas(modifier = Modifier.fillMaxSize()) {
                 val width = size.width
                 val height = size.height
-                
+
                 // Glow circle
                 drawCircle(
                     brush = Brush.radialGradient(
-                        colors = listOf(Color(0x709825DD), Color.Transparent),
+                        colors = listOf(Color(0x809825DD), Color(0x3038BDF8), Color.Transparent),
                         center = Offset(width / 2, height / 2),
-                        radius = width * 0.8f
+                        radius = width * 0.75f
                     )
                 )
 
-                // Sound Wave bars inside 'S' curve shape
-                val purpleGrad = Brush.verticalGradient(
-                    colors = listOf(Color(0xFFB062FF), Color(0xFFE534B2))
+                val brandGrad = Brush.linearGradient(
+                    colors = listOf(Color(0xFF38BDF8), Color(0xFFB062FF), Color(0xFFE534B2)),
+                    start = Offset(width * 0.15f, height * 0.15f),
+                    end = Offset(width * 0.85f, height * 0.85f)
                 )
-                
-                // Sound Bars
-                val barWidth = 3.dp.toPx()
-                val barGap = 4.dp.toPx()
-                val heights = listOf(0.3f, 0.55f, 0.85f, 0.6f, 0.4f)
-                val startX = width * 0.25f
-                
-                heights.forEachIndexed { index, hRatio ->
-                    val x = startX + index * (barWidth + barGap)
-                    val barH = height * 0.4f * hRatio
-                    val y = height * 0.5f - barH / 2
+
+                val zPath = Path().apply {
+                    moveTo(width * 0.24f, height * 0.30f)
+                    lineTo(width * 0.76f, height * 0.30f)
+                    lineTo(width * 0.32f, height * 0.70f)
+                    lineTo(width * 0.76f, height * 0.70f)
+                }
+
+                drawPath(
+                    path = zPath,
+                    brush = brandGrad,
+                    style = Stroke(
+                        width = 4.5.dp.toPx(),
+                        cap = StrokeCap.Round,
+                        join = androidx.compose.ui.graphics.StrokeJoin.Round
+                    )
+                )
+
+                val barWidth = 2.8.dp.toPx()
+                val barHeights = listOf(0.24f, 0.44f, 0.28f)
+                val barOffsetsX = listOf(0.42f, 0.54f, 0.66f)
+
+                barOffsetsX.forEachIndexed { index, xRatio ->
+                    val x = width * xRatio
+                    val barH = height * barHeights[index]
+                    val y = height * 0.50f - barH / 2
                     drawLine(
-                        brush = purpleGrad,
+                        brush = Brush.verticalGradient(
+                            colors = listOf(Color(0xFF38BDF8), Color(0xFFFF52C4))
+                        ),
                         start = Offset(x, y),
                         end = Offset(x, y + barH),
                         strokeWidth = barWidth,
                         cap = StrokeCap.Round
                     )
                 }
-
-                // S-Curve Outline
-                val path = Path().apply {
-                    moveTo(width * 0.72f, height * 0.22f)
-                    cubicTo(
-                        width * 0.4f, height * 0.12f,
-                        width * 0.25f, height * 0.35f,
-                        width * 0.45f, height * 0.5f
-                    )
-                    cubicTo(
-                        width * 0.75f, height * 0.65f,
-                        width * 0.6f, height * 0.88f,
-                        width * 0.22f, height * 0.78f
-                    )
-                }
-                
-                drawPath(
-                    path = path,
-                    brush = purpleGrad,
-                    style = Stroke(width = 5.dp.toPx(), cap = StrokeCap.Round)
-                )
             }
         }
 
-        Spacer(modifier = Modifier.height(6.dp))
+        Spacer(modifier = Modifier.height(8.dp))
 
-        // Brand Name Text
+        // Official Brand Name Text
         Text(
-            text = "SONEXA",
+            text = "ZYNERA",
             fontSize = 24.sp,
-            fontWeight = FontWeight.Bold,
+            fontWeight = FontWeight.ExtraBold,
             color = SonexaTextWhite,
-            letterSpacing = 4.sp
+            letterSpacing = 6.sp
         )
 
         Spacer(modifier = Modifier.height(2.dp))
 
-        // Tagline Text
-        Row(
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = "Feel the ",
-                fontSize = 12.sp,
-                color = SonexaTextMuted
-            )
-            Text(
-                text = "Music",
-                fontSize = 12.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = SonexaPurpleLight
-            )
-            Text(
-                text = ". Live the ",
-                fontSize = 12.sp,
-                color = SonexaTextMuted
-            )
-            Text(
-                text = "Vibe",
-                fontSize = 12.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = SonexaMagenta
-            )
-            Text(
-                text = ".",
-                fontSize = 12.sp,
-                color = SonexaTextMuted
-            )
-        }
+        // Official Tagline Text
+        Text(
+            text = "Your mood. Your music.",
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Medium,
+            color = SonexaPurpleLight,
+            letterSpacing = 0.8.sp
+        )
     }
 }
 

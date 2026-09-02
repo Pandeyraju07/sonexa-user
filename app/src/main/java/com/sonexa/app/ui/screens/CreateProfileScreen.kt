@@ -41,7 +41,7 @@ fun CreateProfileScreen(
     val context = LocalContext.current
     val setupState by profileViewModel.uiState.collectAsState()
     var displayName by remember { mutableStateOf("Yash") }
-    var handle by remember { mutableStateOf("yash_sonexa") }
+    var handle by remember { mutableStateOf("yash_zynera") }
     var selectedAvatarIndex by remember { mutableIntStateOf(0) }
 
     val avatarGradients = listOf(
@@ -94,7 +94,7 @@ fun CreateProfileScreen(
                 Spacer(modifier = Modifier.height(4.dp))
 
                 Text(
-                    text = "Set up your avatar & display name for Sonexa",
+                    text = "Set up your avatar & display name for Zynera",
                     fontSize = 13.sp,
                     color = SonexaTextMuted
                 )

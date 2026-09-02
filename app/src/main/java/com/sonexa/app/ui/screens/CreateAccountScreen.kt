@@ -123,7 +123,7 @@ fun CreateAccountScreen(
                 Spacer(modifier = Modifier.height(14.dp))
 
                 Text(
-                    text = "Sign up for Sonexa",
+                    text = "Sign up for Zynera",
                     fontSize = 26.sp,
                     fontWeight = FontWeight.ExtraBold,
                     color = SonexaTextWhite

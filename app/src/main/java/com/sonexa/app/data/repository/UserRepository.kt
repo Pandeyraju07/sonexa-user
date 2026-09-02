@@ -55,6 +55,21 @@ class UserRepository(private val apiService: UserApiService = RetrofitClient.use
 
     suspend fun getNotifications(): Result<NotificationListResponse> = apiCall { apiService.getNotifications() }
 
+    suspend fun markAllNotificationsRead(): Result<SimpleSuccessResponse> =
+        apiCall { apiService.markAllNotificationsRead() }
+
+    suspend fun markNotificationRead(id: String): Result<SimpleSuccessResponse> =
+        apiCall { apiService.markNotificationRead(id) }
+
+    suspend fun getActiveSessions(): Result<ActiveSessionsResponse> =
+        apiCall { apiService.getActiveSessions() }
+
+    suspend fun revokeSession(sessionId: String): Result<SimpleSuccessResponse> =
+        apiCall { apiService.revokeSession(sessionId) }
+
+    suspend fun deleteAccount(): Result<SimpleSuccessResponse> =
+        apiCall { apiService.deleteAccount() }
+
     suspend fun getSettings(): Result<SettingsResponse> = apiCall { apiService.getSettings() }
 
     suspend fun updateSettings(settings: Map<String, Any?>): Result<SimpleSuccessResponse> =

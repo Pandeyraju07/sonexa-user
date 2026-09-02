@@ -1,5 +1,6 @@
 package com.sonexa.app.data.local
 
+import android.content.Context
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import com.sonexa.app.data.model.TrackDto
@@ -12,8 +13,8 @@ object LikedSongsStore {
     private val _likedSongs = MutableStateFlow<List<TrackDto>>(emptyList())
     val likedSongs: StateFlow<List<TrackDto>> = _likedSongs.asStateFlow()
 
-    fun init(context: android.content.Context) {
-        val prefs = context.getSharedPreferences("sonexa_liked_songs", android.content.Context.MODE_PRIVATE)
+    fun init(context: Context) {
+        val prefs = context.getSharedPreferences("sonexa_liked_songs", Context.MODE_PRIVATE)
         val json = prefs.getString("liked_tracks", null)
         if (!json.isNullOrBlank()) {
             try {
@@ -26,11 +27,21 @@ object LikedSongsStore {
         }
     }
 
-    fun isLiked(trackId: String): Boolean {
+    fun isLiked(trackId: String?): Boolean {
+        if (trackId.isNullOrBlank()) return false
         return _likedSongs.value.any { it.id == trackId }
     }
 
-    fun toggleLike(context: android.content.Context, track: TrackDto): Boolean {
+    fun withLikedStatus(track: TrackDto?): TrackDto? {
+        if (track == null) return null
+        return track.copy(isLiked = isLiked(track.id))
+    }
+
+    fun withLikedStatus(tracks: List<TrackDto>): List<TrackDto> {
+        return tracks.map { it.copy(isLiked = isLiked(it.id)) }
+    }
+
+    fun toggleLike(context: Context, track: TrackDto): Boolean {
         val current = _likedSongs.value.toMutableList()
         val exists = current.any { it.id == track.id }
         val nowLiked = if (exists) {
@@ -43,7 +54,7 @@ object LikedSongsStore {
         _likedSongs.value = current
 
         // Persist to SharedPreferences
-        val prefs = context.getSharedPreferences("sonexa_liked_songs", android.content.Context.MODE_PRIVATE)
+        val prefs = context.getSharedPreferences("sonexa_liked_songs", Context.MODE_PRIVATE)
         prefs.edit().putString("liked_tracks", gson.toJson(current)).apply()
 
         return nowLiked

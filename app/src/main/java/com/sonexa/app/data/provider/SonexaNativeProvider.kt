@@ -9,8 +9,8 @@ class SonexaNativeProvider(
     private val musicRepository: MusicRepository = MusicRepository()
 ) : MusicProvider {
 
-    override val providerId: String = "sonexa"
-    override val displayName: String = "Sonexa Catalog"
+    override val providerId: String = "zynera"
+    override val displayName: String = "Zynera Catalog"
     override val isEnabled: Boolean = true
     override val isConfigured: Boolean = true
 

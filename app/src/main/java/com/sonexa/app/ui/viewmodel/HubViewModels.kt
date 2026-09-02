@@ -1,6 +1,7 @@
 package com.sonexa.app.ui.viewmodel
 
 import android.app.Application
+import android.content.Context
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -13,8 +14,11 @@ import com.sonexa.app.data.repository.MusicRepository
 import com.sonexa.app.data.repository.UserRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -175,35 +179,79 @@ class AlbumDetailViewModel(
 }
 
 class ArtistProfileViewModel(
-    private val saavnProvider: com.sonexa.app.data.provider.JioSaavnMusicProvider = com.sonexa.app.data.provider.JioSaavnMusicProvider()
+    private val catalogService: com.sonexa.app.data.provider.ArtistCatalogService = com.sonexa.app.data.provider.ArtistCatalogService()
 ) : ViewModel() {
     private val _uiState = MutableStateFlow<CatalogUiState<ArtistDetailResponse>>(CatalogUiState.Loading)
     val uiState: StateFlow<CatalogUiState<ArtistDetailResponse>> = _uiState.asStateFlow()
 
+    private val _catalog = MutableStateFlow<ArtistCatalogResponse?>(null)
+    val catalog: StateFlow<ArtistCatalogResponse?> = _catalog.asStateFlow()
+
+    private val _isLoadingMore = MutableStateFlow(false)
+    val isLoadingMore: StateFlow<Boolean> = _isLoadingMore.asStateFlow()
+
+    private var currentArtistQuery: String = ""
+    private var currentCursor: Int = 0
+
     fun load(idOrName: String) {
         viewModelScope.launch {
             _uiState.value = CatalogUiState.Loading
+            currentCursor = 0
             val searchQuery = idOrName.replace("art_", "").replace("_", " ").trim().ifBlank { "Arijit Singh" }
+            currentArtistQuery = searchQuery
 
             try {
-                val tracks = saavnProvider.search(searchQuery, limit = 35).getOrDefault(emptyList())
-                val cleanArtistName = if (searchQuery.contains("Top", ignoreCase = true) || searchQuery.contains("Trending", ignoreCase = true)) {
-                    tracks.firstOrNull()?.artist?.split(",", "&")?.first()?.trim() ?: searchQuery
+                val fullCatalog = catalogService.getFullArtistCatalog(searchQuery, cursor = 0, pageSize = 35)
+                _catalog.value = fullCatalog
+
+                val allArtistTracks = if (fullCatalog.allTracks.isNotEmpty()) {
+                    fullCatalog.allTracks
                 } else {
-                    searchQuery
+                    fullCatalog.popularTracks
                 }
-                val artist = ArtistDto(
-                    id = "art_${cleanArtistName.lowercase().replace(" ", "_")}",
-                    name = cleanArtistName,
-                    genre = "Top Global Artist",
-                    bio = "Discover the top hits, trending tracks, and latest releases from $cleanArtistName on Sonexa.",
-                    imageUrl = tracks.firstOrNull()?.effectiveCoverUrl.orEmpty(),
-                    followersCount = 4850000,
-                    verified = true
+
+                _uiState.value = CatalogUiState.Ready(
+                    ArtistDetailResponse(
+                        success = true,
+                        artist = fullCatalog.artist,
+                        tracks = allArtistTracks
+                    )
                 )
-                _uiState.value = CatalogUiState.Ready(ArtistDetailResponse(true, artist, tracks))
             } catch (e: Exception) {
                 _uiState.value = CatalogUiState.Error(e.message ?: "Failed to load artist")
+            }
+        }
+    }
+
+    fun loadMore() {
+        val current = _catalog.value ?: return
+        if (_isLoadingMore.value || !current.hasMore) return
+
+        viewModelScope.launch {
+            _isLoadingMore.value = true
+            try {
+                currentCursor += 30
+                val nextTracks = catalogService.getMoreTracks(currentArtistQuery, cursor = currentCursor, pageSize = 30)
+                if (nextTracks.isNotEmpty()) {
+                    val combinedTracks = (_catalog.value?.allTracks.orEmpty() + nextTracks).distinctBy { it.id }
+                    val updatedCatalog = _catalog.value!!.copy(
+                        allTracks = combinedTracks,
+                        hasMore = nextTracks.size >= 15
+                    )
+                    _catalog.value = updatedCatalog
+                    _uiState.value = CatalogUiState.Ready(
+                        ArtistDetailResponse(
+                            success = true,
+                            artist = updatedCatalog.artist,
+                            tracks = combinedTracks
+                        )
+                    )
+                } else {
+                    _catalog.value = _catalog.value?.copy(hasMore = false)
+                }
+            } catch (_: Exception) {}
+            finally {
+                _isLoadingMore.value = false
             }
         }
     }
@@ -477,8 +525,22 @@ class PodcastViewModel(
 class NotificationViewModel(
     private val userRepository: UserRepository = UserRepository()
 ) : ViewModel() {
+    private val _allNotifications = MutableStateFlow<List<NotificationDto>>(emptyList())
+
     private val _uiState = MutableStateFlow<CatalogUiState<List<NotificationDto>>>(CatalogUiState.Loading)
     val uiState: StateFlow<CatalogUiState<List<NotificationDto>>> = _uiState.asStateFlow()
+
+    private val _unreadCount = MutableStateFlow(0)
+    val unreadCount: StateFlow<Int> = _unreadCount.asStateFlow()
+
+    private val _selectedCategory = MutableStateFlow("all")
+    val selectedCategory: StateFlow<String> = _selectedCategory.asStateFlow()
+
+    val filteredNotifications: StateFlow<List<NotificationDto>> = combine(
+        _allNotifications, _selectedCategory
+    ) { notifs, cat ->
+        if (cat == "all") notifs else notifs.filter { it.category == cat }
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     init { load() }
 
@@ -486,9 +548,37 @@ class NotificationViewModel(
         viewModelScope.launch {
             _uiState.value = CatalogUiState.Loading
             userRepository.getNotifications().fold(
-                onSuccess = { _uiState.value = CatalogUiState.Ready(it.notifications) },
+                onSuccess = { res ->
+                    val list = res.notifications
+                    _allNotifications.value = list
+                    _unreadCount.value = list.count { !it.read }
+                    _uiState.value = CatalogUiState.Ready(list)
+                },
                 onFailure = { e -> _uiState.value = CatalogUiState.Error(e.message ?: "Failed") }
             )
+        }
+    }
+
+    fun selectCategory(category: String) {
+        _selectedCategory.value = category
+    }
+
+    fun markRead(id: String) {
+        viewModelScope.launch {
+            val updated = _allNotifications.value.map { if (it.id == id) it.copy(read = true) else it }
+            _allNotifications.value = updated
+            _unreadCount.value = updated.count { !it.read }
+            userRepository.markNotificationRead(id)
+        }
+    }
+
+    fun markAllRead() {
+        viewModelScope.launch {
+            val updated = _allNotifications.value.map { it.copy(read = true) }
+            _allNotifications.value = updated
+            _unreadCount.value = 0
+            _uiState.value = CatalogUiState.Ready(updated)
+            userRepository.markAllNotificationsRead()
         }
     }
 }
@@ -557,6 +647,7 @@ class ProfileHubViewModel(
     val uiState: StateFlow<CatalogUiState<UserProfileDto>> = _uiState.asStateFlow()
     private val _busy = MutableStateFlow(false)
     val busy: StateFlow<Boolean> = _busy.asStateFlow()
+    private var cachedBio: String? = null
 
     init { load() }
 
@@ -565,7 +656,14 @@ class ProfileHubViewModel(
             _uiState.value = CatalogUiState.Loading
             userRepository.getUserProfile().fold(
                 onSuccess = {
-                    _uiState.value = CatalogUiState.Ready(it.user ?: UserProfileDto(name = "Sonexa Listener"))
+                    val user = it.user ?: UserProfileDto(name = "Sonexa Listener")
+                    val merged = if (user.bio.isBlank() && !cachedBio.isNullOrBlank()) {
+                        user.copy(bio = cachedBio.orEmpty())
+                    } else {
+                        user
+                    }
+                    if (merged.bio.isNotBlank()) cachedBio = merged.bio
+                    _uiState.value = CatalogUiState.Ready(merged)
                 },
                 onFailure = { e -> _uiState.value = CatalogUiState.Error(e.message ?: "Failed") }
             )
@@ -575,6 +673,7 @@ class ProfileHubViewModel(
     fun updateProfile(name: String, bio: String? = null, onDone: () -> Unit = {}) {
         viewModelScope.launch {
             _busy.value = true
+            if (!bio.isNullOrBlank()) cachedBio = bio
             userRepository.updateProfile(name = name, bio = bio).fold(
                 onSuccess = {
                     load()
@@ -610,47 +709,105 @@ class SettingsViewModel(
 
     private val sessionManager = SessionManager.getInstance(application)
 
+    private val prefs = application.getSharedPreferences("sonexa_app_settings", Context.MODE_PRIVATE)
+
     init {
         load()
     }
 
+    private fun getLocalSettings(): MutableMap<String, Any?> {
+        val defaultMap = mutableMapOf<String, Any?>(
+            "aiSensitivity" to "High",
+            "aiVoiceModel" to "Sonexa Voice v2.4",
+            "smartLyrics" to true,
+            "audioQuality" to "High",
+            "crossfade" to true,
+            "normalizeVolume" to true,
+            "gaplessPlayback" to true,
+            "explicitContent" to true,
+            "downloadQuality" to "High",
+            "downloadOverWifiOnly" to true,
+            "pushNotifications" to true,
+            "friendActivity" to true,
+            "newReleaseAlerts" to true,
+            "theme" to "Dark",
+            "accentStyle" to "Glassmorphism",
+            "dataSharing" to true,
+            "showActiveSessions" to true,
+            "twoFactorEnabled" to false,
+            "connectedDevices" to listOf("This Android phone", "Bluetooth earbuds")
+        )
+        prefs.all.forEach { (k, v) ->
+            if (v != null) defaultMap[k] = v
+        }
+        return defaultMap
+    }
+
+    private fun saveLocalSettings(settings: Map<String, Any?>) {
+        val editor = prefs.edit()
+        settings.forEach { (k, v) ->
+            when (v) {
+                is Boolean -> editor.putBoolean(k, v)
+                is String -> editor.putString(k, v)
+                is Int -> editor.putInt(k, v)
+                is Long -> editor.putLong(k, v)
+                is Float -> editor.putFloat(k, v)
+                is List<*> -> editor.putString(k, v.joinToString(","))
+            }
+        }
+        editor.apply()
+    }
+
     fun load() {
+        val appCtx = getApplication<Application>()
+        val localSettings = getLocalSettings()
+        val versionName = try {
+            val info = appCtx.packageManager.getPackageInfo(appCtx.packageName, 0)
+            info.versionName ?: "1.0"
+        } catch (_: Exception) {
+            "1.0"
+        }
+        val defaultLangs = listOf("English (India)", "Hindi", "Punjabi", "Tamil", "Telugu", "Spanish")
+
+        // 1. Immediately emit Ready state from local storage for instant responsiveness
+        _uiState.value = CatalogUiState.Ready(
+            UiModel(
+                settings = localSettings,
+                profile = UserProfileDto(name = sessionManager.userName ?: "Music Lover", email = sessionManager.userEmail.orEmpty()),
+                cacheBytes = AudioCacheManager.cacheSizeBytes(appCtx),
+                availableLanguages = defaultLangs,
+                appVersion = versionName,
+                latestVersion = "1.0"
+            )
+        )
+
+        // 2. Asynchronously sync with backend
         viewModelScope.launch {
-            _uiState.value = CatalogUiState.Loading
-            val appCtx = getApplication<Application>()
             val cacheBytes = withContext(Dispatchers.IO) { AudioCacheManager.cacheSizeBytes(appCtx) }
             val settingsResult = userRepository.getSettings()
             val profileResult = userRepository.getUserProfile()
             val languagesResult = appConfigRepository.getLanguages()
             val updateResult = appConfigRepository.getAppUpdate()
 
-            settingsResult.fold(
-                onSuccess = { settingsResp ->
-                    val settings = settingsResp.settings.toMutableMap()
-                    val profile = profileResult.getOrNull()?.user
-                    val langs = languagesResult.getOrNull()?.languages?.map { it.name }?.ifEmpty { null }
-                        ?: listOf("English (India)", "Hindi", "Punjabi", "Tamil", "Telugu", "Spanish")
-                    val versionName = try {
-                        val info = appCtx.packageManager.getPackageInfo(appCtx.packageName, 0)
-                        info.versionName ?: "1.0"
-                    } catch (_: Exception) {
-                        "1.0"
-                    }
-                    val latest = updateResult.getOrNull()?.latestVersion.orEmpty()
-                    _uiState.value = CatalogUiState.Ready(
-                        UiModel(
-                            settings = settings,
-                            profile = profile,
-                            cacheBytes = cacheBytes,
-                            availableLanguages = langs,
-                            appVersion = versionName,
-                            latestVersion = latest
-                        )
-                    )
-                },
-                onFailure = { e ->
-                    _uiState.value = CatalogUiState.Error(e.message ?: "Failed to load settings")
-                }
+            val remoteSettings = settingsResult.getOrNull()?.settings.orEmpty()
+            val mergedSettings = localSettings.apply { putAll(remoteSettings) }
+            saveLocalSettings(mergedSettings)
+
+            val profile = profileResult.getOrNull()?.user
+                ?: UserProfileDto(name = sessionManager.userName ?: "Music Lover", email = sessionManager.userEmail.orEmpty())
+            val langs = languagesResult.getOrNull()?.languages?.map { it.name }?.ifEmpty { null }
+                ?: defaultLangs
+            val latest = updateResult.getOrNull()?.latestVersion.orEmpty().ifBlank { versionName }
+
+            _uiState.value = CatalogUiState.Ready(
+                UiModel(
+                    settings = mergedSettings,
+                    profile = profile,
+                    cacheBytes = cacheBytes,
+                    availableLanguages = langs,
+                    appVersion = versionName,
+                    latestVersion = latest
+                )
             )
         }
     }
@@ -661,25 +818,28 @@ class SettingsViewModel(
     }
 
     fun updateSettings(patch: Map<String, Any?>, successMessage: String = "Settings saved") {
+        val current = (_uiState.value as? CatalogUiState.Ready)?.data ?: return
+        // 1. Instant optimistic state update
+        val merged = current.settings.toMutableMap().apply { putAll(patch) }
+        if (patch.containsKey("languages")) {
+            val list = (patch["languages"] as? List<*>)?.map { it.toString() }.orEmpty()
+            sessionManager.preferredLanguages = list
+            merged["language"] = list.joinToString(" • ")
+        }
+        _uiState.value = CatalogUiState.Ready(
+            current.copy(settings = merged, saving = false, message = null)
+        )
+        // 2. Persist locally to SharedPreferences
+        saveLocalSettings(merged)
+
+        // 3. Asynchronously push to backend
         viewModelScope.launch {
-            val current = (_uiState.value as? CatalogUiState.Ready)?.data ?: return@launch
-            _uiState.value = CatalogUiState.Ready(current.copy(saving = true, message = null))
             userRepository.updateSettings(patch).fold(
                 onSuccess = {
-                    val merged = current.settings.toMutableMap().apply { putAll(patch) }
-                    if (patch.containsKey("languages")) {
-                        val list = (patch["languages"] as? List<*>)?.map { it.toString() }.orEmpty()
-                        sessionManager.preferredLanguages = list
-                        merged["language"] = list.joinToString(" • ")
-                    }
-                    _uiState.value = CatalogUiState.Ready(
-                        current.copy(settings = merged, saving = false, message = successMessage)
-                    )
+                    // Confirmed on server
                 },
-                onFailure = { e ->
-                    _uiState.value = CatalogUiState.Ready(
-                        current.copy(saving = false, message = e.message ?: "Failed to save settings")
-                    )
+                onFailure = {
+                    // Keep optimistic local state
                 }
             )
         }
@@ -690,59 +850,44 @@ class SettingsViewModel(
     fun updateString(key: String, value: String) = updateSettings(mapOf(key to value))
 
     fun updateProfile(name: String, onDone: () -> Unit = {}) {
-        viewModelScope.launch {
-            val current = (_uiState.value as? CatalogUiState.Ready)?.data ?: return@launch
-            _uiState.value = CatalogUiState.Ready(current.copy(saving = true))
-            userRepository.updateProfile(name = name).fold(
-                onSuccess = {
-                    sessionManager.userName = name
-                    val updatedProfile = current.profile?.copy(name = name)
-                        ?: UserProfileDto(name = name, email = sessionManager.userEmail.orEmpty())
-                    _uiState.value = CatalogUiState.Ready(
-                        current.copy(
-                            profile = updatedProfile,
-                            saving = false,
-                            message = "Account updated"
-                        )
-                    )
-                    onDone()
-                },
-                onFailure = { e ->
-                    _uiState.value = CatalogUiState.Ready(
-                        current.copy(saving = false, message = e.message ?: "Profile update failed")
-                    )
-                }
+        val current = (_uiState.value as? CatalogUiState.Ready)?.data ?: return
+        sessionManager.userName = name
+        val updatedProfile = current.profile?.copy(name = name)
+            ?: UserProfileDto(name = name, email = sessionManager.userEmail.orEmpty())
+        _uiState.value = CatalogUiState.Ready(
+            current.copy(
+                profile = updatedProfile,
+                saving = false,
+                message = "Account updated"
             )
+        )
+        onDone()
+
+        viewModelScope.launch {
+            userRepository.updateProfile(name = name)
         }
     }
 
     fun saveLanguages(selected: List<String>) {
+        val current = (_uiState.value as? CatalogUiState.Ready)?.data ?: return
+        sessionManager.preferredLanguages = selected
+        val patch = mapOf(
+            "languages" to selected,
+            "language" to selected.joinToString(" • ")
+        )
+        val merged = current.settings.toMutableMap().apply { putAll(patch) }
+        _uiState.value = CatalogUiState.Ready(
+            current.copy(
+                settings = merged,
+                saving = false,
+                message = "Languages updated"
+            )
+        )
+        saveLocalSettings(merged)
+
         viewModelScope.launch {
-            val current = (_uiState.value as? CatalogUiState.Ready)?.data ?: return@launch
-            _uiState.value = CatalogUiState.Ready(current.copy(saving = true, message = null))
             appConfigRepository.saveLanguages(selected)
-            val patch = mapOf(
-                "languages" to selected,
-                "language" to selected.joinToString(" • ")
-            )
-            userRepository.updateSettings(patch).fold(
-                onSuccess = {
-                    sessionManager.preferredLanguages = selected
-                    val merged = current.settings.toMutableMap().apply { putAll(patch) }
-                    _uiState.value = CatalogUiState.Ready(
-                        current.copy(
-                            settings = merged,
-                            saving = false,
-                            message = "Languages updated"
-                        )
-                    )
-                },
-                onFailure = { e ->
-                    _uiState.value = CatalogUiState.Ready(
-                        current.copy(saving = false, message = e.message ?: "Failed to save languages")
-                    )
-                }
-            )
+            userRepository.updateSettings(patch)
         }
     }
 

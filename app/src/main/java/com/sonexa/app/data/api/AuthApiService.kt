@@ -1,6 +1,7 @@
 package com.sonexa.app.data.api
 
 import com.sonexa.app.data.model.*
+import retrofit2.Call
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.DELETE
@@ -29,6 +30,9 @@ interface AuthApiService {
     @POST("auth/refresh-token")
     suspend fun refreshToken(@Body request: RefreshTokenRequest): Response<ApiResponseEnvelope<AuthDataPayload>>
 
+    @POST("auth/refresh-token")
+    fun refreshTokenBlocking(@Body request: RefreshTokenRequest): Call<ApiResponseEnvelope<AuthDataPayload>>
+
     @POST("auth/forgot-password")
     suspend fun forgotPassword(@Body request: ForgotPasswordRequest): Response<ApiResponseEnvelope<AuthDataPayload>>
 
@@ -39,5 +43,5 @@ interface AuthApiService {
     suspend fun logout(@Query("email") email: String? = null): Response<ApiResponseEnvelope<Void>>
 
     @DELETE("auth/delete-account")
-    suspend fun deleteAccount(@Query("userId") userId: String): Response<ApiResponseEnvelope<Void>>
+    suspend fun deleteAccount(): Response<ApiResponseEnvelope<Void>>
 }

@@ -50,17 +50,11 @@ class AuthRepository(
                 sessionManager?.pendingOtpEmail = email.trim().lowercase()
                 val body = response.body()!!
                 val delivered = body.data?.emailDelivered ?: true
-                val otp = body.data?.otp
-                if (!delivered && !otp.isNullOrBlank()) {
-                    sessionManager?.pendingOtpCode = otp
-                } else {
-                    sessionManager?.pendingOtpCode = null
-                }
                 Result.success(
                     GenericApiResponse(
                         success = true,
                         message = body.message ?: "Verification OTP sent to ${email.trim().lowercase()}",
-                        otp = otp,
+                        otp = null,
                         emailDelivered = delivered
                     )
                 )
@@ -79,17 +73,11 @@ class AuthRepository(
                 sessionManager?.pendingOtpEmail = email.trim().lowercase()
                 val body = response.body()!!
                 val delivered = body.data?.emailDelivered ?: true
-                val otp = body.data?.otp
-                if (!delivered && !otp.isNullOrBlank()) {
-                    sessionManager?.pendingOtpCode = otp
-                } else {
-                    sessionManager?.pendingOtpCode = null
-                }
                 Result.success(
                     GenericApiResponse(
                         success = true,
                         message = body.message ?: "Verification OTP sent to ${email.trim().lowercase()}",
-                        otp = otp,
+                        otp = null,
                         emailDelivered = delivered
                     )
                 )
@@ -191,9 +179,9 @@ class AuthRepository(
         }
     }
 
-    suspend fun deleteAccount(userId: String): Result<GenericApiResponse> = withContext(Dispatchers.IO) {
+    suspend fun deleteAccount(): Result<GenericApiResponse> = withContext(Dispatchers.IO) {
         try {
-            val response = apiService.deleteAccount(userId)
+            val response = apiService.deleteAccount()
             if (response.isSuccessful) {
                 sessionManager?.clearSession()
                 Result.success(GenericApiResponse(true, "Account deleted successfully"))

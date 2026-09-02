@@ -32,6 +32,8 @@ import com.sonexa.app.ui.theme.*
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.sonexa.app.ui.viewmodel.AiSignatureUiState
 import com.sonexa.app.ui.viewmodel.AiSignatureViewModel
+import com.sonexa.app.ui.viewmodel.PlaybackViewModel
+import com.sonexa.app.ui.viewmodel.PlaybackUiState
 
 data class AITool(val name: String, val tag: String, val icon: ImageVector, val color1: Color, val color2: Color)
 
@@ -39,17 +41,21 @@ data class AITool(val name: String, val tag: String, val icon: ImageVector, val 
 fun AISignatureScreen(
     onNavigateBack: () -> Unit,
     aiViewModel: AiSignatureViewModel = viewModel(),
+    playbackViewModel: PlaybackViewModel? = null,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
     val aiState by aiViewModel.uiState.collectAsState()
-    var activeTool by remember { mutableStateOf("AI DJ") }
+    val playbackState by (playbackViewModel?.uiState ?: remember { kotlinx.coroutines.flow.MutableStateFlow(PlaybackUiState()) }).collectAsState()
+    var activeTool by remember { mutableStateOf("Change The Vibe") }
     var promptInput by remember { mutableStateOf("") }
     var showChatModal by remember { mutableStateOf(false) }
+    var showVibeSheet by remember { mutableStateOf(false) }
 
     val aiTools = listOf(
+        AITool("Change The Vibe", "AI Vibe Studio", Icons.Default.Bolt, Color(0xFFF59E0B), Color(0xFFEF4444)),
         AITool("AI DJ", "Live Curation", Icons.Default.GraphicEq, Color(0xFF6B3CE9), Color(0xFF9825DD)),
-        AITool("AI Chat", "Music Assistant", Icons.Default.Chat, Color(0xFFE534B2), Color(0xFFFF52C4)),
+        AITool("AI Chat", "Music Assistant", Icons.Default.ChatBubble, Color(0xFFE534B2), Color(0xFFFF52C4)),
         AITool("Mood Scanner", "Camera Mood", Icons.Default.Camera, Color(0xFF06B6D4), Color(0xFF3B82F6)),
         AITool("Playlist Gen", "Prompt to List", Icons.Default.AutoAwesome, Color(0xFFF59E0B), Color(0xFFEF4444)),
         AITool("Song Meaning", "Lyrics Intelligence", Icons.AutoMirrored.Filled.MenuBook, Color(0xFF8B5CF6), Color(0xFFEC4899)),
@@ -174,10 +180,16 @@ fun AISignatureScreen(
                             .border(1.dp, SonexaInputBorder, RoundedCornerShape(18.dp))
                             .clickable {
                                 activeTool = tool.name
-                                if (tool.name == "AI Chat") {
-                                    showChatModal = true
-                                } else {
-                                    Toast.makeText(context, "Activated ${tool.name} mode!", Toast.LENGTH_SHORT).show()
+                                when (tool.name) {
+                                    "Change The Vibe", "AI DJ" -> {
+                                        showVibeSheet = true
+                                    }
+                                    "AI Chat" -> {
+                                        showChatModal = true
+                                    }
+                                    else -> {
+                                        Toast.makeText(context, "Activated ${tool.name} mode!", Toast.LENGTH_SHORT).show()
+                                    }
                                 }
                             }
                             .padding(horizontal = 16.dp),
@@ -267,6 +279,20 @@ fun AISignatureScreen(
                 dismissButton = {
                     TextButton(onClick = { showChatModal = false }) {
                         Text(text = "Close", color = SonexaTextMuted)
+                    }
+                }
+            )
+        }
+
+        // Change The Vibe Studio Modal
+        if (showVibeSheet) {
+            com.sonexa.app.ui.components.ChangeVibeBottomSheet(
+                onDismiss = { showVibeSheet = false },
+                currentTrack = playbackState.track,
+                currentQueue = playbackState.queue,
+                onApplyVibe = { newQueue, vibeTitle ->
+                    if (newQueue.isNotEmpty()) {
+                        playbackViewModel?.playQueue(newQueue, 0, "Vibe: $vibeTitle")
                     }
                 }
             )

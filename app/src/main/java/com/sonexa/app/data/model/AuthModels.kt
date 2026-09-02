@@ -56,6 +56,7 @@ data class UserProfileDto(
     @SerializedName("id") val id: String = "",
     @SerializedName("name") val name: String = "",
     @SerializedName("email") val email: String = "",
+    @SerializedName("bio") val bio: String = "",
     @SerializedName("profilePicUrl") val profilePicUrl: String = "",
     @SerializedName("isPremium") val isPremium: Boolean = false,
     @SerializedName("isEmailVerified") val isEmailVerified: Boolean = false,

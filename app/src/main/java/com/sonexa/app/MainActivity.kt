@@ -29,6 +29,7 @@ class MainActivity : ComponentActivity() {
         com.sonexa.app.data.local.UserPlaylistStore.init(this)
         setupCoil()
         handleSocialCallback(intent)
+        com.sonexa.app.util.DeepLinkManager.handleIntent(intent)
         enableEdgeToEdge()
         setContent {
             SonexaTheme {
@@ -46,6 +47,7 @@ class MainActivity : ComponentActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         handleSocialCallback(intent)
+        com.sonexa.app.util.DeepLinkManager.handleIntent(intent)
     }
 
     private fun handleSocialCallback(intent: Intent?) {

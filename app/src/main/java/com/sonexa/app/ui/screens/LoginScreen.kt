@@ -93,7 +93,7 @@ fun LoginScreen(
                 SonexaHeaderLogo()
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
-                    text = "Log in to Sonexa",
+                    text = "Log in to Zynera",
                     fontSize = 26.sp,
                     fontWeight = FontWeight.ExtraBold,
                     color = SonexaTextWhite

@@ -5,10 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
-import com.sonexa.app.data.model.AlbumDto
-import com.sonexa.app.data.model.ArtistDto
-import com.sonexa.app.data.model.PlaylistDto
-import com.sonexa.app.data.model.TrackDto
+import com.sonexa.app.data.model.*
 import com.sonexa.app.data.provider.MusicAggregationEngine
 import com.sonexa.app.data.provider.ProviderCategory
 import com.sonexa.app.data.provider.UnifiedSearchResult
@@ -19,6 +16,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 data class BrowseCategoryItem(
@@ -54,18 +52,23 @@ sealed interface SearchUiState {
     data class Success(
         val tracks: List<TrackDto>,
         val topArtist: ArtistDto? = null,
+        val resolvedArtist: ResolvedArtist? = null,
+        val artistCatalog: ArtistCatalogResponse? = null,
         val matchingPlaylists: List<PlaylistDto> = emptyList(),
         val matchingAlbums: List<AlbumDto> = emptyList(),
         val artists: List<String> = emptyList(),
         val providerCounts: Map<String, Int> = emptyMap(),
         val providerLatencies: Map<String, Long> = emptyMap(),
-        val activeCategory: ProviderCategory = ProviderCategory.ALL
+        val activeCategory: ProviderCategory = ProviderCategory.ALL,
+        val hasMoreTracks: Boolean = true,
+        val isLoadingMore: Boolean = false,
+        val suggestions: List<SearchSuggestionDto> = emptyList()
     ) : SearchUiState
     data class Error(val message: String) : SearchUiState
 }
 
 class SearchViewModel(
-    private val aggregationEngine: MusicAggregationEngine = MusicAggregationEngine(),
+    val aggregationEngine: MusicAggregationEngine = MusicAggregationEngine(),
     private val musicRepository: MusicRepository = MusicRepository()
 ) : ViewModel() {
 
@@ -76,19 +79,54 @@ class SearchViewModel(
     private val _selectedCategory = MutableStateFlow(ProviderCategory.ALL)
     val selectedCategory: StateFlow<ProviderCategory> = _selectedCategory.asStateFlow()
 
-    private val _heroCategories = MutableStateFlow<List<BrowseCategoryItem>>(emptyList())
+    private val defaultHeroCategories = listOf(
+        BrowseCategoryItem("hero_music", "Music", 0xFFE1336E, "https://c.saavncdn.com/492/Chand-Mera-Dil-Hindi-2024-20241021111624-500x500.jpg", "Top Bollywood Songs"),
+        BrowseCategoryItem("hero_podcasts", "Podcasts", 0xFF006450, "https://images.unsplash.com/photo-1590602847861-f357a9332bbc?w=500", "Top Podcasts"),
+        BrowseCategoryItem("hero_events", "Live\nEvents", 0xFF7358FF, "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=500", "Live Concerts"),
+        BrowseCategoryItem("hero_ipop", "Home of\nI-Pop", 0xFF1E3264, "https://c.saavncdn.com/264/Love-Exit-Punjabi-2023-20230606132711-500x500.jpg", "Indian Pop Hits")
+    )
+
+    private val defaultDiscoverItems = listOf(
+        DiscoverItem("disc_hindipop", "#hindipop", "Hindi Pop", "https://c.saavncdn.com/492/Chand-Mera-Dil-Hindi-2024-20241021111624-500x500.jpg", "Hindi Pop Hits"),
+        DiscoverItem("disc_bollywood", "#bollywood", "Bollywood", "https://c.saavncdn.com/001/Cocktail-2-Hindi-2024-20240214152011-500x500.jpg", "Bollywood Hits"),
+        DiscoverItem("disc_punjabi", "#punjabi", "Punjabi Wave", "https://c.saavncdn.com/264/Love-Exit-Punjabi-2023-20230606132711-500x500.jpg", "Top Punjabi Hits"),
+        DiscoverItem("disc_lofi", "#lofi", "Lo-Fi Chill", "https://c.saavncdn.com/602/Dooron-Dooron-Punjabi-2022-20220914180808-500x500.jpg", "Lo-Fi Beats"),
+        DiscoverItem("disc_romantic", "#romance", "Romantic Melodies", "https://c.saavncdn.com/712/Main-Vaapas-Aaunga-Hindi-2024-20240321154032-500x500.jpg", "Romantic Hindi Songs"),
+        DiscoverItem("disc_acoustic", "#acoustic", "Acoustic Live", "https://images.unsplash.com/photo-1510915361894-db8b60106cb1?w=500", "Acoustic Hindi Hits"),
+        DiscoverItem("disc_party", "#party", "Club Anthem", "https://c.saavncdn.com/152/Jodi-Punjabi-2023-20230509183424-500x500.jpg", "Bollywood Party Hits"),
+        DiscoverItem("disc_trending", "#trending", "Trending India", "https://c.saavncdn.com/832/Gully-Boy-Hindi-2019-20190124110321-500x500.jpg", "Top Trending Songs")
+    )
+
+    private val defaultBrowseAll = listOf(
+        BrowseCategoryItem("cat_made_for_you", "Made\nFor You", 0xFF8C67AC, "https://c.saavncdn.com/001/Cocktail-2-Hindi-2024-20240214152011-500x500.jpg", "Made For You"),
+        BrowseCategoryItem("cat_new_releases", "New\nReleases", 0xFFE8115B, "https://c.saavncdn.com/712/Main-Vaapas-Aaunga-Hindi-2024-20240321154032-500x500.jpg", "New Releases"),
+        BrowseCategoryItem("cat_hindi", "Hindi", 0xFFE91429, "https://c.saavncdn.com/492/Chand-Mera-Dil-Hindi-2024-20241021111624-500x500.jpg", "Top Hindi Songs"),
+        BrowseCategoryItem("cat_punjabi", "Punjabi", 0xFFB02897, "https://c.saavncdn.com/264/Love-Exit-Punjabi-2023-20230606132711-500x500.jpg", "Top Punjabi Hits"),
+        BrowseCategoryItem("cat_charts", "Charts", 0xFF8D67AB, "https://c.saavncdn.com/832/Gully-Boy-Hindi-2019-20190124110321-500x500.jpg", "Top 50 India"),
+        BrowseCategoryItem("cat_lofi", "Lo-Fi\nChill", 0xFF1E3264, "https://c.saavncdn.com/602/Dooron-Dooron-Punjabi-2022-20220914180808-500x500.jpg", "Lo-Fi Beats"),
+        BrowseCategoryItem("cat_party", "Party &\nDance", 0xFF503750, "https://c.saavncdn.com/152/Jodi-Punjabi-2023-20230509183424-500x500.jpg", "Bollywood Party"),
+        BrowseCategoryItem("cat_romance", "Romance", 0xFFE8115B, "https://c.saavncdn.com/492/Chand-Mera-Dil-Hindi-2024-20241021111624-500x500.jpg", "Romantic Hindi Songs"),
+        BrowseCategoryItem("cat_bhakti", "Devotional", 0xFF477D95, "https://c.saavncdn.com/177/Barsaat-Lagdi-Ae-Hindi-2023-20230713123847-500x500.jpg", "Bhakti Songs"),
+        BrowseCategoryItem("cat_workout", "Workout", 0xFF777777, "https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=500", "Workout Motivation")
+    )
+
+    private val _heroCategories = MutableStateFlow<List<BrowseCategoryItem>>(defaultHeroCategories)
     val heroCategories: StateFlow<List<BrowseCategoryItem>> = _heroCategories.asStateFlow()
 
-    private val _discoverItems = MutableStateFlow<List<DiscoverItem>>(emptyList())
+    private val _discoverItems = MutableStateFlow<List<DiscoverItem>>(defaultDiscoverItems)
     val discoverItems: StateFlow<List<DiscoverItem>> = _discoverItems.asStateFlow()
 
-    private val _browseAllCategories = MutableStateFlow<List<BrowseCategoryItem>>(emptyList())
+    private val _browseAllCategories = MutableStateFlow<List<BrowseCategoryItem>>(defaultBrowseAll)
     val browseAllCategories: StateFlow<List<BrowseCategoryItem>> = _browseAllCategories.asStateFlow()
 
     private val _recents = MutableStateFlow<List<RecentSearchItem>>(emptyList())
     val recents: StateFlow<List<RecentSearchItem>> = _recents.asStateFlow()
 
+    private val _suggestions = MutableStateFlow<List<SearchSuggestionDto>>(emptyList())
+    val suggestions: StateFlow<List<SearchSuggestionDto>> = _suggestions.asStateFlow()
+
     private var currentQuery: String = ""
+    private var currentCursor: Int = 0
     private var searchJob: Job? = null
     private var appContext: Context? = null
 
@@ -127,13 +165,14 @@ class SearchViewModel(
             if (categoriesResult.isSuccess && categoriesResult.getOrNull()?.heroCategories?.isNotEmpty() == true) {
                 val data = categoriesResult.getOrNull()!!
                 _heroCategories.value = data.heroCategories.map {
-                    BrowseCategoryItem(it.id, it.title, it.colorHex, it.imageUrl, it.query)
+                    BrowseCategoryItem(it.id, it.title, it.colorHex, it.imageUrl.ifBlank { "https://c.saavncdn.com/492/Chand-Mera-Dil-Hindi-2024-20241021111624-500x500.jpg" }, it.query)
                 }
-                _discoverItems.value = data.discoverTags.map {
-                    DiscoverItem(it.id, it.tag, it.title, it.imageUrl, it.query)
+                _discoverItems.value = data.discoverTags.mapIndexed { idx, it ->
+                    val fallbackCover = defaultDiscoverItems.getOrNull(idx)?.imageUrl ?: "https://c.saavncdn.com/492/Chand-Mera-Dil-Hindi-2024-20241021111624-500x500.jpg"
+                    DiscoverItem(it.id, it.tag, it.title, it.imageUrl.ifBlank { fallbackCover }, it.query)
                 }
                 _browseAllCategories.value = data.browseCategories.map {
-                    BrowseCategoryItem(it.id, it.title, it.colorHex, it.imageUrl, it.query)
+                    BrowseCategoryItem(it.id, it.title, it.colorHex, it.imageUrl.ifBlank { "https://c.saavncdn.com/001/Cocktail-2-Hindi-2024-20240214152011-500x500.jpg" }, it.query)
                 }
                 return@launch
             }
@@ -143,45 +182,33 @@ class SearchViewModel(
                 val trending = aggregationEngine.jiosaavnProvider.getTrending(20).getOrDefault(emptyList())
                 val hindiPop = aggregationEngine.jiosaavnProvider.search("Hindi Pop Hits", limit = 10).getOrDefault(emptyList())
 
-                val musicCover = trending.firstOrNull()?.effectiveCoverUrl ?: "https://c.saavncdn.com/492/Chand-Mera-Dil-Hindi-2024-20241021111624-500x500.jpg"
-                val eventCover = trending.getOrNull(2)?.effectiveCoverUrl ?: "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=300"
-                val ipopCover = hindiPop.firstOrNull()?.effectiveCoverUrl ?: "https://c.saavncdn.com/264/Love-Exit-Punjabi-2023-20230606132711-500x500.jpg"
+                val musicCover = trending.firstOrNull()?.effectiveCoverUrl?.takeIf { it.isNotBlank() } ?: defaultHeroCategories[0].imageUrl
+                val eventCover = trending.getOrNull(2)?.effectiveCoverUrl?.takeIf { it.isNotBlank() } ?: defaultHeroCategories[2].imageUrl
+                val ipopCover = hindiPop.firstOrNull()?.effectiveCoverUrl?.takeIf { it.isNotBlank() } ?: defaultHeroCategories[3].imageUrl
 
                 _heroCategories.value = listOf(
                     BrowseCategoryItem("hero_music", "Music", 0xFFE1336E, musicCover, "Top Bollywood Songs"),
-                    BrowseCategoryItem("hero_podcasts", "Podcasts", 0xFF006450, "https://images.unsplash.com/photo-1590602847861-f357a9332bbc?w=300", "Top Podcasts"),
+                    BrowseCategoryItem("hero_podcasts", "Podcasts", 0xFF006450, "https://images.unsplash.com/photo-1590602847861-f357a9332bbc?w=500", "Top Podcasts"),
                     BrowseCategoryItem("hero_events", "Live\nEvents", 0xFF7358FF, eventCover, "Live Concerts"),
                     BrowseCategoryItem("hero_ipop", "Home of\nI-Pop", 0xFF1E3264, ipopCover, "Indian Pop Hits")
                 )
 
-                val dynamicDiscover = mutableListOf<DiscoverItem>()
-                trending.take(6).forEachIndexed { index, tr ->
-                    val tag = when (index) {
-                        0 -> "#hindipop"
-                        1 -> "#bollywood"
-                        2 -> "#punjabi"
-                        3 -> "#lofi"
-                        4 -> "#acoustic"
-                        else -> "#trending"
+                val updatedDiscover = defaultDiscoverItems.mapIndexed { index, defaultItem ->
+                    val matchingTrack = when (index) {
+                        0 -> hindiPop.firstOrNull()
+                        1 -> trending.firstOrNull()
+                        2 -> trending.getOrNull(1)
+                        3 -> trending.getOrNull(3)
+                        else -> trending.getOrNull(index)
                     }
-                    dynamicDiscover.add(DiscoverItem("disc_$index", tag, tr.title, tr.effectiveCoverUrl, tr.title, tr))
+                    val cover = matchingTrack?.effectiveCoverUrl?.takeIf { it.isNotBlank() } ?: defaultItem.imageUrl
+                    defaultItem.copy(
+                        title = matchingTrack?.title ?: defaultItem.title,
+                        imageUrl = cover,
+                        track = matchingTrack
+                    )
                 }
-                if (dynamicDiscover.isNotEmpty()) {
-                    _discoverItems.value = dynamicDiscover
-                }
-
-                _browseAllCategories.value = listOf(
-                    BrowseCategoryItem("cat_made_for_you", "Made\nFor You", 0xFF8C67AC, "https://c.saavncdn.com/001/Cocktail-2-Hindi-2024-20240214152011-500x500.jpg", "Made For You"),
-                    BrowseCategoryItem("cat_new_releases", "New\nReleases", 0xFFE8115B, "https://c.saavncdn.com/712/Main-Vaapas-Aaunga-Hindi-2024-20240321154032-500x500.jpg", "New Releases"),
-                    BrowseCategoryItem("cat_hindi", "Hindi", 0xFFE91429, "https://c.saavncdn.com/492/Chand-Mera-Dil-Hindi-2024-20241021111624-500x500.jpg", "Top Hindi Songs"),
-                    BrowseCategoryItem("cat_punjabi", "Punjabi", 0xFFB02897, "https://c.saavncdn.com/264/Love-Exit-Punjabi-2023-20230606132711-500x500.jpg", "Top Punjabi Hits"),
-                    BrowseCategoryItem("cat_charts", "Charts", 0xFF8D67AB, "https://c.saavncdn.com/832/Gully-Boy-Hindi-2019-20190124110321-500x500.jpg", "Top 50 India"),
-                    BrowseCategoryItem("cat_lofi", "Lo-Fi\nChill", 0xFF1E3264, "https://c.saavncdn.com/602/Dooron-Dooron-Punjabi-2022-20220914180808-500x500.jpg", "Lo-Fi Beats"),
-                    BrowseCategoryItem("cat_party", "Party &\nDance", 0xFF503750, "https://c.saavncdn.com/152/Jodi-Punjabi-2023-20230509183424-500x500.jpg", "Bollywood Party"),
-                    BrowseCategoryItem("cat_romance", "Romance", 0xFFE8115B, "https://c.saavncdn.com/492/Chand-Mera-Dil-Hindi-2024-20241021111624-500x500.jpg", "Romantic Hindi Songs"),
-                    BrowseCategoryItem("cat_bhakti", "Devotional", 0xFF477D95, "https://c.saavncdn.com/177/Barsaat-Lagdi-Ae-Hindi-2023-20230713123847-500x500.jpg", "Bhakti Songs"),
-                    BrowseCategoryItem("cat_workout", "Workout", 0xFF777777, "https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=300", "Workout Motivation")
-                )
+                _discoverItems.value = updatedDiscover
             } catch (_: Exception) {}
         }
     }
@@ -239,10 +266,15 @@ class SearchViewModel(
 
         if (query.isBlank()) {
             _uiState.value = SearchUiState.Idle
+            _suggestions.value = emptyList()
             return
         }
 
         searchJob = viewModelScope.launch {
+            // Instant debounced autocomplete suggestions
+            val suggestList = aggregationEngine.getSearchSuggestions(query)
+            _suggestions.value = suggestList
+
             delay(250) // Debounce typing
             executeSearch(query, _selectedCategory.value)
         }
@@ -261,16 +293,58 @@ class SearchViewModel(
         }
     }
 
+    fun loadMoreTracks() {
+        val currentState = _uiState.value as? SearchUiState.Success ?: return
+        if (currentState.isLoadingMore || !currentState.hasMoreTracks || currentQuery.isBlank()) return
+
+        viewModelScope.launch {
+            _uiState.update {
+                if (it is SearchUiState.Success) it.copy(isLoadingMore = true) else it
+            }
+
+            try {
+                currentCursor += 25
+                val moreTracks = aggregationEngine.artistCatalogService.getMoreTracks(
+                    artistName = currentQuery,
+                    cursor = currentCursor,
+                    pageSize = 25
+                )
+
+                if (moreTracks.isEmpty()) {
+                    _uiState.update {
+                        if (it is SearchUiState.Success) it.copy(isLoadingMore = false, hasMoreTracks = false) else it
+                    }
+                } else {
+                    _uiState.update {
+                        if (it is SearchUiState.Success) {
+                            val combined = (it.tracks + moreTracks).distinctBy { t -> t.id }
+                            it.copy(
+                                tracks = combined,
+                                isLoadingMore = false,
+                                hasMoreTracks = moreTracks.size >= 10
+                            )
+                        } else it
+                    }
+                }
+            } catch (e: Exception) {
+                _uiState.update {
+                    if (it is SearchUiState.Success) it.copy(isLoadingMore = false) else it
+                }
+            }
+        }
+    }
+
     private fun executeSearch(query: String, category: ProviderCategory) {
         viewModelScope.launch {
             _uiState.value = SearchUiState.Loading
+            currentCursor = 0
 
             try {
-                // 1. Search using Unified Aggregation Engine
+                // 1. Search using Unified Aggregation Engine (Audius, JioSaavn, Jamendo, Sonexa)
                 val result: UnifiedSearchResult = aggregationEngine.searchAll(
                     query = query,
                     selectedCategory = category,
-                    limit = 35
+                    limit = 40
                 )
 
                 // 2. Also query backend catalog for native tracks & albums
@@ -281,7 +355,19 @@ class SearchViewModel(
                 // Merge native tracks on top of streaming tracks
                 val mergedTracks = (nativeTracks + result.tracks).distinctBy { it.id }
 
-                val topArtist = if (mergedTracks.isNotEmpty()) {
+                // 3. Resolve Artist & Catalog Breakdown
+                val resolvedArtist = result.resolvedArtist
+                val topArtist = if (resolvedArtist != null) {
+                    ArtistDto(
+                        id = resolvedArtist.canonicalId,
+                        name = resolvedArtist.canonicalName,
+                        genre = resolvedArtist.genres.firstOrNull() ?: "Artist",
+                        bio = resolvedArtist.bio,
+                        imageUrl = resolvedArtist.imageUrl,
+                        followersCount = resolvedArtist.followersCount.toInt(),
+                        verified = resolvedArtist.isVerified
+                    )
+                } else if (mergedTracks.isNotEmpty()) {
                     val first = mergedTracks.first()
                     ArtistDto(
                         id = "art_" + first.artist.lowercase().replace(" ", "_"),
@@ -293,6 +379,18 @@ class SearchViewModel(
                         verified = true
                     )
                 } else null
+
+                // 4. If query matches an artist strongly, retrieve rich discography catalog
+                var artistCatalog: ArtistCatalogResponse? = null
+                if (topArtist != null) {
+                    val isArtistQuery = topArtist.name.contains(query, ignoreCase = true) ||
+                            query.contains(topArtist.name, ignoreCase = true)
+                    if (isArtistQuery) {
+                        artistCatalog = runCatching {
+                            aggregationEngine.getArtistFullCatalog(topArtist.name, cursor = 0, pageSize = 30)
+                        }.getOrNull()
+                    }
+                }
 
                 // Construct matching dynamic playlists
                 val matchingPlaylists = listOf(
@@ -315,12 +413,17 @@ class SearchViewModel(
                 _uiState.value = SearchUiState.Success(
                     tracks = mergedTracks,
                     topArtist = topArtist,
+                    resolvedArtist = resolvedArtist,
+                    artistCatalog = artistCatalog,
                     matchingPlaylists = matchingPlaylists,
                     matchingAlbums = matchingAlbums,
-                    artists = mergedTracks.map { it.artist }.distinct().take(5),
+                    artists = mergedTracks.map { it.artist }.distinct().take(6),
                     providerCounts = result.providerCounts,
                     providerLatencies = result.providerLatencies,
-                    activeCategory = category
+                    activeCategory = category,
+                    hasMoreTracks = mergedTracks.size >= 15,
+                    isLoadingMore = false,
+                    suggestions = _suggestions.value
                 )
             } catch (e: Exception) {
                 _uiState.value = SearchUiState.Error(e.message ?: "Search failed. Please try again.")

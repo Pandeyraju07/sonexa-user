@@ -453,14 +453,15 @@ fun IPopHubScreen(
                                 )
                             }
 
+                            val isTrackLiked = track.isLiked || com.sonexa.app.data.local.LikedSongsStore.isLiked(track.id)
                             IconButton(
                                 onClick = { playbackViewModel.toggleLike(track) },
                                 modifier = Modifier.size(36.dp)
                             ) {
                                 Icon(
-                                    imageVector = if (track.isLiked) Icons.Default.Favorite else Icons.Outlined.FavoriteBorder,
+                                    imageVector = if (isTrackLiked) Icons.Default.Favorite else Icons.Outlined.FavoriteBorder,
                                     contentDescription = "Like",
-                                    tint = if (track.isLiked) IPopPink else TextMuted,
+                                    tint = if (isTrackLiked) IPopPink else TextMuted,
                                     modifier = Modifier.size(18.dp)
                                 )
                             }

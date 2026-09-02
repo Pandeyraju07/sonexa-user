@@ -1,24 +1,27 @@
 package com.sonexa.app.audio.playback
 
 import android.content.Context
+import android.content.Intent
+import androidx.core.content.ContextCompat
 import com.sonexa.app.audio.SonexaEqualizerEngine
 import com.sonexa.app.data.model.TrackDto
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.launch
 
 class PlaybackManager(
     context: Context,
     val equalizerEngine: SonexaEqualizerEngine = SonexaEqualizerEngine()
 ) {
-    val nativeProvider = NativeAudioPlaybackProvider(context, equalizerEngine)
+    private val appContext = context.applicationContext
+    val nativeProvider = NativeAudioPlaybackProvider(appContext, equalizerEngine)
     val youtubeProvider = YouTubePlaybackProvider()
 
     private val scope = CoroutineScope(Dispatchers.Main + Job())
@@ -46,14 +49,13 @@ class PlaybackManager(
     )
 
     fun play(track: TrackDto, startPositionMs: Long = 0L) {
+        startPlaybackService()
         val hasDirectAudio = track.audioUrl.isNotBlank()
         if (hasDirectAudio) {
-            // High-performance native audio playback (ExoPlayer with hardware acceleration)
             _activeProviderType.value = "native_audio"
             youtubeProvider.stop()
             nativeProvider.play(track, startPositionMs)
         } else if (track.isYouTube && track.effectiveVideoId.isNotBlank()) {
-            // Fallback for YouTube video tracks only if no direct audio stream exists
             _activeProviderType.value = "youtube_video"
             nativeProvider.stop()
             youtubeProvider.play(track, startPositionMs)
@@ -65,12 +67,7 @@ class PlaybackManager(
     }
 
     fun togglePlayPause(currentTrack: TrackDto?) {
-        val currentIsPlaying = engineState.value.isPlaying
-        if (currentIsPlaying) {
-            pause()
-        } else {
-            resume()
-        }
+        if (engineState.value.isPlaying) pause() else resume()
     }
 
     fun pause() {
@@ -109,5 +106,15 @@ class PlaybackManager(
     fun release() {
         nativeProvider.release()
         youtubeProvider.release()
+        scope.cancel()
+    }
+
+    private fun startPlaybackService() {
+        val intent = Intent(appContext, SonexaPlaybackService::class.java)
+        runCatching {
+            ContextCompat.startForegroundService(appContext, intent)
+        }.onFailure {
+            runCatching { appContext.startService(intent) }
+        }
     }
 }

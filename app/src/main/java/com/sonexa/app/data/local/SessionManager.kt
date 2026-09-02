@@ -2,6 +2,8 @@ package com.sonexa.app.data.local
 
 import android.content.Context
 import android.content.SharedPreferences
+import androidx.security.crypto.EncryptedSharedPreferences
+import androidx.security.crypto.MasterKey
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 
@@ -15,8 +17,8 @@ data class SavedAccount(
 
 class SessionManager(context: Context) {
 
-    private val prefs: SharedPreferences =
-        context.applicationContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+    private val appContext = context.applicationContext
+    private val prefs: SharedPreferences = createSecurePrefs(appContext)
     private val gson = Gson()
 
     var accessToken: String?
@@ -43,10 +45,6 @@ class SessionManager(context: Context) {
         get() = prefs.getString(KEY_PENDING_OTP_EMAIL, null)
         set(value) = prefs.edit().putString(KEY_PENDING_OTP_EMAIL, value).apply()
 
-    var pendingOtpCode: String?
-        get() = prefs.getString(KEY_PENDING_OTP_CODE, null)
-        set(value) = prefs.edit().putString(KEY_PENDING_OTP_CODE, value).apply()
-
     var preferredLanguages: List<String>
         get() = prefs.getString(KEY_PREFERRED_LANGUAGES, null)
             ?.split(",")
@@ -62,7 +60,7 @@ class SessionManager(context: Context) {
         return try {
             val type = object : TypeToken<List<SavedAccount>>() {}.type
             gson.fromJson(raw, type) ?: emptyList()
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             emptyList()
         }
     }
@@ -106,6 +104,7 @@ class SessionManager(context: Context) {
             .putString(KEY_USER_ID, userId)
             .putString(KEY_USER_EMAIL, email)
             .putString(KEY_USER_NAME, name)
+            .remove(KEY_PENDING_OTP_EMAIL)
             .apply()
 
         if (!accessToken.isNullOrBlank() && !userId.isNullOrBlank()) {
@@ -121,24 +120,43 @@ class SessionManager(context: Context) {
         }
     }
 
+    @Synchronized
+    fun updateTokens(accessToken: String?, refreshToken: String?) {
+        prefs.edit()
+            .putString(KEY_ACCESS_TOKEN, accessToken)
+            .putString(KEY_REFRESH_TOKEN, refreshToken)
+            .apply()
+        val userId = this.userId
+        if (!accessToken.isNullOrBlank() && !userId.isNullOrBlank()) {
+            addOrUpdateAccount(
+                SavedAccount(
+                    userId = userId,
+                    name = userName ?: userEmail?.substringBefore("@") ?: "User",
+                    email = userEmail.orEmpty(),
+                    accessToken = accessToken,
+                    refreshToken = refreshToken
+                )
+            )
+        }
+    }
+
     fun clearSession() {
         val accounts = getSavedAccounts()
         prefs.edit().clear().apply()
-        // preserve saved accounts list so switching is convenient
         prefs.edit().putString(KEY_SAVED_ACCOUNTS, gson.toJson(accounts)).apply()
     }
 
     fun isLoggedIn(): Boolean = !accessToken.isNullOrBlank()
 
     companion object {
-        private const val PREFS_NAME = "sonexa_session"
+        private const val PREFS_NAME = "sonexa_session_encrypted"
+        private const val LEGACY_PREFS_NAME = "sonexa_session"
         private const val KEY_ACCESS_TOKEN = "access_token"
         private const val KEY_REFRESH_TOKEN = "refresh_token"
         private const val KEY_USER_ID = "user_id"
         private const val KEY_USER_EMAIL = "user_email"
         private const val KEY_USER_NAME = "user_name"
         private const val KEY_PENDING_OTP_EMAIL = "pending_otp_email"
-        private const val KEY_PENDING_OTP_CODE = "pending_otp_code"
         private const val KEY_PREFERRED_LANGUAGES = "preferred_languages"
         private const val KEY_SAVED_ACCOUNTS = "saved_accounts"
 
@@ -149,6 +167,44 @@ class SessionManager(context: Context) {
             return instance ?: synchronized(this) {
                 instance ?: SessionManager(context).also { instance = it }
             }
+        }
+
+        private fun createSecurePrefs(context: Context): SharedPreferences {
+            val encrypted = runCatching {
+                val masterKey = MasterKey.Builder(context)
+                    .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+                    .build()
+                EncryptedSharedPreferences.create(
+                    context,
+                    PREFS_NAME,
+                    masterKey,
+                    EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                    EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+                )
+            }.getOrElse {
+                context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            }
+            migrateLegacyPrefs(context, encrypted)
+            return encrypted
+        }
+
+        private fun migrateLegacyPrefs(context: Context, target: SharedPreferences) {
+            val legacy = context.getSharedPreferences(LEGACY_PREFS_NAME, Context.MODE_PRIVATE)
+            if (legacy.all.isEmpty()) return
+            if (target.getString(KEY_ACCESS_TOKEN, null).isNullOrBlank()
+                && !legacy.getString(KEY_ACCESS_TOKEN, null).isNullOrBlank()
+            ) {
+                target.edit()
+                    .putString(KEY_ACCESS_TOKEN, legacy.getString(KEY_ACCESS_TOKEN, null))
+                    .putString(KEY_REFRESH_TOKEN, legacy.getString(KEY_REFRESH_TOKEN, null))
+                    .putString(KEY_USER_ID, legacy.getString(KEY_USER_ID, null))
+                    .putString(KEY_USER_EMAIL, legacy.getString(KEY_USER_EMAIL, null))
+                    .putString(KEY_USER_NAME, legacy.getString(KEY_USER_NAME, null))
+                    .putString(KEY_PREFERRED_LANGUAGES, legacy.getString(KEY_PREFERRED_LANGUAGES, null))
+                    .putString(KEY_SAVED_ACCOUNTS, legacy.getString(KEY_SAVED_ACCOUNTS, null))
+                    .apply()
+            }
+            legacy.edit().clear().apply()
         }
     }
 }

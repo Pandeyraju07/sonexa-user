@@ -1,6 +1,8 @@
 package com.sonexa.app.audio.playback
 
 import android.content.Context
+import androidx.media3.common.AudioAttributes
+import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
@@ -12,6 +14,7 @@ import com.sonexa.app.data.model.TrackDto
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -27,7 +30,18 @@ class NativeAudioPlaybackProvider(
 
     override val providerType: String = "native_audio"
 
-    private val player: ExoPlayer = ExoPlayer.Builder(context).build()
+    private val appContext = context.applicationContext
+
+    private val audioAttributes = AudioAttributes.Builder()
+        .setContentType(C.AUDIO_CONTENT_TYPE_MUSIC)
+        .setUsage(C.USAGE_MEDIA)
+        .build()
+
+    val player: ExoPlayer = ExoPlayer.Builder(appContext)
+        .setAudioAttributes(audioAttributes, true)
+        .setHandleAudioBecomingNoisy(true)
+        .setWakeMode(C.WAKE_MODE_LOCAL)
+        .build()
     private val scope = CoroutineScope(Dispatchers.Main + Job())
     private var progressJob: Job? = null
 
@@ -160,6 +174,7 @@ class NativeAudioPlaybackProvider(
 
     override fun release() {
         progressJob?.cancel()
+        scope.cancel()
         equalizerEngine.release()
         player.release()
     }

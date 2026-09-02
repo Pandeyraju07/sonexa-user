@@ -17,6 +17,7 @@ val SonexaPinkAccent = Color(0xFFFF52C4)
 val SonexaTextWhite = Color(0xFFFFFFFF)
 val SonexaTextMuted = Color(0xFF9EA4B0)
 val SonexaTextSubtle = Color(0xFF6C7280)
+val SpotifyGreen = Color(0xFF1ED760)
 
 val SonexaGradientBrush = Brush.horizontalGradient(
     colors = listOf(

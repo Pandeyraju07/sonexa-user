@@ -66,7 +66,7 @@ fun WelcomeScreen(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = "Millions of songs.\nFree on Sonexa.",
+                    text = "Millions of songs.\nFree on Zynera.",
                     fontSize = 28.sp,
                     fontWeight = FontWeight.ExtraBold,
                     color = SonexaTextWhite,

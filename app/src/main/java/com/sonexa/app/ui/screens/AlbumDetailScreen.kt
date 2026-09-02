@@ -117,7 +117,11 @@ fun AlbumDetailScreen(
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     item {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
                             Box(
                                 modifier = Modifier
                                     .size(38.dp)
@@ -129,6 +133,29 @@ fun AlbumDetailScreen(
                                 Icon(
                                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                                     contentDescription = "Back",
+                                    tint = SonexaTextWhite,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+
+                            Box(
+                                modifier = Modifier
+                                    .size(38.dp)
+                                    .clip(CircleShape)
+                                    .background(SonexaInputBg)
+                                    .clickable {
+                                        com.sonexa.app.util.SonexaShareHelper.shareAlbum(
+                                            context = context,
+                                            albumId = albumId,
+                                            title = albumTitle,
+                                            artist = album?.artist.orEmpty()
+                                        )
+                                    },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Share,
+                                    contentDescription = "Share Album",
                                     tint = SonexaTextWhite,
                                     modifier = Modifier.size(18.dp)
                                 )

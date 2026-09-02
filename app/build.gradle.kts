@@ -23,34 +23,58 @@ android {
         if (localFile.exists()) {
             localFile.inputStream().use { localProps.load(it) }
         }
-        // Emulator → 10.0.2.2 | Physical device → your PC LAN IP
-        val apiBaseUrl = localProps.getProperty(
-            "api.base.url",
-            "http://10.0.2.2:8080/api/v1/"
-        )
-        // Google Cloud Console → OAuth 2.0 Web client ID (required for Google Sign-In)
         val googleWebClientId = localProps.getProperty("google.web.client.id", "")
-        // Apple Developer → Services ID (Sign in with Apple)
         val appleServiceId = localProps.getProperty("apple.service.id", "")
         val appleRedirectUri = localProps.getProperty(
             "apple.redirect.uri",
             "com.sonexa.app://auth/apple"
         )
         val youtubeApiKey = localProps.getProperty("youtube.api.key", "")
-        buildConfigField("String", "API_BASE_URL", "\"$apiBaseUrl\"")
+        val jamendoClientId = localProps.getProperty("jamendo.client.id", "")
         buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"$googleWebClientId\"")
         buildConfigField("String", "APPLE_SERVICE_ID", "\"$appleServiceId\"")
         buildConfigField("String", "APPLE_REDIRECT_URI", "\"$appleRedirectUri\"")
         buildConfigField("String", "YOUTUBE_API_KEY", "\"$youtubeApiKey\"")
+        buildConfigField("String", "JAMENDO_CLIENT_ID", "\"$jamendoClientId\"")
     }
 
     buildTypes {
+        debug {
+            val localProps = Properties()
+            val localFile = rootProject.file("local.properties")
+            if (localFile.exists()) {
+                localFile.inputStream().use { localProps.load(it) }
+            }
+            val apiBaseUrl = localProps.getProperty(
+                "api.base.url",
+                "http://10.0.2.2:8080/api/v1/"
+            )
+            buildConfigField("String", "API_BASE_URL", "\"$apiBaseUrl\"")
+            manifestPlaceholders["networkSecurityConfig"] = "@xml/network_security_config_debug"
+        }
         release {
             isMinifyEnabled = false
+            isShrinkResources = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            val localProps = Properties()
+            val localFile = rootProject.file("local.properties")
+            if (localFile.exists()) {
+                localFile.inputStream().use { localProps.load(it) }
+            }
+            val candidate = (localProps.getProperty("api.base.url.release")
+                ?: localProps.getProperty("api.base.url")
+                ?: "https://api.zynera.app/api/v1/").trim()
+            val releaseUrl = if (candidate.startsWith("https://")) {
+                candidate
+            } else {
+                "https://api.zynera.app/api/v1/"
+            }
+            val normalized = if (releaseUrl.endsWith("/")) releaseUrl else "$releaseUrl/"
+            buildConfigField("String", "API_BASE_URL", "\"$normalized\"")
+            manifestPlaceholders["networkSecurityConfig"] = "@xml/network_security_config"
         }
     }
     compileOptions {
@@ -61,7 +85,6 @@ android {
         compose = true
         buildConfig = true
     }
-
 }
 
 dependencies {
@@ -81,16 +104,13 @@ dependencies {
     implementation(libs.retrofit.converter.gson)
     implementation(libs.okhttp.logging.interceptor)
     implementation(libs.coil.compose)
-    implementation(libs.androidx.camera.camera2)
-    implementation(libs.androidx.camera.lifecycle)
-    implementation(libs.androidx.camera.view)
-    implementation(libs.androidx.camera.video)
-    implementation(libs.mlkit.face.detection)
     implementation(libs.androidx.credentials)
     implementation(libs.androidx.credentials.play.services)
     implementation(libs.google.id)
     implementation(libs.androidx.browser)
     implementation(libs.androidx.media3.exoplayer)
+    implementation(libs.androidx.media3.session)
+    implementation(libs.androidx.security.crypto)
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
     androidTestImplementation(platform(libs.androidx.compose.bom))

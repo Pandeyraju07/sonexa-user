@@ -43,17 +43,20 @@ class PlaybackViewModel : AndroidViewModel {
 
     private val musicRepository = MusicRepository()
     private val userRepository = UserRepository()
-    val equalizerEngine = SonexaEqualizerEngine()
     val playbackManager: PlaybackManager
+    val equalizerEngine: SonexaEqualizerEngine
+        get() = playbackManager.equalizerEngine
 
     private val _uiState = MutableStateFlow(PlaybackUiState())
     val uiState: StateFlow<PlaybackUiState> = _uiState.asStateFlow()
+    private val _elapsedMs = MutableStateFlow(0L)
+    val elapsedMs: StateFlow<Long> = _elapsedMs.asStateFlow()
 
     private var sleepJob: Job? = null
     private var originalQueue: List<TrackDto> = emptyList()
 
     constructor(application: Application) : super(application) {
-        playbackManager = PlaybackManager(application, equalizerEngine)
+        playbackManager = (application as com.sonexa.app.SonexaApp).playbackManager
 
         playbackManager.onTrackEnded = {
             onTrackEnded()
@@ -63,16 +66,27 @@ class PlaybackViewModel : AndroidViewModel {
             bindEqualizer(sessionId)
         }
 
-        // Collect engine state from active provider (native or YouTube)
+        // Collect engine state from active provider (native or YouTube).
+        // Position ticks stay on elapsedMs so the full player is not recomposed 3x/sec.
         viewModelScope.launch {
             playbackManager.engineState.collectLatest { engine ->
+                _elapsedMs.value = engine.positionMs
                 _uiState.update { current ->
-                    current.copy(
-                        isPlaying = engine.isPlaying,
-                        positionMs = engine.positionMs,
-                        durationMs = if (engine.durationMs > 0) engine.durationMs else current.durationMs,
-                        errorMessage = engine.errorMessage ?: current.errorMessage
-                    )
+                    val duration = if (engine.durationMs > 0) engine.durationMs else current.durationMs
+                    val error = engine.errorMessage ?: current.errorMessage
+                    if (current.isPlaying == engine.isPlaying &&
+                        current.durationMs == duration &&
+                        current.errorMessage == error
+                    ) {
+                        current
+                    } else {
+                        current.copy(
+                            isPlaying = engine.isPlaying,
+                            durationMs = duration,
+                            errorMessage = error,
+                            positionMs = engine.positionMs
+                        )
+                    }
                 }
             }
         }
@@ -89,13 +103,31 @@ class PlaybackViewModel : AndroidViewModel {
             }
         }
 
+        // Live Reactive Liked Songs Synchronization
+        viewModelScope.launch {
+            com.sonexa.app.data.local.LikedSongsStore.likedSongs.collectLatest { likedList ->
+                val likedSet = likedList.map { it.id }.toSet()
+                _uiState.update { state ->
+                    val currentTrack = state.track
+                    val updatedTrack = if (currentTrack != null) {
+                        currentTrack.copy(isLiked = likedSet.contains(currentTrack.id))
+                    } else null
+                    val updatedQueue = state.queue.map {
+                        it.copy(isLiked = likedSet.contains(it.id))
+                    }
+                    state.copy(track = updatedTrack, queue = updatedQueue)
+                }
+            }
+        }
+
         refreshDeviceFromSettings()
         loadServerQueueHint()
         bindEqualizer()
     }
 
     fun play(track: TrackDto, sourceTitle: String = track.album) {
-        playQueue(listOf(track), 0, sourceTitle.ifBlank { track.album })
+        val mappedTrack = com.sonexa.app.data.local.LikedSongsStore.withLikedStatus(track) ?: track
+        playQueue(listOf(mappedTrack), 0, sourceTitle.ifBlank { mappedTrack.album })
     }
 
     fun playQueue(tracks: List<TrackDto>, startIndex: Int = 0, sourceTitle: String = "") {
@@ -103,15 +135,16 @@ class PlaybackViewModel : AndroidViewModel {
             _uiState.update { it.copy(errorMessage = "No tracks to play") }
             return
         }
-        originalQueue = tracks
-        val index = startIndex.coerceIn(0, tracks.lastIndex)
-        val ordered = if (_uiState.value.shuffle && tracks.size > 1) {
-            buildShuffledQueue(tracks, index)
+        val mappedTracks = com.sonexa.app.data.local.LikedSongsStore.withLikedStatus(tracks)
+        originalQueue = mappedTracks
+        val index = startIndex.coerceIn(0, mappedTracks.lastIndex)
+        val ordered = if (_uiState.value.shuffle && mappedTracks.size > 1) {
+            buildShuffledQueue(mappedTracks, index)
         } else {
-            tracks
+            mappedTracks
         }
-        val playIndex = if (_uiState.value.shuffle && tracks.size > 1) {
-            ordered.indexOfFirst { it.id == tracks[index].id }.coerceAtLeast(0)
+        val playIndex = if (_uiState.value.shuffle && mappedTracks.size > 1) {
+            ordered.indexOfFirst { it.id == mappedTracks[index].id }.coerceAtLeast(0)
         } else {
             index
         }
@@ -144,7 +177,7 @@ class PlaybackViewModel : AndroidViewModel {
     fun skipPrevious() {
         val state = _uiState.value
         if (state.queue.isEmpty()) return
-        if (state.positionMs > 3000) {
+        if (state.positionMs > 3000 || _elapsedMs.value > 3000) {
             playbackManager.seekTo(0)
             return
         }
@@ -216,6 +249,7 @@ class PlaybackViewModel : AndroidViewModel {
         val dur = _uiState.value.durationMs
         val target = if (dur > 0) positionMs.coerceIn(0L, dur) else positionMs.coerceAtLeast(0L)
         playbackManager.seekTo(target)
+        _elapsedMs.value = target
         _uiState.update { it.copy(positionMs = target) }
     }
 
@@ -228,14 +262,14 @@ class PlaybackViewModel : AndroidViewModel {
     }
 
     fun seekForward30() {
-        val current = _uiState.value.positionMs
+        val current = _elapsedMs.value.takeIf { it > 0 } ?: _uiState.value.positionMs
         val dur = _uiState.value.durationMs
-        val target = (current + 30_000L).coerceAtMost(if (dur > 0) dur else Long.MAX_VALUE)
+        val target = (current + 10_000L).coerceAtMost(if (dur > 0) dur else Long.MAX_VALUE)
         seekToMs(target)
     }
 
     fun seekBackward10() {
-        val current = _uiState.value.positionMs
+        val current = _elapsedMs.value.takeIf { it > 0 } ?: _uiState.value.positionMs
         val target = (current - 10_000L).coerceAtLeast(0L)
         seekToMs(target)
     }
@@ -360,6 +394,7 @@ class PlaybackViewModel : AndroidViewModel {
         when (_uiState.value.repeatMode) {
             RepeatMode.ONE -> {
                 playbackManager.seekTo(0)
+                _elapsedMs.value = 0L
                 playbackManager.resume()
             }
             RepeatMode.ALL, RepeatMode.OFF -> skipNext()
@@ -369,8 +404,10 @@ class PlaybackViewModel : AndroidViewModel {
     private fun startTrackAt(index: Int) {
         val queue = _uiState.value.queue
         if (index !in queue.indices) return
-        val track = queue[index]
+        val rawTrack = queue[index]
+        val track = com.sonexa.app.data.local.LikedSongsStore.withLikedStatus(rawTrack) ?: rawTrack
 
+        _elapsedMs.value = 0L
         _uiState.update {
             it.copy(
                 track = track,
@@ -395,7 +432,7 @@ class PlaybackViewModel : AndroidViewModel {
 
     override fun onCleared() {
         sleepJob?.cancel()
-        playbackManager.release()
+        playbackManager.onTrackEnded = null
         super.onCleared()
     }
 

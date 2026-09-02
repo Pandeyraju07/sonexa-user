@@ -85,6 +85,12 @@ fun PodcastHubScreen(
 
     var searchQuery by remember { mutableStateOf("") }
     var isSearching by remember { mutableStateOf(false) }
+    val sessionManager = remember { com.sonexa.app.data.local.SessionManager.getInstance(context) }
+    val avatarInitial = remember(sessionManager.userName, sessionManager.userEmail) {
+        (sessionManager.userName?.firstOrNull()
+            ?: sessionManager.userEmail?.firstOrNull()
+            ?: 'U').uppercaseChar().toString()
+    }
 
     val feedData = (homeFeedState as? CatalogUiState.Ready)?.data
     val languages = remember(feedData) { feedData?.languages ?: viewModel.getLanguagesSafe() }
@@ -124,34 +130,39 @@ fun PodcastHubScreen(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                        .padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 8.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column {
+                    Column(
+                        modifier = Modifier
+                            .weight(1f, fill = false)
+                            .padding(end = 12.dp)
+                    ) {
                         Text(
                             text = "Good evening",
                             fontSize = 22.sp,
                             fontWeight = FontWeight.ExtraBold,
-                            color = Color.White
+                            color = Color.White,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                         Text(
                             text = "Listen to something interesting",
                             fontSize = 12.5.sp,
-                            color = TextMuted
+                            color = TextMuted,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
 
                     Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        IconButton(
+                        PodcastHeaderAction(
                             onClick = { isSearching = !isSearching },
-                            modifier = Modifier
-                                .size(38.dp)
-                                .clip(CircleShape)
-                                .background(Color(0xFF1F1A28))
+                            background = Color(0xFF1F1A28)
                         ) {
                             Icon(
                                 imageVector = if (isSearching) Icons.Default.Close else Icons.Default.Search,
@@ -161,12 +172,9 @@ fun PodcastHubScreen(
                             )
                         }
 
-                        IconButton(
+                        PodcastHeaderAction(
                             onClick = onOpenNotifications,
-                            modifier = Modifier
-                                .size(38.dp)
-                                .clip(CircleShape)
-                                .background(Color(0xFF1F1A28))
+                            background = Color(0xFF1F1A28)
                         ) {
                             Icon(
                                 imageVector = Icons.Outlined.Notifications,
@@ -176,15 +184,16 @@ fun PodcastHubScreen(
                             )
                         }
 
-                        IconButton(
+                        PodcastHeaderAction(
                             onClick = onOpenProfile,
-                            modifier = Modifier
-                                .size(38.dp)
-                                .clip(CircleShape)
-                                .background(BrandPurple),
-                            colors = IconButtonDefaults.iconButtonColors(contentColor = Color.White)
+                            background = BrandPurple
                         ) {
-                            Text("U", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                            Text(
+                                text = avatarInitial,
+                                fontWeight = FontWeight.ExtraBold,
+                                fontSize = 14.sp,
+                                color = Color.White
+                            )
                         }
                     }
                 }
@@ -567,6 +576,24 @@ fun PodcastHubScreen(
             }
         }
     }
+}
+
+@Composable
+private fun PodcastHeaderAction(
+    onClick: () -> Unit,
+    background: Color,
+    content: @Composable BoxScope.() -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .size(38.dp)
+            .clip(CircleShape)
+            .background(background)
+            .border(1.dp, Color.White.copy(alpha = 0.12f), CircleShape)
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
+        content = content
+    )
 }
 
 private fun PodcastViewModel.getLanguagesSafe(): List<PodcastLanguageDto> = listOf(

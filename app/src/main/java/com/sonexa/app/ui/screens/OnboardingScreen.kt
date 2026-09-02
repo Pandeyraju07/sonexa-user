@@ -82,7 +82,7 @@ fun OnboardingScreen(
         ),
         OnboardingSlide(
             "Personalized AI DJ",
-            "Let Sonexa AI curate perfect music mixes tailored to your mood & current activity.",
+            "Let Zynera AI curate perfect music mixes tailored to your mood & current activity.",
             Icons.Default.GraphicEq,
             Color(0xFF9825DD),
             Color(0xFFE534B2)
@@ -107,7 +107,7 @@ fun OnboardingScreen(
         is CatalogUiState.Ready -> state.data.mapIndexed { index, dto ->
             val palette = onboardingPalette[index % onboardingPalette.size]
             OnboardingSlide(
-                title = dto.title.ifBlank { fallbackSlides.getOrNull(index)?.title ?: "Sonexa" },
+                title = dto.title.ifBlank { fallbackSlides.getOrNull(index)?.title ?: "Zynera" },
                 description = dto.subtitle.ifBlank { fallbackSlides.getOrNull(index)?.description.orEmpty() },
                 icon = palette.first,
                 color1 = palette.second,

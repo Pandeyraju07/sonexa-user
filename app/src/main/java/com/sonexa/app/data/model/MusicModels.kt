@@ -21,7 +21,21 @@ data class TrackDto(
     @SerializedName("availability") val availability: String = "AVAILABLE",
     @SerializedName("availableProviders") val availableProviders: List<String> = emptyList(),
     @SerializedName("channelTitle") val channelTitle: String = "",
-    @SerializedName("isOfficial") val isOfficial: Boolean = false
+    @SerializedName("isOfficial") val isOfficial: Boolean = false,
+    @SerializedName("bpm") val bpm: Double = 110.0,
+    @SerializedName("energy") val energy: Double = 0.55,
+    @SerializedName("mood") val mood: String = "Chill",
+    @SerializedName("moods") val moods: List<String> = emptyList(),
+    @SerializedName("genres") val genres: List<String> = emptyList(),
+    @SerializedName("language") val language: String = "Hindi",
+    @SerializedName("eraDecade") val eraDecade: String = "2020s",
+    @SerializedName("acousticness") val acousticness: Double = 0.45,
+    @SerializedName("danceability") val danceability: Double = 0.60,
+    @SerializedName("isInstrumental") val isInstrumental: Boolean = false,
+    @SerializedName("tags") val tags: List<String> = emptyList(),
+    @SerializedName("versionType") val versionType: String = "Original",
+    @SerializedName("recommendationReason") val recommendationReason: String = "",
+    @SerializedName("qualityTier") val qualityTier: String = "EXACT_MATCH"
 ) {
     val isYouTube: Boolean
         get() = provider?.equals("youtube", ignoreCase = true) == true ||
@@ -44,6 +58,9 @@ data class TrackDto(
             val vid = effectiveVideoId
             return if (vid.isNotBlank()) "https://img.youtube.com/vi/$vid/hqdefault.jpg" else ""
         }
+
+    val genre: String
+        get() = genres.firstOrNull()?.ifBlank { album } ?: album
 }
 
 data class AlbumDto(
@@ -194,7 +211,21 @@ data class NotificationDto(
     @SerializedName("iconKey") val iconKey: String = "",
     @SerializedName("colorHex") val colorHex: String = "#E534B2",
     @SerializedName("timeAgo") val timeAgo: String = "",
-    @SerializedName("read") val read: Boolean = false
+    @SerializedName("read") val read: Boolean = false,
+    @SerializedName("category") val category: String = "music" // music, social, ai, system
+)
+
+data class ActiveSessionDto(
+    @SerializedName("id") val id: String = "",
+    @SerializedName("device") val device: String = "Unknown Device",
+    @SerializedName("location") val location: String = "",
+    @SerializedName("lastActive") val lastActive: String = "",
+    @SerializedName("isCurrent") val isCurrent: Boolean = false,
+    @SerializedName("platform") val platform: String = "android"
+)
+
+data class ActiveSessionsResponse(
+    @SerializedName("sessions") val sessions: List<ActiveSessionDto> = emptyList()
 )
 
 data class HomeDynamicSectionDto(
@@ -550,3 +581,212 @@ data class IPopHomeResponse(
     @SerializedName("spotlightArtists") val spotlightArtists: List<IPopArtistDto> = emptyList(),
     @SerializedName("newReleases") val newReleases: List<TrackDto> = emptyList()
 )
+
+// ==========================================
+// SIGNATURE AI & VOICE MUSIC MODELS
+// ==========================================
+
+data class MusicIntentDto(
+    @SerializedName("intentType") val intentType: String = "PLAY_MUSIC",
+    @SerializedName("query") val query: String = "",
+    @SerializedName("artist") val artist: String? = null,
+    @SerializedName("track") val track: String? = null,
+    @SerializedName("album") val album: String? = null,
+    @SerializedName("genres") val genres: List<String> = emptyList(),
+    @SerializedName("languages") val languages: List<String> = emptyList(),
+    @SerializedName("moods") val moods: List<String> = emptyList(),
+    @SerializedName("energy") val energy: Double? = null,
+    @SerializedName("durationMinutes") val durationMinutes: Int? = null,
+    @SerializedName("activity") val activity: String? = null,
+    @SerializedName("era") val era: String? = null,
+    @SerializedName("action") val action: String? = null,
+    @SerializedName("confidence") val confidence: Double = 0.90
+)
+
+data class IntentParseRequestDto(
+    @SerializedName("text") val text: String = "",
+    @SerializedName("userKey") val userKey: String = "guest_user",
+    @SerializedName("currentTrackId") val currentTrackId: String? = null
+)
+
+data class ChangeVibeRequestDto(
+    @SerializedName("userKey") val userKey: String = "guest_user",
+    @SerializedName("vibe") val vibe: String = "MORE_ENERGETIC",
+    @SerializedName("currentQueue") val currentQueue: List<TrackDto> = emptyList(),
+    @SerializedName("currentTrack") val currentTrack: TrackDto? = null
+)
+
+data class ChangeVibeResponseDto(
+    @SerializedName("newVibe") val newVibe: String = "",
+    @SerializedName("targetEnergy") val targetEnergy: Double = 0.5,
+    @SerializedName("reorderedQueue") val reorderedQueue: List<TrackDto> = emptyList(),
+    @SerializedName("explanation") val explanation: String = ""
+)
+
+data class FixQueueRequestDto(
+    @SerializedName("userKey") val userKey: String = "guest_user",
+    @SerializedName("queue") val queue: List<TrackDto> = emptyList()
+)
+
+data class FixQueueResponseDto(
+    @SerializedName("balancedQueue") val balancedQueue: List<TrackDto> = emptyList(),
+    @SerializedName("removedDuplicatesCount") val removedDuplicatesCount: Int = 0,
+    @SerializedName("balanceSummary") val balanceSummary: String = ""
+)
+
+data class MusicJourneyPhaseItemDto(
+    @SerializedName("name") val name: String = "",
+    @SerializedName("startMinute") val startMinute: Int = 0,
+    @SerializedName("endMinute") val endMinute: Int = 20,
+    @SerializedName("targetEnergy") val targetEnergy: Double = 0.5,
+    @SerializedName("mood") val mood: String = "Calm",
+    @SerializedName("tracks") val tracks: List<TrackDto> = emptyList()
+)
+
+data class MusicJourneyResponseDto(
+    @SerializedName("title") val title: String = "",
+    @SerializedName("theme") val theme: String = "",
+    @SerializedName("totalDurationMinutes") val totalDurationMinutes: Int = 60,
+    @SerializedName("phases") val phases: List<MusicJourneyPhaseItemDto> = emptyList(),
+    @SerializedName("allTracks") val allTracks: List<TrackDto> = emptyList()
+)
+
+data class MusicDnaResponseDto(
+    @SerializedName("personality") val personality: String = "Explorer",
+    @SerializedName("energy") val energy: Int = 72,
+    @SerializedName("discovery") val discovery: Int = 64,
+    @SerializedName("nostalgia") val nostalgia: Int = 81,
+    @SerializedName("romance") val romance: Int = 58,
+    @SerializedName("mainstream") val mainstream: Int = 42,
+    @SerializedName("topGenres") val topGenres: Map<String, Double> = emptyMap(),
+    @SerializedName("topLanguages") val topLanguages: Map<String, Double> = emptyMap(),
+    @SerializedName("topArtists") val topArtists: Map<String, Double> = emptyMap(),
+    @SerializedName("summaryText") val summaryText: String = ""
+)
+
+data class ListeningInsightsResponseDto(
+    @SerializedName("totalMinutes") val totalMinutes: Int = 3640,
+    @SerializedName("topArtists") val topArtists: List<String> = emptyList(),
+    @SerializedName("topGenres") val topGenres: List<String> = emptyList(),
+    @SerializedName("topLanguages") val topLanguages: List<String> = emptyList(),
+    @SerializedName("peakListeningHour") val peakListeningHour: String = "10 PM - 1 AM",
+    @SerializedName("skipRate") val skipRate: Double = 0.08,
+    @SerializedName("completionRate") val completionRate: Double = 0.92,
+    @SerializedName("discoveryRate") val discoveryRate: Double = 0.48,
+    @SerializedName("favoriteMood") val favoriteMood: String = "Romantic"
+)
+
+data class PredictionItemDto(
+    @SerializedName("track") val track: TrackDto = TrackDto(),
+    @SerializedName("matchScore") val matchScore: Double = 0.90,
+    @SerializedName("reasons") val reasons: List<String> = emptyList()
+)
+
+data class WhyThisSongResponseDto(
+    @SerializedName("trackId") val trackId: String = "",
+    @SerializedName("trackTitle") val trackTitle: String = "",
+    @SerializedName("reasons") val reasons: List<String> = emptyList(),
+    @SerializedName("affinityScore") val affinityScore: Double = 0.89
+)
+
+data class VoiceSearchRequestDto(
+    @SerializedName("userKey") val userKey: String = "guest_user",
+    @SerializedName("transcript") val transcript: String = "",
+    @SerializedName("language") val language: String = "en"
+)
+
+data class VoiceSearchResponseDto(
+    @SerializedName("transcript") val transcript: String = "",
+    @SerializedName("intent") val intent: MusicIntentDto = MusicIntentDto(),
+    @SerializedName("feedbackMessage") val feedbackMessage: String = "",
+    @SerializedName("tracks") val tracks: List<TrackDto> = emptyList()
+)
+
+data class NextTrackDecisionDto(
+    @SerializedName("track") val track: TrackDto? = null,
+    @SerializedName("reason") val reason: String = "",
+    @SerializedName("confidence") val confidence: Double = 0.85
+)
+
+data class UserEventRequestDto(
+    @SerializedName("userKey") val userKey: String = "guest_user",
+    @SerializedName("eventType") val eventType: String = "PLAY_STARTED",
+    @SerializedName("trackId") val trackId: String? = null,
+    @SerializedName("trackTitle") val trackTitle: String? = null,
+    @SerializedName("artist") val artist: String? = null,
+    @SerializedName("genre") val genre: String? = null,
+    @SerializedName("language") val language: String? = null,
+    @SerializedName("mood") val mood: String? = null,
+    @SerializedName("energy") val energy: Double? = null,
+    @SerializedName("metadataJson") val metadataJson: String? = null
+)
+
+// ==========================================
+// 🔍 MULTI-STAGE ARTIST DISCOVERY & INTELLIGENCE
+// ==========================================
+
+data class ResolvedArtist(
+    val canonicalName: String,
+    val canonicalId: String,
+    val providerIds: Map<String, String> = emptyMap(),
+    val aliases: List<String> = emptyList(),
+    val confidence: Double = 1.0,
+    val bio: String = "",
+    val imageUrl: String = "",
+    val genres: List<String> = emptyList(),
+    val languages: List<String> = emptyList(),
+    val relatedArtists: List<String> = emptyList(),
+    val followersCount: Long = 0,
+    val isVerified: Boolean = false
+)
+
+data class ArtistAlbumSectionDto(
+    val id: String,
+    val title: String,
+    val year: String,
+    val coverUrl: String,
+    val trackCount: Int,
+    val tracks: List<TrackDto> = emptyList()
+)
+
+data class ArtistCatalogResponse(
+    val artist: ArtistDto,
+    val popularTracks: List<TrackDto> = emptyList(),
+    val albums: List<ArtistAlbumSectionDto> = emptyList(),
+    val singlesAndEps: List<TrackDto> = emptyList(),
+    val collaborations: List<TrackDto> = emptyList(),
+    val remixes: List<TrackDto> = emptyList(),
+    val relatedArtists: List<ArtistDto> = emptyList(),
+    val allTracks: List<TrackDto> = emptyList(),
+    val nextCursor: String? = null,
+    val hasMore: Boolean = false
+)
+
+data class SearchSuggestionDto(
+    val title: String,
+    val subtitle: String,
+    val type: String, // "artist", "track", "album", "genre", "mood", "language"
+    val imageUrl: String = "",
+    val query: String = title
+)
+
+data class TrackUnderstandingProfile(
+    val trackId: String,
+    val title: String,
+    val artist: String,
+    val primaryGenre: String,
+    val subgenres: List<String> = emptyList(),
+    val canonicalMood: String,
+    val moods: List<String> = emptyList(),
+    val normalizedEnergy: Double, // 0.0 to 1.0
+    val language: String,
+    val eraDecade: String,
+    val tempoBpm: Double,
+    val isRomantic: Boolean,
+    val acousticness: Double,
+    val danceability: Double,
+    val isInstrumental: Boolean,
+    val tags: List<String> = emptyList(),
+    val confidence: Double = 0.90
+)
+

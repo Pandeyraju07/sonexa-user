@@ -53,7 +53,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.sonexa.app.data.local.SessionManager
 import com.sonexa.app.ui.components.OtpResendRow
 import com.sonexa.app.ui.components.SonexaGradientButton
 import com.sonexa.app.ui.theme.SonexaGradientBrush
@@ -80,14 +79,12 @@ fun OtpVerificationScreen(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    val sessionManager = remember { SessionManager.getInstance(context) }
     val authState by authViewModel.uiState.collectAsState()
     var otpCode by remember { mutableStateOf("") }
     var resendSecondsLeft by remember { mutableIntStateOf(OTP_COOLDOWN_SECONDS) }
     val targetEmail = email.ifBlank { authViewModel.pendingOtpEmail.value }
     val isLoading = authState is AuthUiState.Loading
     val focusRequester = remember { FocusRequester() }
-    val fallbackOtp = sessionManager.pendingOtpCode
 
     LaunchedEffect(Unit) {
         authViewModel.resetState()
@@ -108,7 +105,6 @@ fun OtpVerificationScreen(
                 if (state.message.contains("OTP verified", ignoreCase = true) ||
                     state.user != null
                 ) {
-                    sessionManager.pendingOtpCode = null
                     Toast.makeText(context, state.message, Toast.LENGTH_SHORT).show()
                     authViewModel.resetState()
                     onOtpVerified()
@@ -116,14 +112,10 @@ fun OtpVerificationScreen(
                     state.message.contains("sent", ignoreCase = true) ||
                     state.message.contains("generated", ignoreCase = true)
                 ) {
-                    if (!state.emailDelivered && !state.otp.isNullOrBlank()) {
-                        sessionManager.pendingOtpCode = state.otp
-                    }
                     val toast = buildString {
                         append(state.message)
                         if (!state.emailDelivered) {
                             append(" Check Spam.")
-                            state.otp?.let { append(" OTP: $it") }
                         } else {
                             append(" Check inbox & Spam (valid 1 min).")
                         }
@@ -205,7 +197,7 @@ fun OtpVerificationScreen(
                 }
                 Spacer(modifier = Modifier.weight(1f))
                 Text(
-                    text = "SONEXA",
+                    text = "ZYNERA",
                     color = SonexaPurpleLight,
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Bold,
@@ -308,16 +300,6 @@ fun OtpVerificationScreen(
                     }
                 }
             )
-
-            if (!fallbackOtp.isNullOrBlank()) {
-                Spacer(modifier = Modifier.height(14.dp))
-                Text(
-                    text = "Dev code: $fallbackOtp",
-                    fontSize = 12.sp,
-                    color = SonexaTextSubtle,
-                    textAlign = TextAlign.Center
-                )
-            }
 
             Spacer(modifier = Modifier.height(28.dp))
 

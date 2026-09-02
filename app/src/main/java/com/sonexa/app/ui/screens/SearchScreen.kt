@@ -51,8 +51,6 @@ import com.sonexa.app.ui.viewmodel.RecentSearchItem
 import com.sonexa.app.ui.viewmodel.SearchUiState
 import com.sonexa.app.ui.viewmodel.SearchViewModel
 
-private val SpotifyGreen = Color(0xFF1ED760)
-
 @Composable
 fun SearchScreen(
     onOpenVoiceSearch: () -> Unit = {},
@@ -71,6 +69,7 @@ fun SearchScreen(
     val focusManager = LocalFocusManager.current
     var query by remember { mutableStateOf("") }
     var isSearchActive by remember { mutableStateOf(false) }
+    var showVoiceSheet by remember { mutableStateOf(false) }
 
     val searchState by searchViewModel.uiState.collectAsState()
     val recents by searchViewModel.recents.collectAsState()
@@ -120,31 +119,30 @@ fun SearchScreen(
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
 
-            // Top Header / Search Bar Row
+            // Header: Profile Initial, Title, Search Input Box
             if (!isSearchActive && query.isBlank()) {
-                // Spotify Browse Home Header
+                // Top Header Row
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                        .padding(horizontal = 16.dp, vertical = 10.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        // User Avatar
                         Box(
                             modifier = Modifier
                                 .size(36.dp)
                                 .clip(CircleShape)
-                                .background(Color(0xFFE8590C))
+                                .background(Color(0xFF8C67AC))
                                 .clickable { onOpenProfile() },
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
                                 text = avatarInitial,
-                                color = Color.Black,
-                                fontSize = 17.sp,
-                                fontWeight = FontWeight.ExtraBold
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
                             )
                         }
                         Spacer(modifier = Modifier.width(14.dp))
@@ -153,6 +151,21 @@ fun SearchScreen(
                             fontSize = 26.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color.White
+                        )
+                    }
+
+                    IconButton(
+                        onClick = { showVoiceSheet = true },
+                        modifier = Modifier
+                            .size(38.dp)
+                            .clip(CircleShape)
+                            .background(SpotifyGreen.copy(alpha = 0.15f))
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Mic,
+                            contentDescription = "Voice Search",
+                            tint = SpotifyGreen,
+                            modifier = Modifier.size(22.dp)
                         )
                     }
                 }
@@ -169,20 +182,38 @@ fun SearchScreen(
                         .padding(horizontal = 14.dp),
                     contentAlignment = Alignment.CenterStart
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            Icons.Default.Search,
-                            contentDescription = "Search",
-                            tint = Color(0xFF121212),
-                            modifier = Modifier.size(22.dp)
-                        )
-                        Spacer(modifier = Modifier.width(10.dp))
-                        Text(
-                            text = "What do you want to listen to?",
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = Color(0xFF242424)
-                        )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                            Icon(
+                                Icons.Default.Search,
+                                contentDescription = "Search",
+                                tint = Color(0xFF121212),
+                                modifier = Modifier.size(22.dp)
+                            )
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Text(
+                                text = "What do you want to listen to?",
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = Color(0xFF242424)
+                            )
+                        }
+
+                        IconButton(
+                            onClick = { showVoiceSheet = true },
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Mic,
+                                contentDescription = "Voice Search",
+                                tint = Color(0xFF121212),
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
                     }
                 }
             } else {
@@ -245,6 +276,18 @@ fun SearchScreen(
                         )
                     }
 
+                    IconButton(
+                        onClick = { showVoiceSheet = true },
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Mic,
+                            contentDescription = "Voice Search",
+                            tint = SpotifyGreen,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+
                     if (query.isNotEmpty()) {
                         IconButton(
                             onClick = {
@@ -264,14 +307,69 @@ fun SearchScreen(
                 }
             }
 
+            if (showVoiceSheet) {
+                com.sonexa.app.ui.components.VoiceSearchBottomSheet(
+                    onDismiss = { showVoiceSheet = false },
+                    onVoiceResult = { response ->
+                        query = response.transcript
+                        isSearchActive = true
+                        searchViewModel.onSearchQueryChanged(response.transcript)
+                        if (response.tracks.isNotEmpty()) {
+                            playTrackList(response.tracks, 0, "Voice: ${response.transcript}")
+                        }
+                    },
+                    onDirectSearch = { voiceQuery ->
+                        query = voiceQuery
+                        isSearchActive = true
+                        searchViewModel.onSearchQueryChanged(voiceQuery)
+                    }
+                )
+            }
+
+            // Main Content Area
             // Main Content Area
             if (!isSearchActive && query.isBlank()) {
-                // Browse Home (2x2 Hero categories + Discover + Browse All)
+                val quickMoodChips = remember {
+                    listOf("🔥 Trending", "💖 Romance", "⚡ High Energy", "🎧 Lo-Fi Chill", "🪩 Party Hits", "🌿 Acoustic", "🧘 Alpha Focus", "🚗 Drive Mode")
+                }
+
+                // Browse Home (Quick Chips + 2x2 Hero categories + Discover + Browse All)
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
+                    // 0. Quick Mood & Vibe Chips
+                    item {
+                        LazyRow(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            items(quickMoodChips) { moodText ->
+                                val cleanQuery = moodText.substringAfter(" ").trim()
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(20.dp))
+                                        .background(SonexaInputBg)
+                                        .border(1.dp, SonexaCardBorder, RoundedCornerShape(20.dp))
+                                        .clickable {
+                                            query = cleanQuery
+                                            isSearchActive = true
+                                            searchViewModel.onSearchQueryChanged(cleanQuery)
+                                        }
+                                        .padding(horizontal = 14.dp, vertical = 8.dp)
+                                ) {
+                                    Text(
+                                        text = moodText,
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color.White
+                                    )
+                                }
+                            }
+                        }
+                    }
+
                     // 1. 2x2 Hero Category Cards
                     item {
                         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -305,24 +403,45 @@ fun SearchScreen(
                         }
                     }
 
-                    // 2. "Discover something new"
+                    // 2. "Discover something new" (Redesigned with guaranteed covers & Play action)
                     item {
                         Column {
-                            Text(
-                                text = "Discover something new",
-                                fontSize = 20.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color.White,
-                                modifier = Modifier.padding(vertical = 8.dp)
-                            )
-                            LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 8.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column {
+                                    Text(
+                                        text = "Discover something new",
+                                        fontSize = 20.sp,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        color = Color.White
+                                    )
+                                    Text(
+                                        text = "Curated trending tags & fresh sounds",
+                                        fontSize = 12.sp,
+                                        color = SonexaTextMuted
+                                    )
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(4.dp))
+
+                            LazyRow(
+                                horizontalArrangement = Arrangement.spacedBy(14.dp),
+                                contentPadding = PaddingValues(horizontal = 2.dp)
+                            ) {
                                 items(discoverItems) { item ->
                                     Box(
                                         modifier = Modifier
-                                            .width(140.dp)
-                                            .height(215.dp)
-                                            .clip(RoundedCornerShape(12.dp))
-                                            .background(Color(0xFF242424))
+                                            .width(155.dp)
+                                            .height(235.dp)
+                                            .clip(RoundedCornerShape(18.dp))
+                                            .background(SonexaInputBg)
+                                            .border(1.dp, SonexaCardBorder, RoundedCornerShape(18.dp))
                                             .clickable {
                                                 when {
                                                     item.tag.contains("podcast", ignoreCase = true) || item.query.contains("podcast", ignoreCase = true) -> onOpenPodcasts()
@@ -333,30 +452,108 @@ fun SearchScreen(
                                                 }
                                             }
                                     ) {
+                                        // Background Image
                                         AsyncImage(
-                                            model = ImageRequest.Builder(context).data(item.imageUrl).crossfade(true).build(),
+                                            model = ImageRequest.Builder(context)
+                                                .data(item.imageUrl)
+                                                .crossfade(true)
+                                                .build(),
                                             contentDescription = item.tag,
                                             contentScale = ContentScale.Crop,
                                             modifier = Modifier.fillMaxSize()
                                         )
+
+                                        // Dark Scrim Gradient
                                         Box(
                                             modifier = Modifier
                                                 .fillMaxSize()
                                                 .background(
                                                     Brush.verticalGradient(
-                                                        listOf(Color.Transparent, Color.Black.copy(alpha = 0.88f))
+                                                        listOf(
+                                                            Color.Black.copy(alpha = 0.35f),
+                                                            Color.Transparent,
+                                                            Color.Black.copy(alpha = 0.90f)
+                                                        )
                                                     )
                                                 )
                                         )
-                                        Text(
-                                            text = item.tag,
-                                            fontSize = 15.sp,
-                                            fontWeight = FontWeight.ExtraBold,
-                                            color = Color.White,
+
+                                        // Top Hashtag Badge
+                                        Box(
                                             modifier = Modifier
+                                                .align(Alignment.TopStart)
+                                                .padding(10.dp)
+                                                .clip(RoundedCornerShape(10.dp))
+                                                .background(Color.Black.copy(alpha = 0.65f))
+                                                .border(1.dp, Color.White.copy(alpha = 0.20f), RoundedCornerShape(10.dp))
+                                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                                        ) {
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                Icon(
+                                                    imageVector = Icons.Default.MusicNote,
+                                                    contentDescription = null,
+                                                    tint = SpotifyGreen,
+                                                    modifier = Modifier.size(12.dp)
+                                                )
+                                                Spacer(modifier = Modifier.width(4.dp))
+                                                Text(
+                                                    text = item.tag,
+                                                    fontSize = 11.sp,
+                                                    fontWeight = FontWeight.ExtraBold,
+                                                    color = Color.White
+                                                )
+                                            }
+                                        }
+
+                                        // Bottom Info & Play Button
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
                                                 .align(Alignment.BottomStart)
-                                                .padding(12.dp)
-                                        )
+                                                .padding(12.dp),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.Bottom
+                                        ) {
+                                            Column(modifier = Modifier.weight(1f)) {
+                                                Text(
+                                                    text = item.title,
+                                                    fontSize = 14.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = Color.White,
+                                                    maxLines = 2,
+                                                    overflow = TextOverflow.Ellipsis
+                                                )
+                                                Text(
+                                                    text = "Explore Flow",
+                                                    fontSize = 11.sp,
+                                                    color = SpotifyGreen,
+                                                    fontWeight = FontWeight.SemiBold
+                                                )
+                                            }
+
+                                            // Quick Play Circle
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(34.dp)
+                                                    .clip(CircleShape)
+                                                    .background(SpotifyGreen)
+                                                    .clickable {
+                                                        if (item.track != null) {
+                                                            playTrackList(listOf(item.track), 0, item.tag)
+                                                        } else {
+                                                            searchViewModel.playCategoryOrTagDirect(item.query, item.tag) { tracks, idx, title -> playTrackList(tracks, idx, title) }
+                                                        }
+                                                    },
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.PlayArrow,
+                                                    contentDescription = "Play",
+                                                    tint = Color.Black,
+                                                    modifier = Modifier.size(20.dp)
+                                                )
+                                            }
+                                        }
                                     }
                                 }
                             }
@@ -404,51 +601,92 @@ fun SearchScreen(
                     }
                 }
             } else if (query.isBlank()) {
-                // Recents State (Screenshot 3)
+                // ── Premium Recents State ──────────────────────────────────────
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 24.dp)
                 ) {
                     item {
+                        // Header row
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(vertical = 12.dp),
+                                .padding(top = 12.dp, bottom = 6.dp),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text(
-                                text = "Recents",
-                                fontSize = 18.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color.White
-                            )
-                            if (recents.isNotEmpty()) {
+                            Column {
                                 Text(
-                                    text = "Clear all",
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = Color(0xFFA19BAE),
-                                    modifier = Modifier.clickable { searchViewModel.clearAllRecents() }
+                                    text = "Recently Searched",
+                                    fontSize = 20.sp,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = Color.White
                                 )
+                                Text(
+                                    text = "Tap to jump back in",
+                                    fontSize = 12.sp,
+                                    color = Color(0xFFA19BAE)
+                                )
+                            }
+                            if (recents.isNotEmpty()) {
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(14.dp))
+                                        .background(Color(0xFF1F1F1F))
+                                        .border(1.dp, Color(0xFF333333), RoundedCornerShape(14.dp))
+                                        .clickable { searchViewModel.clearAllRecents() }
+                                        .padding(horizontal = 12.dp, vertical = 6.dp)
+                                ) {
+                                    Text(
+                                        text = "Clear all",
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = Color(0xFFA19BAE)
+                                    )
+                                }
                             }
                         }
                     }
 
-                    items(recents) { item ->
-                        RecentSearchRow(
-                            item = item,
-                            onClick = {
-                                if (item.type == "artist") {
-                                    query = item.title
-                                    searchViewModel.onSearchQueryChanged(item.title)
-                                } else {
-                                    query = item.title
-                                    searchViewModel.onSearchQueryChanged(item.title)
+                    if (recents.isEmpty()) {
+                        item {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 60.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Text("🔍", fontSize = 40.sp)
+                                    Spacer(modifier = Modifier.height(12.dp))
+                                    Text(
+                                        text = "Nothing searched yet",
+                                        fontSize = 16.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color.White
+                                    )
+                                    Text(
+                                        text = "Your recent tracks & artists appear here",
+                                        fontSize = 13.sp,
+                                        color = Color(0xFFA19BAE)
+                                    )
                                 }
-                            },
-                            onRemove = { searchViewModel.removeRecent(item.id) }
-                        )
+                            }
+                        }
+                    } else {
+                        items(recents) { item ->
+                            RecentSearchRow(
+                                item = item,
+                                onClick = {
+                                    query = item.title
+                                    searchViewModel.onSearchQueryChanged(item.title)
+                                    if (item.track != null && playbackViewModel != null) {
+                                        playTrackList(listOf(item.track), 0, item.title)
+                                    }
+                                },
+                                onRemove = { searchViewModel.removeRecent(item.id) }
+                            )
+                        }
                     }
                 }
             } else {
@@ -467,29 +705,31 @@ fun SearchScreen(
                     is SearchUiState.Success -> {
                         val tracks = state.tracks
                         val topArtist = state.topArtist
+                        val artistCatalog = state.artistCatalog
 
                         LazyColumn(
                             modifier = Modifier.fillMaxSize(),
                             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                             verticalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
-                            // Top Artist Match (if singer searched e.g. Arijit Singh)
+                            // 1. Top Artist Match (if singer searched e.g. Arijit Singh)
                             if (topArtist != null) {
                                 item {
                                     Row(
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .clip(RoundedCornerShape(12.dp))
-                                            .background(Color(0xFF1E1E1E))
+                                            .clip(RoundedCornerShape(14.dp))
+                                            .background(SonexaInputBg)
+                                            .border(1.dp, SonexaCardBorder, RoundedCornerShape(14.dp))
                                             .clickable { onOpenArtistProfile(topArtist.id) }
                                             .padding(12.dp),
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
                                         Box(
                                             modifier = Modifier
-                                                .size(56.dp)
+                                                .size(60.dp)
                                                 .clip(CircleShape)
-                                                .background(Color(0xFF333333))
+                                                .background(SonexaGradientBrush)
                                         ) {
                                             AsyncImage(
                                                 model = ImageRequest.Builder(context).data(topArtist.imageUrl).crossfade(true).build(),
@@ -507,50 +747,117 @@ fun SearchScreen(
                                                     fontWeight = FontWeight.Bold,
                                                     color = Color.White
                                                 )
-                                                Spacer(modifier = Modifier.width(6.dp))
-                                                Icon(
-                                                    Icons.Default.CheckCircle,
-                                                    contentDescription = "Verified",
-                                                    tint = SpotifyGreen,
-                                                    modifier = Modifier.size(16.dp)
-                                                )
+                                                if (topArtist.verified) {
+                                                    Spacer(modifier = Modifier.width(6.dp))
+                                                    Icon(
+                                                        Icons.Default.CheckCircle,
+                                                        contentDescription = "Verified",
+                                                        tint = Color(0xFF3B82F6),
+                                                        modifier = Modifier.size(16.dp)
+                                                    )
+                                                }
                                             }
                                             Spacer(modifier = Modifier.height(2.dp))
                                             Text(
-                                                text = "Artist • Verified Singer",
+                                                text = "Artist • ${topArtist.followersCount / 1000000}M Followers",
                                                 fontSize = 13.sp,
                                                 color = Color(0xFFA19BAE)
                                             )
                                         }
-                                        Icon(
-                                            Icons.Default.ChevronRight,
-                                            contentDescription = "Open Artist",
-                                            tint = Color(0xFFA19BAE)
-                                        )
+                                        Box(
+                                            modifier = Modifier
+                                                .clip(RoundedCornerShape(8.dp))
+                                                .background(SonexaPurplePrimary)
+                                                .clickable {
+                                                    val artistTracks = artistCatalog?.popularTracks ?: tracks
+                                                    if (artistTracks.isNotEmpty()) {
+                                                        playTrackList(artistTracks, 0, "${topArtist.name} Radio")
+                                                    }
+                                                }
+                                                .padding(horizontal = 10.dp, vertical = 6.dp)
+                                        ) {
+                                            Text(text = "Play Radio", fontSize = 12.sp, color = Color.White, fontWeight = FontWeight.Bold)
+                                        }
                                     }
                                 }
                             }
 
-                            // Matching Songs List
-                            item {
-                                Text(
-                                    text = "Songs",
-                                    fontSize = 17.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color.White,
-                                    modifier = Modifier.padding(top = 6.dp, bottom = 2.dp)
-                                )
+                            // 2. Discography / Albums Shelf
+                            if (artistCatalog?.albums?.isNotEmpty() == true) {
+                                item {
+                                    Column {
+                                        Text(
+                                            text = "Albums & Singles",
+                                            fontSize = 17.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color.White,
+                                            modifier = Modifier.padding(top = 4.dp, bottom = 6.dp)
+                                        )
+                                        LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                            items(artistCatalog.albums) { alb ->
+                                                Column(
+                                                    modifier = Modifier
+                                                        .width(110.dp)
+                                                        .clip(RoundedCornerShape(10.dp))
+                                                        .background(SonexaInputBg)
+                                                        .clickable {
+                                                            if (alb.tracks.isNotEmpty()) {
+                                                                playTrackList(alb.tracks, 0, alb.title)
+                                                            }
+                                                        }
+                                                        .padding(6.dp)
+                                                ) {
+                                                    AsyncImage(
+                                                        model = ImageRequest.Builder(context).data(alb.coverUrl).crossfade(true).build(),
+                                                        contentDescription = alb.title,
+                                                        modifier = Modifier
+                                                            .size(98.dp)
+                                                            .clip(RoundedCornerShape(6.dp)),
+                                                        contentScale = ContentScale.Crop
+                                                    )
+                                                    Spacer(modifier = Modifier.height(4.dp))
+                                                    Text(text = alb.title, fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White, maxLines = 1)
+                                                    Text(text = alb.year, fontSize = 10.sp, color = SonexaTextMuted)
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
                             }
 
+                            // 3. Songs Header
+                            item {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "Top Songs & Hits",
+                                        fontSize = 17.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color.White,
+                                        modifier = Modifier.padding(top = 6.dp, bottom = 2.dp)
+                                    )
+                                    Text(
+                                        text = "${tracks.size} tracks found",
+                                        fontSize = 12.sp,
+                                        color = SonexaPurpleLight
+                                    )
+                                }
+                            }
+
+                            // 4. Track List with Version Tags & Provider Badges
                             itemsIndexed(tracks) { index, track ->
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
+                                        .clip(RoundedCornerShape(8.dp))
                                         .clickable {
                                             searchViewModel.addRecentTrack(track)
                                             playTrackList(tracks, index, "$query Results")
                                         }
-                                        .padding(vertical = 6.dp),
+                                        .padding(vertical = 6.dp, horizontal = 4.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Box(
@@ -579,12 +886,34 @@ fun SearchScreen(
                                             overflow = TextOverflow.Ellipsis
                                         )
                                         Spacer(modifier = Modifier.height(2.dp))
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            if (track.versionType != "Original") {
+                                                Box(
+                                                    modifier = Modifier
+                                                        .clip(RoundedCornerShape(4.dp))
+                                                        .background(SonexaPurplePrimary.copy(alpha = 0.45f))
+                                                        .padding(horizontal = 4.dp, vertical = 1.dp)
+                                                ) {
+                                                    Text(text = track.versionType, fontSize = 9.sp, color = Color.White, fontWeight = FontWeight.Bold)
+                                                }
+                                                Spacer(modifier = Modifier.width(5.dp))
+                                            }
+                                            Text(
+                                                text = "Song • ${track.artist}",
+                                                fontSize = 13.sp,
+                                                color = Color(0xFFA19BAE),
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                        }
+                                    }
+
+                                    if (track.availableProviders.isNotEmpty()) {
                                         Text(
-                                            text = "Song • ${track.artist}",
-                                            fontSize = 13.sp,
-                                            color = Color(0xFFA19BAE),
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis
+                                            text = track.availableProviders.first(),
+                                            fontSize = 10.sp,
+                                            color = SonexaPurpleLight,
+                                            modifier = Modifier.padding(end = 6.dp)
                                         )
                                     }
 
@@ -601,6 +930,41 @@ fun SearchScreen(
                                             tint = Color(0xFFA19BAE),
                                             modifier = Modifier.size(20.dp)
                                         )
+                                    }
+                                }
+                            }
+
+                            // 5. Infinite Pagination Load More Row
+                            if (state.hasMoreTracks || tracks.size >= 15) {
+                                item {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(vertical = 12.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        if (state.isLoadingMore) {
+                                            CircularProgressIndicator(
+                                                color = SonexaPurpleLight,
+                                                modifier = Modifier.size(24.dp)
+                                            )
+                                        } else {
+                                            Box(
+                                                modifier = Modifier
+                                                    .clip(RoundedCornerShape(12.dp))
+                                                    .background(SonexaInputBg)
+                                                    .border(1.dp, SonexaCardBorder, RoundedCornerShape(12.dp))
+                                                    .clickable { searchViewModel.loadMoreTracks() }
+                                                    .padding(horizontal = 20.dp, vertical = 8.dp)
+                                            ) {
+                                                Text(
+                                                    text = "Load More Songs",
+                                                    color = Color.White,
+                                                    fontSize = 13.sp,
+                                                    fontWeight = FontWeight.SemiBold
+                                                )
+                                            }
+                                        }
                                     }
                                 }
                             }
@@ -621,30 +985,42 @@ private fun BrowseHeroCard(
 ) {
     Box(
         modifier = modifier
-            .height(90.dp)
-            .clip(RoundedCornerShape(8.dp))
-            .background(Color(category.colorHex))
+            .height(96.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .background(
+                Brush.linearGradient(
+                    listOf(
+                        Color(category.colorHex),
+                        Color(category.colorHex).copy(alpha = 0.75f)
+                    )
+                )
+            )
+            .border(1.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(16.dp))
             .clickable { onClick(category) }
-            .padding(12.dp)
+            .padding(14.dp)
     ) {
         Text(
             text = category.title,
             fontSize = 17.sp,
-            fontWeight = FontWeight.Bold,
+            fontWeight = FontWeight.ExtraBold,
             color = Color.White,
-            lineHeight = 20.sp,
+            lineHeight = 21.sp,
             modifier = Modifier.align(Alignment.TopStart)
         )
         AsyncImage(
-            model = ImageRequest.Builder(LocalContext.current).data(category.imageUrl).crossfade(true).build(),
+            model = ImageRequest.Builder(LocalContext.current)
+                .data(category.imageUrl)
+                .crossfade(true)
+                .build(),
             contentDescription = null,
             contentScale = ContentScale.Crop,
             modifier = Modifier
-                .size(56.dp)
+                .size(62.dp)
                 .align(Alignment.BottomEnd)
-                .offset(x = 10.dp, y = 10.dp)
-                .rotate(24f)
-                .clip(RoundedCornerShape(4.dp))
+                .offset(x = 12.dp, y = 12.dp)
+                .rotate(22f)
+                .clip(RoundedCornerShape(8.dp))
+                .border(1.dp, Color.White.copy(alpha = 0.25f), RoundedCornerShape(8.dp))
         )
     }
 }
@@ -657,33 +1033,46 @@ private fun BrowseCategoryCard(
 ) {
     Box(
         modifier = modifier
-            .height(96.dp)
-            .clip(RoundedCornerShape(8.dp))
-            .background(Color(category.colorHex))
+            .height(102.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .background(
+                Brush.linearGradient(
+                    listOf(
+                        Color(category.colorHex),
+                        Color(category.colorHex).copy(alpha = 0.80f)
+                    )
+                )
+            )
+            .border(1.dp, Color.White.copy(alpha = 0.12f), RoundedCornerShape(16.dp))
             .clickable { onClick(category) }
-            .padding(12.dp)
+            .padding(14.dp)
     ) {
         Text(
             text = category.title,
             fontSize = 16.sp,
-            fontWeight = FontWeight.Bold,
+            fontWeight = FontWeight.ExtraBold,
             color = Color.White,
             lineHeight = 20.sp,
             modifier = Modifier.align(Alignment.TopStart)
         )
         AsyncImage(
-            model = ImageRequest.Builder(LocalContext.current).data(category.imageUrl).crossfade(true).build(),
+            model = ImageRequest.Builder(LocalContext.current)
+                .data(category.imageUrl)
+                .crossfade(true)
+                .build(),
             contentDescription = null,
             contentScale = ContentScale.Crop,
             modifier = Modifier
-                .size(60.dp)
+                .size(64.dp)
                 .align(Alignment.BottomEnd)
-                .offset(x = 12.dp, y = 12.dp)
-                .rotate(24f)
-                .clip(RoundedCornerShape(4.dp))
+                .offset(x = 14.dp, y = 14.dp)
+                .rotate(22f)
+                .clip(RoundedCornerShape(8.dp))
+                .border(1.dp, Color.White.copy(alpha = 0.20f), RoundedCornerShape(8.dp))
         )
     }
 }
+
 
 @Composable
 private fun RecentSearchRow(
@@ -691,92 +1080,149 @@ private fun RecentSearchRow(
     onClick: () -> Unit,
     onRemove: () -> Unit
 ) {
-    Row(
+    val typeIcon = when (item.type) {
+        "artist" -> Icons.Default.Person
+        "album" -> Icons.Default.Album
+        "playlist" -> Icons.Default.QueueMusic
+        else -> Icons.Default.MusicNote
+    }
+    val typeColor = when (item.type) {
+        "artist" -> Color(0xFF3B82F6)
+        "album" -> Color(0xFFF59E0B)
+        "playlist" -> Color(0xFF10B981)
+        else -> SpotifyGreen
+    }
+
+    Box(
         modifier = Modifier
             .fillMaxWidth()
+            .padding(vertical = 4.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .background(Color(0xFF1A1A2E))
+            .border(1.dp, Color(0xFF2D2D3D), RoundedCornerShape(16.dp))
             .clickable { onClick() }
-            .padding(vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically
     ) {
-        Box(
+        Row(
             modifier = Modifier
-                .size(50.dp)
-                .clip(if (item.type == "artist") CircleShape else RoundedCornerShape(4.dp))
-                .background(Color(0xFF282828))
+                .fillMaxWidth()
+                .padding(10.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            AsyncImage(
-                model = ImageRequest.Builder(LocalContext.current).data(item.imageUrl).crossfade(true).build(),
-                contentDescription = item.title,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize()
-            )
-        }
+            // Album Art with gradient overlay
+            Box(
+                modifier = Modifier
+                    .size(54.dp)
+                    .clip(if (item.type == "artist") CircleShape else RoundedCornerShape(10.dp))
+                    .background(
+                        Brush.linearGradient(
+                            listOf(Color(0xFF2D1B6B), Color(0xFF1A0D3D))
+                        )
+                    )
+            ) {
+                if (item.imageUrl.isNotBlank()) {
+                    AsyncImage(
+                        model = ImageRequest.Builder(LocalContext.current)
+                            .data(item.imageUrl)
+                            .crossfade(true)
+                            .build(),
+                        contentDescription = item.title,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                    // subtle dark scrim
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(Color.Black.copy(alpha = 0.15f))
+                    )
+                } else {
+                    Icon(
+                        imageVector = typeIcon,
+                        contentDescription = null,
+                        tint = typeColor,
+                        modifier = Modifier
+                            .size(26.dp)
+                            .align(Alignment.Center)
+                    )
+                }
+            }
 
-        Spacer(modifier = Modifier.width(12.dp))
+            Spacer(modifier = Modifier.width(12.dp))
 
-        Column(modifier = Modifier.weight(1f)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = item.title,
-                    fontSize = 15.sp,
+                    fontSize = 14.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color.White,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-                if (item.type == "artist") {
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Icon(
-                        Icons.Default.CheckCircle,
-                        contentDescription = null,
-                        tint = SpotifyGreen,
-                        modifier = Modifier.size(14.dp)
+                Spacer(modifier = Modifier.height(3.dp))
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    // Type badge
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(5.dp))
+                            .background(typeColor.copy(alpha = 0.15f))
+                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                    ) {
+                        Text(
+                            text = item.type.replaceFirstChar { it.uppercaseChar() },
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = typeColor
+                        )
+                    }
+                    Text(
+                        text = item.subtitle.removePrefix("Song • ").removePrefix("Search"),
+                        fontSize = 11.sp,
+                        color = Color(0xFFA19BAE),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
             }
-            Spacer(modifier = Modifier.height(2.dp))
-            Text(
-                text = item.subtitle,
-                fontSize = 13.sp,
-                color = Color(0xFFA19BAE),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-        }
 
-        if (item.isSaved) {
-            Icon(
-                Icons.Default.CheckCircle,
-                contentDescription = "Saved",
-                tint = SpotifyGreen,
+            // Quick Play button (for tracks only)
+            if (item.type == "song" && item.track != null) {
+                Box(
+                    modifier = Modifier
+                        .size(34.dp)
+                        .clip(CircleShape)
+                        .background(SpotifyGreen)
+                        .clickable { onClick() },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        Icons.Default.PlayArrow,
+                        contentDescription = "Play",
+                        tint = Color.Black,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.width(6.dp))
+            }
+
+            // Remove button
+            Box(
                 modifier = Modifier
-                    .size(20.dp)
-                    .padding(end = 4.dp)
-            )
-        } else {
-            IconButton(
-                onClick = { /* Add to library */ },
-                modifier = Modifier.size(34.dp)
+                    .size(30.dp)
+                    .clip(CircleShape)
+                    .background(Color(0xFF2A2A3A))
+                    .clickable { onRemove() },
+                contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    Icons.Default.AddCircleOutline,
-                    contentDescription = "Add",
-                    tint = Color(0xFFA19BAE),
-                    modifier = Modifier.size(20.dp)
+                    Icons.Default.Close,
+                    contentDescription = "Remove",
+                    tint = Color(0xFF888888),
+                    modifier = Modifier.size(14.dp)
                 )
             }
-        }
-
-        IconButton(
-            onClick = onRemove,
-            modifier = Modifier.size(34.dp)
-        ) {
-            Icon(
-                Icons.Default.Close,
-                contentDescription = "Remove",
-                tint = Color(0xFFA19BAE),
-                modifier = Modifier.size(18.dp)
-            )
         }
     }
 }

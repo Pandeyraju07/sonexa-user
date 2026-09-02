@@ -2,6 +2,7 @@ package com.sonexa.app.ui.screens
 
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -30,6 +31,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.Devices
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Info
@@ -41,6 +43,7 @@ import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
@@ -62,6 +65,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
@@ -129,34 +133,49 @@ fun SettingsScreen(
             .statusBarsPadding()
             .navigationBarsPadding()
     ) {
-        Row(
+        // ── Premium gradient header ──────────────────────────────────────────
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 20.dp, vertical = 14.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(38.dp)
-                    .clip(CircleShape)
-                    .background(SonexaInputBg)
-                    .clickable(onClick = onNavigateBack),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "Back",
-                    tint = SonexaTextWhite,
-                    modifier = Modifier.size(18.dp)
+                .background(
+                    Brush.verticalGradient(
+                        listOf(Color(0xFF12082A), Color(0xFF0C0520))
+                    )
                 )
+                .padding(horizontal = 20.dp, vertical = 16.dp)
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .size(38.dp)
+                        .clip(CircleShape)
+                        .background(SonexaInputBg)
+                        .border(1.dp, SonexaInputBorder, CircleShape)
+                        .clickable(onClick = onNavigateBack),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "Back",
+                        tint = SonexaTextWhite,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.width(14.dp))
+                Column {
+                    Text(
+                        text = "Settings & Preferences",
+                        fontSize = 22.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = SonexaTextWhite
+                    )
+                    Text(
+                        text = "Manage your Zynera experience",
+                        fontSize = 12.sp,
+                        color = SonexaTextSubtle
+                    )
+                }
             }
-            Spacer(modifier = Modifier.width(12.dp))
-            Text(
-                text = "Settings & Preferences",
-                fontSize = 22.sp,
-                fontWeight = FontWeight.Bold,
-                color = SonexaTextWhite
-            )
         }
 
         when (val state = uiState) {
@@ -203,7 +222,7 @@ fun SettingsScreen(
                     SettingRow(
                         SettingsPanel.AI,
                         "AI Features & DJ",
-                        "${settings["aiSensitivity"] ?: "High"} • ${settings["aiVoiceModel"] ?: "Sonexa Voice v2.4"}",
+                        "${settings["aiSensitivity"] ?: "High"} • ${settings["aiVoiceModel"] ?: "Zynera Voice v2.4"}",
                         Icons.Default.AutoAwesome
                     ),
                     SettingRow(
@@ -215,7 +234,7 @@ fun SettingsScreen(
                     SettingRow(
                         SettingsPanel.PROVIDERS,
                         "Music Discovery & Providers",
-                        "YouTube • Sonexa Catalog • Audiomack",
+                        "YouTube • Zynera Catalog • Audiomack",
                         Icons.Default.PlayArrow
                     ),
                     SettingRow(
@@ -253,7 +272,7 @@ fun SettingsScreen(
                     SettingRow(
                         SettingsPanel.ABOUT,
                         "About & Support",
-                        "Sonexa v$aboutVersion • Terms & Help Center",
+                        "Zynera v$aboutVersion • Terms & Help Center",
                         Icons.Default.Info
                     )
                 )
@@ -263,8 +282,78 @@ fun SettingsScreen(
                         .fillMaxWidth()
                         .weight(1f),
                     contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 24.dp),
-                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
+                    // ── Premium Profile Card ─────────────────────────────────────
+                    item {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(20.dp))
+                                .background(
+                                    Brush.linearGradient(
+                                        listOf(Color(0xFF2D1B6B), Color(0xFF6B3CE9), Color(0xFF1A0D3D))
+                                    )
+                                )
+                                .border(1.dp, SonexaPurplePrimary.copy(alpha = 0.35f), RoundedCornerShape(20.dp))
+                                .padding(18.dp)
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                // Avatar
+                                Box(
+                                    modifier = Modifier
+                                        .size(58.dp)
+                                        .clip(CircleShape)
+                                        .background(
+                                            Brush.linearGradient(
+                                                listOf(Color(0xFFE534B2), Color(0xFF6B3CE9))
+                                            )
+                                        ),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = model.profile?.name?.take(1)?.uppercase() ?: "S",
+                                        fontSize = 24.sp,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        color = Color.White
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(14.dp))
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = model.profile?.name?.ifBlank { "Zynera Listener" } ?: "Zynera Listener",
+                                        fontSize = 17.sp,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        color = Color.White
+                                    )
+                                    Text(
+                                        text = model.profile?.email ?: "listener@zynera.app",
+                                        fontSize = 12.sp,
+                                        color = Color.White.copy(alpha = 0.7f)
+                                    )
+                                    Spacer(modifier = Modifier.height(6.dp))
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(8.dp))
+                                            .background(
+                                                if (model.profile?.isPremium == true)
+                                                    Color(0xFFFFD700).copy(alpha = 0.20f)
+                                                else Color.White.copy(alpha = 0.10f)
+                                            )
+                                            .padding(horizontal = 10.dp, vertical = 4.dp)
+                                    ) {
+                                        Text(
+                                            text = if (model.profile?.isPremium == true) "⭐  Zynera Premium" else "Free Plan  →  Upgrade",
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = if (model.profile?.isPremium == true) Color(0xFFFFD700) else Color.White
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+
                     item {
                         CacheCard(
                             cacheLabel = cacheLabel,
@@ -274,7 +363,7 @@ fun SettingsScreen(
                     }
 
                     items(rows) { row ->
-                        SettingsCategoryCard(
+                        PremiumSettingsCategoryCard(
                             name = row.name,
                             subtitle = row.subtitle,
                             icon = row.icon,
@@ -301,32 +390,12 @@ fun SettingsScreen(
                 }
 
                 if (showLogoutConfirm) {
-                    AlertDialog(
-                        onDismissRequest = { showLogoutConfirm = false },
-                        containerColor = SonexaCardDark,
-                        title = {
-                            Text("Log out?", color = SonexaTextWhite, fontWeight = FontWeight.Bold)
+                    com.sonexa.app.ui.components.LogoutConfirmationDialog(
+                        onConfirmLogout = {
+                            showLogoutConfirm = false
+                            onLogout()
                         },
-                        text = {
-                            Text(
-                                "You’ll need to sign in again to access your library and Premium.",
-                                color = SonexaTextMuted,
-                                fontSize = 13.sp
-                            )
-                        },
-                        confirmButton = {
-                            TextButton(onClick = {
-                                showLogoutConfirm = false
-                                onLogout()
-                            }) {
-                                Text("Log Out", color = Color(0xFFEF4444), fontWeight = FontWeight.Bold)
-                            }
-                        },
-                        dismissButton = {
-                            TextButton(onClick = { showLogoutConfirm = false }) {
-                                Text("Cancel", color = SonexaTextMuted)
-                            }
-                        }
+                        onDismiss = { showLogoutConfirm = false }
                     )
                 }
             }
@@ -380,18 +449,32 @@ private fun CacheCard(
 }
 
 @Composable
-private fun SettingsCategoryCard(
+private fun PremiumSettingsCategoryCard(
     name: String,
     subtitle: String,
     icon: ImageVector,
     onClick: () -> Unit
 ) {
+    val panelColor = when {
+        name.contains("Account") -> Color(0xFF3B82F6)
+        name.contains("AI") -> Color(0xFF8B5CF6)
+        name.contains("Audio") -> Color(0xFF10B981)
+        name.contains("Download") -> Color(0xFFF59E0B)
+        name.contains("Notification") -> Color(0xFFE534B2)
+        name.contains("Theme") -> Color(0xFF06B6D4)
+        name.contains("Language") -> Color(0xFF84CC16)
+        name.contains("Privacy") -> Color(0xFFEF4444)
+        name.contains("Device") -> Color(0xFFFF7849)
+        name.contains("Music Discovery") -> Color(0xFF22D3EE)
+        else -> SonexaPurpleLight
+    }
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(18.dp))
             .background(SonexaInputBg)
-            .border(1.dp, SonexaInputBorder, RoundedCornerShape(16.dp))
+            .border(1.dp, SonexaInputBorder, RoundedCornerShape(18.dp))
             .clickable(onClick = onClick)
             .padding(14.dp)
     ) {
@@ -404,16 +487,33 @@ private fun SettingsCategoryCard(
                 modifier = Modifier.weight(1f),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    tint = SonexaPurpleLight,
-                    modifier = Modifier.size(22.dp)
-                )
+                // Gradient icon container
+                Box(
+                    modifier = Modifier
+                        .size(44.dp)
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(
+                            Brush.linearGradient(
+                                listOf(
+                                    panelColor.copy(alpha = 0.30f),
+                                    panelColor.copy(alpha = 0.10f)
+                                )
+                            )
+                        )
+                        .border(1.dp, panelColor.copy(alpha = 0.22f), RoundedCornerShape(14.dp)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = panelColor,
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
                 Spacer(modifier = Modifier.width(14.dp))
                 Column {
                     Text(text = name, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = SonexaTextWhite)
-                    Text(text = subtitle, fontSize = 12.sp, color = SonexaTextMuted)
+                    Text(text = subtitle, fontSize = 11.sp, color = SonexaTextMuted, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
                 }
             }
             Icon(
@@ -435,15 +535,15 @@ private fun SettingsDetailDialog(
 ) {
     when (panel) {
         SettingsPanel.ACCOUNT -> AccountDialog(viewModel, model, onDismiss)
-        SettingsPanel.AI -> AiDialog(viewModel, onDismiss)
-        SettingsPanel.AUDIO -> AudioDialog(viewModel, onDismiss)
+        SettingsPanel.AI -> AiDialog(model, viewModel, onDismiss)
+        SettingsPanel.AUDIO -> AudioDialog(model, viewModel, onDismiss)
         SettingsPanel.PROVIDERS -> ProvidersDialog(onDismiss)
-        SettingsPanel.DOWNLOADS -> DownloadsDialog(viewModel, model, onDismiss)
-        SettingsPanel.NOTIFICATIONS -> NotificationsDialog(viewModel, onDismiss)
-        SettingsPanel.THEME -> ThemeDialog(viewModel, onDismiss)
+        SettingsPanel.DOWNLOADS -> DownloadsDialog(model, viewModel, onDismiss)
+        SettingsPanel.NOTIFICATIONS -> NotificationsDialog(model, viewModel, onDismiss)
+        SettingsPanel.THEME -> ThemeDialog(model, viewModel, onDismiss)
         SettingsPanel.LANGUAGE -> LanguageDialog(viewModel, model, onDismiss)
-        SettingsPanel.PRIVACY -> PrivacyDialog(viewModel, onDismiss)
-        SettingsPanel.DEVICES -> DevicesDialog(viewModel, onDismiss)
+        SettingsPanel.PRIVACY -> PrivacyDialog(model, viewModel, onDismiss)
+        SettingsPanel.DEVICES -> DevicesDialog(model, viewModel, onDismiss)
         SettingsPanel.ABOUT -> AboutDialog(model, onDismiss)
         SettingsPanel.NONE -> Unit
     }
@@ -491,17 +591,28 @@ private fun ToggleRow(label: String, checked: Boolean, onCheckedChange: (Boolean
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 6.dp),
+            .clip(RoundedCornerShape(10.dp))
+            .clickable { onCheckedChange(!checked) }
+            .padding(horizontal = 4.dp, vertical = 8.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(label, color = SonexaTextWhite, fontSize = 13.sp, modifier = Modifier.weight(1f))
+        Text(
+            text = label,
+            color = SonexaTextWhite,
+            fontSize = 13.sp,
+            modifier = Modifier
+                .weight(1f)
+                .padding(end = 12.dp)
+        )
         Switch(
             checked = checked,
             onCheckedChange = onCheckedChange,
             colors = SwitchDefaults.colors(
                 checkedTrackColor = SonexaPurplePrimary,
-                checkedThumbColor = Color.White
+                checkedThumbColor = Color.White,
+                uncheckedTrackColor = SonexaInputBg,
+                uncheckedThumbColor = SonexaTextMuted
             )
         )
     }
@@ -512,12 +623,27 @@ private fun ChoiceRow(label: String, selected: Boolean, onClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .clip(RoundedCornerShape(10.dp))
+            .background(if (selected) SonexaPurplePrimary.copy(alpha = 0.15f) else Color.Transparent)
             .clickable(onClick = onClick)
-            .padding(vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        RadioButton(selected = selected, onClick = onClick)
-        Text(label, color = SonexaTextWhite, fontSize = 13.sp)
+        Text(
+            text = label,
+            color = if (selected) Color.White else SonexaTextWhite.copy(alpha = 0.85f),
+            fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+            fontSize = 14.sp
+        )
+        RadioButton(
+            selected = selected,
+            onClick = onClick,
+            colors = androidx.compose.material3.RadioButtonDefaults.colors(
+                selectedColor = SonexaPurpleLight,
+                unselectedColor = SonexaTextMuted
+            )
+        )
     }
 }
 
@@ -528,6 +654,17 @@ private fun AccountDialog(
     onDismiss: () -> Unit
 ) {
     var name by remember { mutableStateOf(model.profile?.name.orEmpty()) }
+    var showAccountSwitcher by remember { mutableStateOf(false) }
+
+    if (showAccountSwitcher) {
+        com.sonexa.app.ui.components.AccountSwitcherDialog(
+            onDismiss = { showAccountSwitcher = false },
+            onAccountSwitched = {
+                viewModel.load()
+            }
+        )
+    }
+
     SettingsSheetScaffold(
         title = "Account Settings",
         onDismiss = onDismiss,
@@ -552,70 +689,102 @@ private fun AccountDialog(
             singleLine = true,
             modifier = Modifier.fillMaxWidth()
         )
+        Spacer(modifier = Modifier.height(14.dp))
+        OutlinedButton(
+            onClick = { showAccountSwitcher = true },
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            Icon(Icons.Default.AccountCircle, contentDescription = null, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(8.dp))
+            Text("Switch or Add Account", color = SonexaPurpleLight)
+        }
     }
 }
 
 @Composable
-private fun AiDialog(viewModel: SettingsViewModel, onDismiss: () -> Unit) {
+private fun AiDialog(
+    model: SettingsViewModel.UiModel,
+    viewModel: SettingsViewModel,
+    onDismiss: () -> Unit
+) {
     val sensitivities = listOf("Low", "Medium", "High")
-    val voices = listOf("Sonexa Voice v2.4", "Sonexa Voice Studio", "Natural Soft")
+    val voices = listOf("Zynera Voice v2.4", "Zynera Voice Studio", "Natural Soft")
+    val currentSensitivity = model.settings["aiSensitivity"]?.toString() ?: "High"
+    val currentVoice = model.settings["aiVoiceModel"]?.toString() ?: "Zynera Voice v2.4"
+    val smartLyrics = (model.settings["smartLyrics"] as? Boolean) ?: true
+
     SettingsSheetScaffold(title = "AI DJ & Assistant", onDismiss = onDismiss) {
-        Text("Curation sensitivity", color = SonexaTextMuted, fontSize = 12.sp)
+        Text("Curation sensitivity", color = SonexaTextMuted, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+        Spacer(modifier = Modifier.height(4.dp))
         sensitivities.forEach { option ->
             ChoiceRow(
                 label = option,
-                selected = viewModel.settingString("aiSensitivity", "High") == option,
+                selected = currentSensitivity.equals(option, ignoreCase = true),
                 onClick = { viewModel.updateString("aiSensitivity", option) }
             )
         }
-        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = SonexaInputBorder)
-        Text("Voice model", color = SonexaTextMuted, fontSize = 12.sp)
+        HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = SonexaInputBorder)
+        Text("Voice model", color = SonexaTextMuted, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+        Spacer(modifier = Modifier.height(4.dp))
         voices.forEach { option ->
             ChoiceRow(
                 label = option,
-                selected = viewModel.settingString("aiVoiceModel", "Sonexa Voice v2.4") == option,
+                selected = currentVoice.equals(option, ignoreCase = true),
                 onClick = { viewModel.updateString("aiVoiceModel", option) }
             )
         }
+        HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = SonexaInputBorder)
         ToggleRow(
             label = "Smart lyrics translator",
-            checked = viewModel.settingBool("smartLyrics", true),
+            checked = smartLyrics,
             onCheckedChange = { viewModel.updateToggle("smartLyrics", it) }
         )
     }
 }
 
 @Composable
-private fun AudioDialog(viewModel: SettingsViewModel, onDismiss: () -> Unit) {
+private fun AudioDialog(
+    model: SettingsViewModel.UiModel,
+    viewModel: SettingsViewModel,
+    onDismiss: () -> Unit
+) {
     val qualities = listOf("Normal", "High", "Very High", "Lossless")
+    val currentQuality = model.settings["audioQuality"]?.toString() ?: "High"
+    val crossfade = (model.settings["crossfade"] as? Boolean) ?: true
+    val normalizeVolume = (model.settings["normalizeVolume"] as? Boolean) ?: true
+    val gaplessPlayback = (model.settings["gaplessPlayback"] as? Boolean) ?: true
+    val explicitContent = (model.settings["explicitContent"] as? Boolean) ?: true
+
     SettingsSheetScaffold(title = "Audio Quality & Playback", onDismiss = onDismiss) {
-        Text("Streaming quality", color = SonexaTextMuted, fontSize = 12.sp)
+        Text("Streaming quality", color = SonexaTextMuted, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+        Spacer(modifier = Modifier.height(4.dp))
         qualities.forEach { option ->
             ChoiceRow(
                 label = option,
-                selected = viewModel.settingString("audioQuality", "High") == option,
+                selected = currentQuality.equals(option, ignoreCase = true),
                 onClick = { viewModel.updateString("audioQuality", option) }
             )
         }
-        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = SonexaInputBorder)
+        HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = SonexaInputBorder)
         ToggleRow(
-            "Crossfade",
-            viewModel.settingBool("crossfade"),
+            "Crossfade (Smooth transitions)",
+            crossfade,
             { viewModel.updateToggle("crossfade", it) }
         )
         ToggleRow(
             "Normalize volume",
-            viewModel.settingBool("normalizeVolume", true),
+            normalizeVolume,
             { viewModel.updateToggle("normalizeVolume", it) }
         )
         ToggleRow(
             "Gapless playback",
-            viewModel.settingBool("gaplessPlayback", true),
+            gaplessPlayback,
             { viewModel.updateToggle("gaplessPlayback", it) }
         )
         ToggleRow(
             "Allow explicit content",
-            viewModel.settingBool("explicitContent"),
+            explicitContent,
             { viewModel.updateToggle("explicitContent", it) }
         )
     }
@@ -623,31 +792,37 @@ private fun AudioDialog(viewModel: SettingsViewModel, onDismiss: () -> Unit) {
 
 @Composable
 private fun DownloadsDialog(
-    viewModel: SettingsViewModel,
     model: SettingsViewModel.UiModel,
+    viewModel: SettingsViewModel,
     onDismiss: () -> Unit
 ) {
     val qualities = listOf("Normal", "High", "Very High")
+    val currentQuality = model.settings["downloadQuality"]?.toString() ?: "High"
+    val wifiOnly = (model.settings["downloadOverWifiOnly"] as? Boolean) ?: true
+
     SettingsSheetScaffold(title = "Downloads & Storage", onDismiss = onDismiss) {
-        Text("Download quality", color = SonexaTextMuted, fontSize = 12.sp)
+        Text("Download quality", color = SonexaTextMuted, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+        Spacer(modifier = Modifier.height(4.dp))
         qualities.forEach { option ->
             ChoiceRow(
                 label = option,
-                selected = viewModel.settingString("downloadQuality", "High") == option,
+                selected = currentQuality.equals(option, ignoreCase = true),
                 onClick = { viewModel.updateString("downloadQuality", option) }
             )
         }
+        HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = SonexaInputBorder)
         ToggleRow(
             "Download over Wi‑Fi only",
-            viewModel.settingBool("downloadOverWifiOnly", true),
+            wifiOnly,
             { viewModel.updateToggle("downloadOverWifiOnly", it) }
         )
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(12.dp))
         Text(
             "Cache on device: ${AudioCacheManager.formatMb(model.cacheBytes)}",
             color = SonexaTextMuted,
             fontSize = 12.sp
         )
+        Spacer(modifier = Modifier.height(8.dp))
         OutlinedButton(onClick = { viewModel.clearCache() }, modifier = Modifier.fillMaxWidth()) {
             Text("Clear audio cache", color = Color(0xFFEF4444))
         }
@@ -655,45 +830,62 @@ private fun DownloadsDialog(
 }
 
 @Composable
-private fun NotificationsDialog(viewModel: SettingsViewModel, onDismiss: () -> Unit) {
+private fun NotificationsDialog(
+    model: SettingsViewModel.UiModel,
+    viewModel: SettingsViewModel,
+    onDismiss: () -> Unit
+) {
+    val push = (model.settings["pushNotifications"] as? Boolean) ?: true
+    val friend = (model.settings["friendActivity"] as? Boolean) ?: true
+    val releases = (model.settings["newReleaseAlerts"] as? Boolean) ?: true
+
     SettingsSheetScaffold(title = "Notifications", onDismiss = onDismiss) {
         ToggleRow(
             "Push notifications",
-            viewModel.settingBool("pushNotifications", true),
+            push,
             { viewModel.updateToggle("pushNotifications", it) }
         )
         ToggleRow(
             "Friend activity",
-            viewModel.settingBool("friendActivity", true),
+            friend,
             { viewModel.updateToggle("friendActivity", it) }
         )
         ToggleRow(
             "New release alerts",
-            viewModel.settingBool("newReleaseAlerts", true),
+            releases,
             { viewModel.updateToggle("newReleaseAlerts", it) }
         )
     }
 }
 
 @Composable
-private fun ThemeDialog(viewModel: SettingsViewModel, onDismiss: () -> Unit) {
+private fun ThemeDialog(
+    model: SettingsViewModel.UiModel,
+    viewModel: SettingsViewModel,
+    onDismiss: () -> Unit
+) {
     val themes = listOf("Dark", "Amoled", "System")
     val accents = listOf("Glassmorphism", "Neon", "Minimal")
+    val currentTheme = model.settings["theme"]?.toString() ?: "Dark"
+    val currentAccent = model.settings["accentStyle"]?.toString() ?: "Glassmorphism"
+
     SettingsSheetScaffold(title = "Theme & Appearance", onDismiss = onDismiss) {
-        Text("Theme", color = SonexaTextMuted, fontSize = 12.sp)
+        Text("Theme", color = SonexaTextMuted, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+        Spacer(modifier = Modifier.height(4.dp))
         themes.forEach { option ->
             ChoiceRow(
                 label = option,
-                selected = viewModel.settingString("theme", "Dark") == option,
+                selected = currentTheme.equals(option, ignoreCase = true),
                 onClick = { viewModel.updateString("theme", option) }
             )
         }
-        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = SonexaInputBorder)
-        Text("Accent style", color = SonexaTextMuted, fontSize = 12.sp)
+        HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = SonexaInputBorder)
+        Text("Accent style", color = SonexaTextMuted, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+        Spacer(modifier = Modifier.height(4.dp))
         accents.forEach { option ->
             ChoiceRow(
                 label = option,
-                selected = viewModel.settingString("accentStyle", "Glassmorphism") == option,
+                selected = currentAccent.equals(option, ignoreCase = true),
                 onClick = { viewModel.updateString("accentStyle", option) }
             )
         }
@@ -735,30 +927,117 @@ private fun LanguageDialog(
 }
 
 @Composable
-private fun PrivacyDialog(viewModel: SettingsViewModel, onDismiss: () -> Unit) {
+private fun PrivacyDialog(
+    model: SettingsViewModel.UiModel,
+    viewModel: SettingsViewModel,
+    onDismiss: () -> Unit
+) {
+    val dataSharing = (model.settings["dataSharing"] as? Boolean) ?: true
+    val showSessions = (model.settings["showActiveSessions"] as? Boolean) ?: true
+    val twoFa = (model.settings["twoFactorEnabled"] as? Boolean) ?: false
+    val personalizedAds = (model.settings["personalizedAds"] as? Boolean) ?: true
+    val shareListeningHistory = (model.settings["shareListeningHistory"] as? Boolean) ?: false
+    var showDeleteConfirm by remember { mutableStateOf(false) }
+
+    if (showDeleteConfirm) {
+        AlertDialog(
+            onDismissRequest = { showDeleteConfirm = false },
+            containerColor = SonexaCardDark,
+            title = { Text("Delete Account?", color = Color(0xFFEF4444), fontWeight = FontWeight.Bold) },
+            text = {
+                Column {
+                    Text(
+                        "This will permanently delete your Zynera account, all playlists, and listening history. This cannot be undone.",
+                        color = SonexaTextMuted,
+                        fontSize = 13.sp
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = { showDeleteConfirm = false },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF4444))
+                ) {
+                    Text("Delete Account", color = Color.White)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteConfirm = false }) {
+                    Text("Cancel", color = SonexaTextMuted)
+                }
+            }
+        )
+    }
+
     SettingsSheetScaffold(title = "Privacy & Security", onDismiss = onDismiss) {
+        // Security section
+        Text("Security", color = SonexaPurpleLight, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+        Spacer(modifier = Modifier.height(4.dp))
+        ToggleRow(
+            "Two-factor authentication (2FA)",
+            twoFa,
+            { viewModel.updateToggle("twoFactorEnabled", it) }
+        )
+        ToggleRow(
+            "Show active sessions on other devices",
+            showSessions,
+            { viewModel.updateToggle("showActiveSessions", it) }
+        )
+        HorizontalDivider(color = SonexaInputBorder, modifier = Modifier.padding(vertical = 8.dp))
+
+        // Data Controls
+        Text("Data & Privacy", color = SonexaPurpleLight, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+        Spacer(modifier = Modifier.height(4.dp))
         ToggleRow(
             "Share listening data for recommendations",
-            viewModel.settingBool("dataSharing"),
+            dataSharing,
             { viewModel.updateToggle("dataSharing", it) }
         )
         ToggleRow(
-            "Show active sessions",
-            viewModel.settingBool("showActiveSessions", true),
-            { viewModel.updateToggle("showActiveSessions", it) }
+            "Personalized ads & discovery",
+            personalizedAds,
+            { viewModel.updateToggle("personalizedAds", it) }
         )
         ToggleRow(
-            "Two-factor authentication",
-            viewModel.settingBool("twoFactorEnabled"),
-            { viewModel.updateToggle("twoFactorEnabled", it) }
+            "Share listening history with friends",
+            shareListeningHistory,
+            { viewModel.updateToggle("shareListeningHistory", it) }
         )
+        HorizontalDivider(color = SonexaInputBorder, modifier = Modifier.padding(vertical = 8.dp))
+
+        // Danger Zone
+        Text("Danger Zone", color = Color(0xFFEF4444), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+        Spacer(modifier = Modifier.height(6.dp))
+        OutlinedButton(
+            onClick = { showDeleteConfirm = true },
+            modifier = Modifier.fillMaxWidth(),
+            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFEF4444).copy(alpha = 0.5f)),
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            Icon(
+                Icons.Default.DeleteForever,
+                contentDescription = null,
+                tint = Color(0xFFEF4444),
+                modifier = Modifier.size(16.dp)
+            )
+            Spacer(Modifier.width(6.dp))
+            Text("Delete My Account", color = Color(0xFFEF4444), fontSize = 13.sp)
+        }
     }
 }
 
 @Composable
-private fun DevicesDialog(viewModel: SettingsViewModel, onDismiss: () -> Unit) {
-    val devices = viewModel.settingStringList("connectedDevices")
-        .ifEmpty { listOf("This Android phone", "Bluetooth earbuds") }
+private fun DevicesDialog(
+    model: SettingsViewModel.UiModel,
+    viewModel: SettingsViewModel,
+    onDismiss: () -> Unit
+) {
+    val rawDevices = model.settings["connectedDevices"]
+    val devices = when (rawDevices) {
+        is List<*> -> rawDevices.mapNotNull { it?.toString() }
+        is String -> rawDevices.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+        else -> listOf("This Android phone", "Bluetooth earbuds")
+    }
     SettingsSheetScaffold(title = "Connected Devices", onDismiss = onDismiss) {
         devices.forEach { device ->
             Row(
@@ -783,7 +1062,7 @@ private fun DevicesDialog(viewModel: SettingsViewModel, onDismiss: () -> Unit) {
             }
             HorizontalDivider(color = SonexaInputBorder)
         }
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(12.dp))
         OutlinedButton(
             onClick = {
                 val next = (devices + "Chromecast Living Room").distinct()
@@ -802,7 +1081,7 @@ private fun DevicesDialog(viewModel: SettingsViewModel, onDismiss: () -> Unit) {
 @Composable
 private fun AboutDialog(model: SettingsViewModel.UiModel, onDismiss: () -> Unit) {
     SettingsSheetScaffold(title = "About & Support", onDismiss = onDismiss) {
-        Text("Sonexa", color = SonexaTextWhite, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+        Text("Zynera", color = SonexaTextWhite, fontSize = 20.sp, fontWeight = FontWeight.ExtraBold)
         Text("Version ${model.appVersion}", color = SonexaPurpleLight, fontSize = 13.sp)
         if (model.latestVersion.isNotBlank() && model.latestVersion != model.appVersion) {
             Text("Latest available: ${model.latestVersion}", color = SonexaTextMuted, fontSize = 12.sp)
@@ -813,7 +1092,7 @@ private fun AboutDialog(model: SettingsViewModel.UiModel, onDismiss: () -> Unit)
         Text("Privacy Policy", color = SonexaTextWhite, fontSize = 13.sp)
         Spacer(modifier = Modifier.height(8.dp))
         Text(
-            "Made for listeners who want studio-quality streaming with an AI DJ.",
+            "Your mood. Your music. Studio-quality streaming with AI DJ intelligence.",
             color = SonexaTextMuted,
             fontSize = 12.sp
         )
@@ -832,7 +1111,7 @@ private fun ProvidersDialog(onDismiss: () -> Unit) {
             fontWeight = FontWeight.Bold
         )
         Text(
-            "Sonexa aggregates music across authorized APIs and plays using official player mechanisms.",
+            "Zynera aggregates music across authorized APIs and plays using official player mechanisms.",
             color = SonexaTextMuted,
             fontSize = 12.sp
         )
@@ -883,7 +1162,7 @@ private fun ProvidersDialog(onDismiss: () -> Unit) {
 
         Spacer(modifier = Modifier.height(10.dp))
 
-        // 2. Sonexa Core Catalog
+        // 2. Zynera Core Catalog
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -898,7 +1177,7 @@ private fun ProvidersDialog(onDismiss: () -> Unit) {
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("Sonexa Core Catalog", color = SonexaTextWhite, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                    Text("Zynera Core Catalog", color = SonexaTextWhite, fontWeight = FontWeight.Bold, fontSize = 14.sp)
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(6.dp))

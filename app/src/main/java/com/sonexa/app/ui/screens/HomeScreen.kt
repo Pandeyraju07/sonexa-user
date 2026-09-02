@@ -48,8 +48,6 @@ import com.sonexa.app.ui.viewmodel.HomeUiState
 import com.sonexa.app.ui.viewmodel.HomeViewModel
 import com.sonexa.app.ui.viewmodel.PlaybackViewModel
 
-private val SpotifyGreen = Color(0xFF1ED760)
-
 data class QuickCardItem(
     val id: String,
     val title: String,
@@ -80,6 +78,8 @@ fun HomeScreen(
     onOpenPremium: () -> Unit = {},
     onOpenProfile: () -> Unit = {},
     onOpenSettings: () -> Unit = {},
+    onOpenMusicDna: () -> Unit = {},
+    onOpenMusicJourney: () -> Unit = {},
     homeViewModel: HomeViewModel = viewModel(),
     playbackViewModel: PlaybackViewModel,
     modifier: Modifier = Modifier
@@ -93,6 +93,7 @@ fun HomeScreen(
     var showProfileDrawer by remember { mutableStateOf(false) }
 
     var showAccountDialog by remember { mutableStateOf(false) }
+    var showLogoutConfirmDialog by remember { mutableStateOf(false) }
     var addAccountEmail by remember { mutableStateOf("") }
     var addAccountPassword by remember { mutableStateOf("") }
     var isAddingAccount by remember { mutableStateOf(false) }
@@ -100,10 +101,12 @@ fun HomeScreen(
     val authRepo = remember { com.sonexa.app.data.repository.AuthRepository.create(context) }
     val coroutineScope = rememberCoroutineScope()
 
-    val isFavorite = playbackState.track?.isLiked == true
+    val likedSongsList by com.sonexa.app.data.local.LikedSongsStore.likedSongs.collectAsState()
+    val isFavorite = playbackState.track != null && (playbackState.track?.isLiked == true || likedSongsList.any { it.id == playbackState.track?.id })
 
-    androidx.activity.compose.BackHandler(enabled = showProfileDrawer || showAccountDialog || selectedFeedCategory != "All" || selectedNavTab != "Home") {
+    androidx.activity.compose.BackHandler(enabled = showProfileDrawer || showAccountDialog || showLogoutConfirmDialog || selectedFeedCategory != "All" || selectedNavTab != "Home") {
         when {
+            showLogoutConfirmDialog -> showLogoutConfirmDialog = false
             showProfileDrawer -> showProfileDrawer = false
             showAccountDialog -> showAccountDialog = false
             selectedFeedCategory != "All" -> selectedFeedCategory = "All"
@@ -249,7 +252,12 @@ fun HomeScreen(
                                 Box(
                                     modifier = Modifier
                                         .clip(RoundedCornerShape(16.dp))
-                                        .background(if (isSelected) SpotifyGreen else Color(0xFF282828))
+                                        .background(if (isSelected) SonexaPurplePrimary else Color(0xFF221A33))
+                                        .border(
+                                            1.dp,
+                                            if (isSelected) SonexaPurpleLight.copy(alpha = 0.6f) else Color.White.copy(alpha = 0.08f),
+                                            RoundedCornerShape(16.dp)
+                                        )
                                         .clickable {
                                             selectedFeedCategory = cat
                                             when (cat) {
@@ -264,7 +272,7 @@ fun HomeScreen(
                                         text = cat,
                                         fontSize = 13.sp,
                                         fontWeight = FontWeight.SemiBold,
-                                        color = if (isSelected) Color.Black else Color.White
+                                        color = if (isSelected) Color.White else Color(0xFFA19BAE)
                                     )
                                 }
                             }
@@ -313,7 +321,75 @@ fun HomeScreen(
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(24.dp))
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // AI Intelligence Cards (Music DNA & AI Journey)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(
+                                    Brush.linearGradient(listOf(Color(0xFF2E1065), Color(0xFF1E1B4B)))
+                                )
+                                .border(1.dp, Color(0xFF7C3AED).copy(alpha = 0.5f), RoundedCornerShape(16.dp))
+                                .clickable { onOpenMusicDna() }
+                                .padding(12.dp)
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(32.dp)
+                                        .clip(CircleShape)
+                                        .background(SpotifyGreen.copy(alpha = 0.2f)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(Icons.Default.Psychology, contentDescription = null, tint = SpotifyGreen, modifier = Modifier.size(18.dp))
+                                }
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Column {
+                                    Text("Music DNA", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                                    Text("Your Taste", color = Color(0xFFDDD6FE), fontSize = 11.sp)
+                                }
+                            }
+                        }
+
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(
+                                    Brush.linearGradient(listOf(Color(0xFF0F172A), Color(0xFF064E3B)))
+                                )
+                                .border(1.dp, SpotifyGreen.copy(alpha = 0.5f), RoundedCornerShape(16.dp))
+                                .clickable { onOpenMusicJourney() }
+                                .padding(12.dp)
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(32.dp)
+                                        .clip(CircleShape)
+                                        .background(SpotifyGreen.copy(alpha = 0.2f)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = SpotifyGreen, modifier = Modifier.size(18.dp))
+                                }
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Column {
+                                    Text("AI Journey", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                                    Text("Vibe Flow", color = Color(0xFFA7F3D0), fontSize = 11.sp)
+                                }
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(20.dp))
 
                     // Section: Recommended Stations (Screenshot 1)
                     Text(
@@ -449,7 +525,7 @@ fun HomeScreen(
                 }
             )
 
-            SpotifyBottomNavigationBar(
+            ZyneraBottomNavigationBar(
                 selectedTab = selectedNavTab,
                 onSelectTab = { selectedNavTab = it }
             )
@@ -538,175 +614,29 @@ fun HomeScreen(
 
                     DrawerMenuItem(Icons.AutoMirrored.Filled.ExitToApp, "Log out") {
                         showProfileDrawer = false
-                        onLogout()
+                        showLogoutConfirmDialog = true
                     }
                 }
             }
         }
 
-        // Account Switcher & Add Account Dialog
+        // Logout Confirmation Dialog
+        if (showLogoutConfirmDialog) {
+            com.sonexa.app.ui.components.LogoutConfirmationDialog(
+                onConfirmLogout = {
+                    showLogoutConfirmDialog = false
+                    onLogout()
+                },
+                onDismiss = { showLogoutConfirmDialog = false }
+            )
+        }
+
+        // Premium Account Switcher & Add Account Dialog
         if (showAccountDialog) {
-            val savedAccounts = remember(showAccountDialog) { sessionManager.getSavedAccounts() }
-            AlertDialog(
-                onDismissRequest = {
-                    showAccountDialog = false
-                    isAddingAccount = false
-                },
-                containerColor = Color(0xFF1E1E1E),
-                title = {
-                    Text(
-                        text = if (isAddingAccount) "Add New Account" else "Switch or Add Account",
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 18.sp
-                    )
-                },
-                text = {
-                    Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        if (!isAddingAccount) {
-                            Text(
-                                text = "Signed in accounts:",
-                                color = Color(0xFFA19BAE),
-                                fontSize = 13.sp
-                            )
-
-                            savedAccounts.forEach { acc ->
-                                val isCurrent = acc.userId == sessionManager.userId || acc.email.equals(sessionManager.userEmail, ignoreCase = true)
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clip(RoundedCornerShape(8.dp))
-                                        .background(if (isCurrent) Color(0xFF282828) else Color.Transparent)
-                                        .clickable {
-                                            if (!isCurrent) {
-                                                sessionManager.switchAccount(acc.userId)
-                                                showAccountDialog = false
-                                                Toast.makeText(context, "Switched to ${acc.name}", Toast.LENGTH_SHORT).show()
-                                            }
-                                        }
-                                        .padding(8.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(36.dp)
-                                            .clip(CircleShape)
-                                            .background(Color(0xFFC4B5FD)),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Text(
-                                            text = acc.name.firstOrNull()?.uppercase() ?: "U",
-                                            color = Color(0xFF1B1629),
-                                            fontSize = 16.sp,
-                                            fontWeight = FontWeight.Bold
-                                        )
-                                    }
-                                    Spacer(modifier = Modifier.width(10.dp))
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Text(
-                                            text = acc.name,
-                                            color = Color.White,
-                                            fontWeight = FontWeight.Bold,
-                                            fontSize = 14.sp
-                                        )
-                                        Text(
-                                            text = acc.email,
-                                            color = Color(0xFFA19BAE),
-                                            fontSize = 12.sp
-                                        )
-                                    }
-                                    if (isCurrent) {
-                                        Icon(
-                                            Icons.Default.CheckCircle,
-                                            contentDescription = "Active",
-                                            tint = SpotifyGreen,
-                                            modifier = Modifier.size(20.dp)
-                                        )
-                                    }
-                                }
-                            }
-
-                            Spacer(modifier = Modifier.height(6.dp))
-
-                            OutlinedButton(
-                                onClick = { isAddingAccount = true },
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(8.dp),
-                                colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White)
-                            ) {
-                                Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text("Add another account")
-                            }
-                        } else {
-                            // Login Form for Adding Account
-                            OutlinedTextField(
-                                value = addAccountEmail,
-                                onValueChange = { addAccountEmail = it },
-                                label = { Text("Email address", color = Color(0xFFA19BAE)) },
-                                singleLine = true,
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(8.dp)
-                            )
-
-                            OutlinedTextField(
-                                value = addAccountPassword,
-                                onValueChange = { addAccountPassword = it },
-                                label = { Text("Password", color = Color(0xFFA19BAE)) },
-                                singleLine = true,
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(8.dp)
-                            )
-
-                            if (isLoginLoading) {
-                                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                                    CircularProgressIndicator(color = SpotifyGreen, modifier = Modifier.size(28.dp))
-                                }
-                            } else {
-                                Button(
-                                    onClick = {
-                                        if (addAccountEmail.isBlank() || addAccountPassword.isBlank()) {
-                                            Toast.makeText(context, "Please enter email and password", Toast.LENGTH_SHORT).show()
-                                            return@Button
-                                        }
-                                        isLoginLoading = true
-                                        coroutineScope.launch {
-                                            val result = authRepo.login(addAccountEmail, addAccountPassword)
-                                            isLoginLoading = false
-                                            result.fold(
-                                                onSuccess = { resp ->
-                                                    showAccountDialog = false
-                                                    isAddingAccount = false
-                                                    addAccountEmail = ""
-                                                    addAccountPassword = ""
-                                                    Toast.makeText(context, "Successfully signed in as ${resp.resolvedUser?.name ?: "User"}", Toast.LENGTH_LONG).show()
-                                                },
-                                                onFailure = { err ->
-                                                    Toast.makeText(context, err.message ?: "Authentication failed", Toast.LENGTH_LONG).show()
-                                                }
-                                            )
-                                        }
-                                    },
-                                    modifier = Modifier.fillMaxWidth(),
-                                    colors = ButtonDefaults.buttonColors(containerColor = SpotifyGreen, contentColor = Color.Black),
-                                    shape = RoundedCornerShape(8.dp)
-                                ) {
-                                    Text("Sign In & Connect Account", fontWeight = FontWeight.Bold)
-                                }
-                            }
-                        }
-                    }
-                },
-                confirmButton = {
-                    TextButton(onClick = {
-                        if (isAddingAccount) isAddingAccount = false
-                        else showAccountDialog = false
-                    }) {
-                        Text(if (isAddingAccount) "Back" else "Close", color = SpotifyGreen)
-                    }
+            com.sonexa.app.ui.components.AccountSwitcherDialog(
+                onDismiss = { showAccountDialog = false },
+                onAccountSwitched = {
+                    homeViewModel.loadHomeFeed()
                 }
             )
         }
@@ -928,12 +858,12 @@ private fun DrawerMenuItem(
 }
 
 @Composable
-private fun SpotifyBottomNavigationBar(
+private fun ZyneraBottomNavigationBar(
     selectedTab: String,
     onSelectTab: (String) -> Unit
 ) {
     NavigationBar(
-        containerColor = Color(0xFF121212).copy(alpha = 0.96f),
+        containerColor = Color(0xFF100720).copy(alpha = 0.98f),
         modifier = Modifier.height(58.dp)
     ) {
         val navItems = listOf(
@@ -953,7 +883,7 @@ private fun SpotifyBottomNavigationBar(
                     Icon(
                         imageVector = icon,
                         contentDescription = label,
-                        tint = if (isSelected) Color.White else Color(0xFFA19BAE),
+                        tint = if (isSelected) Color(0xFFB062FF) else Color(0xFFA19BAE),
                         modifier = Modifier.size(24.dp)
                     )
                 },
@@ -1039,7 +969,7 @@ private fun HomeStickyMiniPlayer(
                 Icon(
                     Icons.AutoMirrored.Filled.VolumeUp,
                     contentDescription = "Cast",
-                    tint = SpotifyGreen,
+                    tint = Color(0xFF38BDF8),
                     modifier = Modifier.size(19.dp)
                 )
             }
@@ -1048,7 +978,7 @@ private fun HomeStickyMiniPlayer(
                 Icon(
                     if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                     contentDescription = "Favorite",
-                    tint = if (isFavorite) SpotifyGreen else Color.White,
+                    tint = if (isFavorite) SonexaMagenta else Color.White,
                     modifier = Modifier.size(20.dp)
                 )
             }

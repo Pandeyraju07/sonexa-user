@@ -3,9 +3,11 @@ package com.sonexa.app.data.api
 import com.sonexa.app.data.model.*
 import retrofit2.Response
 import retrofit2.http.Body
+import retrofit2.http.DELETE
 import retrofit2.http.GET
 import retrofit2.http.POST
 import retrofit2.http.PUT
+import retrofit2.http.Path
 
 interface UserApiService {
     @GET("user/profile")
@@ -49,6 +51,21 @@ interface UserApiService {
 
     @GET("user/notifications")
     suspend fun getNotifications(): Response<NotificationListResponse>
+
+    @PUT("user/notifications/read-all")
+    suspend fun markAllNotificationsRead(): Response<SimpleSuccessResponse>
+
+    @PUT("user/notifications/{id}/read")
+    suspend fun markNotificationRead(@Path("id") id: String): Response<SimpleSuccessResponse>
+
+    @GET("user/sessions")
+    suspend fun getActiveSessions(): Response<ActiveSessionsResponse>
+
+    @DELETE("user/sessions/{sessionId}")
+    suspend fun revokeSession(@Path("sessionId") sessionId: String): Response<SimpleSuccessResponse>
+
+    @DELETE("user/account")
+    suspend fun deleteAccount(): Response<SimpleSuccessResponse>
 
     @GET("user/settings")
     suspend fun getSettings(): Response<SettingsResponse>

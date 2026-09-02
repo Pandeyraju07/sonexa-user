@@ -51,6 +51,8 @@ enum class AppStep {
     PROFILE_HUB,
     SETTINGS,
     AUTH_UTILITIES,
+    MUSIC_DNA,
+    MUSIC_JOURNEY,
     NO_INTERNET_ERROR,
     SERVER_ERROR
 }
@@ -92,6 +94,8 @@ fun SonexaAppFlow() {
         AppStep.PROFILE_HUB,
         AppStep.SETTINGS,
         AppStep.AUTH_UTILITIES,
+        AppStep.MUSIC_DNA,
+        AppStep.MUSIC_JOURNEY,
         AppStep.NO_INTERNET_ERROR,
         AppStep.SERVER_ERROR
     )
@@ -105,6 +109,29 @@ fun SonexaAppFlow() {
                 name = profile.name
             ) {
                 currentStep = AppStep.HOME
+            }
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        com.sonexa.app.util.DeepLinkEvents.events.collectLatest { target ->
+            when (target) {
+                is com.sonexa.app.util.DeepLinkTarget.PlayTrack -> {
+                    playbackViewModel.play(target.track)
+                    currentStep = AppStep.FULL_PLAYER
+                }
+                is com.sonexa.app.util.DeepLinkTarget.OpenPlaylist -> {
+                    detailId = target.playlistId
+                    currentStep = AppStep.PLAYLIST_DETAIL
+                }
+                is com.sonexa.app.util.DeepLinkTarget.OpenAlbum -> {
+                    detailId = target.albumId
+                    currentStep = AppStep.ALBUM_DETAIL
+                }
+                is com.sonexa.app.util.DeepLinkTarget.OpenArtist -> {
+                    detailId = target.artistId
+                    currentStep = AppStep.ARTIST_PROFILE
+                }
             }
         }
     }
@@ -226,6 +253,8 @@ fun SonexaAppFlow() {
                     onOpenPremium = { currentStep = AppStep.PREMIUM },
                     onOpenProfile = { currentStep = AppStep.PROFILE_HUB },
                     onOpenSettings = { currentStep = AppStep.SETTINGS },
+                    onOpenMusicDna = { currentStep = AppStep.MUSIC_DNA },
+                    onOpenMusicJourney = { currentStep = AppStep.MUSIC_JOURNEY },
                     homeViewModel = homeVm,
                     playbackViewModel = playbackViewModel
                 )
@@ -235,7 +264,8 @@ fun SonexaAppFlow() {
                     playbackViewModel = playbackViewModel
                 )
                 AppStep.AI_SIGNATURE_HUB -> AISignatureScreen(
-                    onNavigateBack = ::goHome
+                    onNavigateBack = ::goHome,
+                    playbackViewModel = playbackViewModel
                 )
                 AppStep.ALBUM_DETAIL -> AlbumDetailScreen(
                     albumId = detailId,
@@ -335,6 +365,8 @@ fun SonexaAppFlow() {
                     onOpenSettings = { currentStep = AppStep.SETTINGS },
                     onOpenPremium = { currentStep = AppStep.PREMIUM },
                     onOpenNotifications = { currentStep = AppStep.NOTIFICATION_CENTER },
+                    onOpenMusicDna = { currentStep = AppStep.MUSIC_DNA },
+                    onOpenMusicJourney = { currentStep = AppStep.MUSIC_JOURNEY },
                     onLogout = {
                         authViewModel.logout { currentStep = AppStep.WELCOME }
                     }
@@ -347,6 +379,13 @@ fun SonexaAppFlow() {
                 )
                 AppStep.AUTH_UTILITIES -> AuthUtilitiesScreen(
                     onNavigateBack = ::goHome
+                )
+                AppStep.MUSIC_DNA -> MusicDnaScreen(
+                    onBack = ::goHome
+                )
+                AppStep.MUSIC_JOURNEY -> MusicJourneyScreen(
+                    onBack = ::goHome,
+                    playbackViewModel = playbackViewModel
                 )
                 AppStep.NO_INTERNET_ERROR -> NoInternetScreen(
                     onRetry = ::goHome
