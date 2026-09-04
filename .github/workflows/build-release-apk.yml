@@ -33,12 +33,14 @@ jobs:
       - name: Rename APK Asset
         run: |
           mkdir -p build_output
-          cp app/build/outputs/apk/release/app-release.apk build_output/Sonexa-Music-${{ github.ref_name }}.apk || cp app/build/outputs/apk/release/*.apk build_output/Sonexa-Music.apk
+          cp app/build/outputs/apk/release/app-release.apk build_output/Zynera-${{ github.ref_name }}.apk || cp app/build/outputs/apk/release/*.apk build_output/Zynera.apk
+          cp build_output/Zynera-${{ github.ref_name }}.apk build_output/Zynera-Music-${{ github.ref_name }}.apk || true
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/')
         with:
+          name: Zynera Music App ${{ github.ref_name }}
           files: build_output/*.apk
           generate_release_notes: true
           draft: false
