@@ -125,31 +125,36 @@ fun FullPlayerScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 22.dp, vertical = 6.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.SpaceBetween
+                .padding(horizontal = 20.dp, vertical = 4.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
             FullPlayerTopBar(
                 playlistName = playlistName,
                 onMinimize = onMinimize,
                 onMore = { showMoreSheet = true }
             )
+            Spacer(modifier = Modifier.height(4.dp))
             FullPlayerArtworkPager(
                 queue = queue,
                 pagerState = pagerState,
-                modifier = Modifier.weight(1f),
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth(),
                 youtubeProvider = playbackViewModel.playbackManager.youtubeProvider
             )
+            Spacer(modifier = Modifier.height(6.dp))
             FullPlayerTrackMeta(
                 title = trackTitle,
                 artist = trackArtist,
                 isFavorite = isFavorite,
                 onToggleLike = { playbackViewModel.toggleLike() }
             )
+            Spacer(modifier = Modifier.height(2.dp))
             FullPlayerProgressSection(
                 durationMs = playbackState.durationMs.coerceAtLeast(0),
                 playbackViewModel = playbackViewModel
             )
+            Spacer(modifier = Modifier.height(2.dp))
             FullPlayerTransportControls(
                 shuffle = playbackState.shuffle,
                 repeatMode = playbackState.repeatMode,
@@ -163,7 +168,9 @@ fun FullPlayerScreen(
                 onNext = { playbackViewModel.skipNext() },
                 onRepeat = { playbackViewModel.cycleRepeatMode() }
             )
+            Spacer(modifier = Modifier.height(4.dp))
             FullPlayerVolumeBar()
+            Spacer(modifier = Modifier.height(4.dp))
             FullPlayerUtilityBar(
                 isPodcast = isPodcast,
                 playbackSpeed = playbackState.playbackSpeed,
@@ -191,6 +198,7 @@ fun FullPlayerScreen(
                 },
                 onMore = { showMoreSheet = true }
             )
+            Spacer(modifier = Modifier.height(4.dp))
             FullPlayerUpNextCard(
                 queue = queue,
                 queueIndex = playbackState.queueIndex,
@@ -205,6 +213,7 @@ fun FullPlayerScreen(
                 },
                 onPlayIndex = { playbackViewModel.playFromQueueIndex(it) }
             )
+            Spacer(modifier = Modifier.height(4.dp))
         }
 
         FullPlayerOverlays(

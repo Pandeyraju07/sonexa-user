@@ -6,6 +6,8 @@ import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -24,9 +26,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -116,7 +121,7 @@ internal fun FullPlayerArtworkPager(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .padding(vertical = 12.dp),
+            .padding(vertical = 4.dp),
         contentAlignment = Alignment.Center
     ) {
         HorizontalPager(
@@ -131,16 +136,17 @@ internal fun FullPlayerArtworkPager(
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Box(
                     modifier = Modifier
-                        .fillMaxHeight(0.96f)
-                        .aspectRatio(1f)
+                        .fillMaxHeight(0.98f)
+                        .aspectRatio(1f, matchHeightConstraintsFirst = true)
                         .shadow(
                             elevation = 24.dp,
-                            shape = RoundedCornerShape(24.dp),
-                            ambientColor = Color.Black.copy(alpha = 0.8f),
+                            shape = RoundedCornerShape(22.dp),
+                            ambientColor = Color.Black.copy(alpha = 0.85f),
                             spotColor = Color.Black
                         )
-                        .clip(RoundedCornerShape(24.dp))
+                        .clip(RoundedCornerShape(22.dp))
                         .background(Color(0xFF1F182E))
+                        .border(1.dp, Color.White.copy(alpha = 0.08f), RoundedCornerShape(22.dp))
                 ) {
                     if (isYouTube && page == pagerState.currentPage && youtubeProvider != null) {
                         YouTubePlayerView(
@@ -474,54 +480,110 @@ internal fun FullPlayerVolumeBar() {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .height(42.dp)
-            .clip(RoundedCornerShape(21.dp))
-            .background(Color(0xFF191226).copy(alpha = 0.85f))
-            .border(1.dp, Color(0xFF2E2442), RoundedCornerShape(21.dp))
-            .padding(horizontal = 12.dp),
+            .padding(horizontal = 6.dp, vertical = 2.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        IconButton(
-            onClick = {
-                if (isMuted || currentVolume == 0) {
-                    val restore = if (previousVolume > 0) previousVolume else (maxVolume / 3)
-                    updateVolume(restore)
-                } else {
-                    previousVolume = currentVolume
-                    updateVolume(0)
-                }
-            },
-            modifier = Modifier.size(28.dp)
+        Box(
+            modifier = Modifier
+                .size(24.dp)
+                .clickable {
+                    if (isMuted || currentVolume == 0) {
+                        val restore = if (previousVolume > 0) previousVolume else (maxVolume / 3)
+                        updateVolume(restore)
+                    } else {
+                        previousVolume = currentVolume
+                        updateVolume(0)
+                    }
+                },
+            contentAlignment = Alignment.Center
         ) {
             Icon(
-                imageVector = if (isMuted || currentVolume == 0) Icons.Default.VolumeOff else Icons.Default.VolumeDown,
-                contentDescription = "Volume Down",
-                tint = if (isMuted || currentVolume == 0) Color(0xFFEF4444) else Color.White.copy(alpha = 0.85f),
-                modifier = Modifier.size(16.dp)
+                imageVector = if (isMuted || currentVolume == 0) Icons.Default.VolumeOff else Icons.Default.VolumeMute,
+                contentDescription = "Mute",
+                tint = if (isMuted || currentVolume == 0) Color(0xFFEF4444) else Color(0xFF9E95B0),
+                modifier = Modifier.size(17.dp)
             )
         }
-        Slider(
-            value = (currentVolume.toFloat() / maxVolume.toFloat()).coerceIn(0f, 1f),
-            onValueChange = { frac -> updateVolume((frac * maxVolume).toInt()) },
-            colors = SliderDefaults.colors(
-                thumbColor = Color.White,
-                activeTrackColor = PlayerGreen,
-                inactiveTrackColor = Color.White.copy(alpha = 0.12f)
-            ),
+
+        var isDragging by remember { mutableStateOf(false) }
+        var dragFraction by remember { mutableFloatStateOf(0f) }
+        val volFraction = (currentVolume.toFloat() / maxVolume.toFloat()).coerceIn(0f, 1f)
+        val activeFraction = if (isDragging) dragFraction else volFraction
+
+        BoxWithConstraints(
             modifier = Modifier
                 .weight(1f)
-                .height(16.dp)
-        )
-        IconButton(
-            onClick = { updateVolume(currentVolume + 1) },
-            modifier = Modifier.size(28.dp)
+                .height(24.dp)
+                .pointerInput(Unit) {
+                    detectTapGestures { offset ->
+                        val frac = (offset.x / size.width).coerceIn(0f, 1f)
+                        updateVolume((frac * maxVolume).toInt())
+                    }
+                }
+                .pointerInput(Unit) {
+                    detectDragGestures(
+                        onDragStart = { offset ->
+                            isDragging = true
+                            dragFraction = (offset.x / size.width).coerceIn(0f, 1f)
+                        },
+                        onDrag = { change, _ ->
+                            change.consume()
+                            val frac = (change.position.x / size.width).coerceIn(0f, 1f)
+                            dragFraction = frac
+                            updateVolume((frac * maxVolume).toInt())
+                        },
+                        onDragEnd = { isDragging = false },
+                        onDragCancel = { isDragging = false }
+                    )
+                },
+            contentAlignment = Alignment.CenterStart
+        ) {
+            val widthPx = constraints.maxWidth.toFloat()
+            val trackHeight = if (isDragging) 5.dp else 3.5.dp
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(trackHeight)
+                    .clip(RoundedCornerShape(2.dp))
+                    .background(Color.White.copy(alpha = 0.15f))
+            )
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth(activeFraction.coerceIn(0.001f, 1f))
+                    .height(trackHeight)
+                    .clip(RoundedCornerShape(2.dp))
+                    .background(
+                        Brush.horizontalGradient(
+                            listOf(Color(0xFFE2E8F0), PlayerGreen)
+                        )
+                    )
+            )
+            val thumbRadiusPx = with(LocalDensity.current) { (if (isDragging) 6.dp else 4.5.dp).toPx() }
+            val thumbOffsetPx = ((widthPx * activeFraction) - thumbRadiusPx)
+                .coerceIn(0f, (widthPx - thumbRadiusPx * 2).coerceAtLeast(0f))
+            Box(
+                modifier = Modifier
+                    .offset(x = with(LocalDensity.current) { thumbOffsetPx.toDp() })
+                    .size(if (isDragging) 12.dp else 9.dp)
+                    .shadow(4.dp, CircleShape, ambientColor = PlayerGreen, spotColor = Color.White)
+                    .clip(CircleShape)
+                    .background(Color.White)
+            )
+        }
+
+        Box(
+            modifier = Modifier
+                .size(24.dp)
+                .clickable { updateVolume((currentVolume + 1).coerceAtMost(maxVolume)) },
+            contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = Icons.Default.VolumeUp,
-                contentDescription = "Volume Up",
-                tint = Color.White.copy(alpha = 0.85f),
-                modifier = Modifier.size(16.dp)
+                contentDescription = "Max Volume",
+                tint = Color(0xFF9E95B0),
+                modifier = Modifier.size(17.dp)
             )
         }
     }
@@ -651,112 +713,92 @@ internal fun FullPlayerUpNextCard(
     onFixQueue: () -> Unit,
     onPlayIndex: (Int) -> Unit
 ) {
-    val context = LocalContext.current
-    val upNextItems = remember(queueIndex, queue) {
+    val nextItem = remember(queueIndex, queue) {
         if (queue.size > 1) {
-            queue.drop(queueIndex + 1).take(3).ifEmpty { queue.take(3) }
-        } else {
-            emptyList()
-        }
+            queue.getOrNull(queueIndex + 1) ?: queue.firstOrNull()
+        } else null
     }
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp, bottomStart = 16.dp, bottomEnd = 16.dp))
-            .background(PlayerCard)
-            .border(
-                1.dp,
-                PlayerCardBorder,
-                RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp, bottomStart = 16.dp, bottomEnd = 16.dp)
-            )
-            .padding(horizontal = 16.dp, vertical = 10.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .background(Color(0xFF140E22).copy(alpha = 0.92f))
+            .border(1.dp, Color(0xFF282038), RoundedCornerShape(16.dp))
+            .clickable(onClick = onOpenQueue)
+            .padding(horizontal = 14.dp, vertical = 7.dp)
     ) {
-        Column {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 2.dp)
+                modifier = Modifier.weight(1f)
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier
-                        .clickable(onClick = onOpenQueue)
-                        .padding(vertical = 2.dp)
-                ) {
-                    Icon(Icons.Default.KeyboardArrowUp, contentDescription = "Expand Up Next", tint = PlayerMuted, modifier = Modifier.size(16.dp))
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        text = "UP NEXT (${queue.size})",
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 1.2.sp,
-                        color = PlayerMuted,
-                        maxLines = 1
-                    )
-                }
-                if (queue.size > 2) {
-                    Row(
+                if (nextItem != null && nextItem.effectiveCoverUrl.isNotBlank()) {
+                    AsyncImage(
+                        model = nextItem.effectiveCoverUrl,
+                        contentDescription = nextItem.title,
+                        contentScale = ContentScale.Crop,
                         modifier = Modifier
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(PlayerGreen.copy(alpha = 0.15f))
-                            .clickable(onClick = onFixQueue)
-                            .padding(horizontal = 8.dp, vertical = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = PlayerGreen, modifier = Modifier.size(12.dp))
-                        Spacer(Modifier.width(4.dp))
-                        Text("AI Fix", color = PlayerGreen, fontSize = 10.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                            .size(28.dp)
+                            .clip(RoundedCornerShape(6.dp))
+                    )
+                    Spacer(modifier = Modifier.width(9.dp))
+                } else {
+                    Icon(
+                        Icons.AutoMirrored.Filled.QueueMusic,
+                        contentDescription = "Queue",
+                        tint = PlayerGreen,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                }
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = if (nextItem != null) "UP NEXT • ${nextItem.title}" else "QUEUE (${queue.size} songs)",
+                        fontSize = 11.5.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color.White,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    if (nextItem != null) {
+                        Text(
+                            text = nextItem.artist,
+                            fontSize = 10.sp,
+                            color = PlayerMuted,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
                     }
                 }
             }
-            Spacer(modifier = Modifier.height(6.dp))
-            if (upNextItems.isEmpty()) {
-                Text(
-                    text = "Add more songs to queue",
-                    fontSize = 12.sp,
-                    color = PlayerMuted,
-                    modifier = Modifier.padding(vertical = 4.dp)
-                )
-            } else {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    upNextItems.forEach { item ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    val targetIndex = queue.indexOfFirst { it.id == item.id }
-                                    if (targetIndex >= 0) onPlayIndex(targetIndex)
-                                },
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(38.dp)
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .background(Color(0xFF261F36))
-                            ) {
-                                if (item.effectiveCoverUrl.isNotBlank()) {
-                                    AsyncImage(
-                                        model = ImageRequest.Builder(context).data(item.effectiveCoverUrl).crossfade(true).build(),
-                                        contentDescription = item.title,
-                                        contentScale = ContentScale.Crop,
-                                        modifier = Modifier.fillMaxSize()
-                                    )
-                                }
-                            }
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(item.title, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                Text(item.artist, fontSize = 11.sp, color = PlayerMuted, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            }
-                            Icon(Icons.Default.DragHandle, contentDescription = "Reorder", tint = Color(0xFF6B6578), modifier = Modifier.size(18.dp))
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Icon(Icons.Default.MoreVert, contentDescription = "Options", tint = Color(0xFF6B6578), modifier = Modifier.size(16.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (queue.size > 2) {
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(PlayerGreen.copy(alpha = 0.15f))
+                            .clickable(onClick = onFixQueue)
+                            .padding(horizontal = 7.dp, vertical = 3.dp)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = PlayerGreen, modifier = Modifier.size(11.dp))
+                            Spacer(Modifier.width(3.dp))
+                            Text("AI Fix", color = PlayerGreen, fontSize = 9.5.sp, fontWeight = FontWeight.Bold)
                         }
                     }
+                    Spacer(modifier = Modifier.width(8.dp))
                 }
+                Icon(
+                    Icons.Default.KeyboardArrowUp,
+                    contentDescription = "Open Queue",
+                    tint = PlayerMuted,
+                    modifier = Modifier.size(18.dp)
+                )
             }
         }
     }
