@@ -144,7 +144,7 @@ class FreeLyricsProvider(
                 val url = "https://lrclib.net/api/get?artist_name=$encodedArtist&track_name=$encodedTitle"
                 val req = Request.Builder()
                     .url(url)
-                    .header("User-Agent", "SonexaApp/2.4 (https://sonexa.app)")
+                    .header("User-Agent", "ZyneraApp/2.4 (https://zynera.app)")
                     .build()
 
                 val resp = client.newCall(req).execute()
@@ -174,7 +174,7 @@ class FreeLyricsProvider(
                 val searchUrl = "https://lrclib.net/api/search?q=" + URLEncoder.encode(q, "UTF-8")
                 val searchReq = Request.Builder()
                     .url(searchUrl)
-                    .header("User-Agent", "SonexaApp/2.4 (https://sonexa.app)")
+                    .header("User-Agent", "ZyneraApp/2.4 (https://zynera.app)")
                     .build()
 
                 val searchResp = client.newCall(searchReq).execute()

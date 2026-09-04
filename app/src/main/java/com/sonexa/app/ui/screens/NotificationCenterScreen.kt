@@ -49,7 +49,7 @@ data class AppNotification(
 
 private val fallbackNotifications = listOf(
     NotificationDto("1", "New Single Alert", "Arijit Singh just dropped 'Satranga' — stream it now!", "music_note", "#E534B2", "10m ago", false, "music"),
-    NotificationDto("2", "Sonexa AI Suggestion", "Your custom mood mix 'Monday Blues' is ready to play.", "auto_awesome", "#9825DD", "3h ago", false, "ai"),
+    NotificationDto("2", "Zynera AI Suggestion", "Your custom mood mix 'Monday Blues' is ready to play.", "auto_awesome", "#9825DD", "3h ago", false, "ai"),
     NotificationDto("3", "Friend Activity", "Rahul Sharma started listening to Lo-Fi Beats playlist.", "group", "#0EA5E9", "5h ago", true, "social"),
     NotificationDto("4", "New Release", "Your favourite album 'Rockstar' turns 15 — relive the classics!", "music_note", "#F59E0B", "Yesterday", true, "music"),
     NotificationDto("5", "AI DJ Insight", "You've listened to 142h this month — explore your Music DNA!", "auto_awesome", "#8B5CF6", "2 days ago", true, "ai"),

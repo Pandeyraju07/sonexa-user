@@ -142,7 +142,7 @@ fun ResetPasswordScreen(
                             Toast.makeText(context, "Passwords do not match", Toast.LENGTH_SHORT).show()
                         }
                         else -> {
-                            authViewModel.resetPassword("user@sonexa.ai", "", newPassword, onSuccess = onPasswordResetSuccess)
+                            authViewModel.resetPassword("user@zynera.app", "", newPassword, onSuccess = onPasswordResetSuccess)
                         }
                     }
                 }

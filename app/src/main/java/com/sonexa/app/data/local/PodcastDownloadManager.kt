@@ -132,7 +132,7 @@ object PodcastDownloadManager {
 
                 val request = Request.Builder()
                     .url(episode.audioUrl)
-                    .header("User-Agent", "Sonexa-Downloader/1.0")
+                    .header("User-Agent", "Zynera-Downloader/1.0")
                     .build()
 
                 val response = client.newCall(request).execute()

@@ -115,7 +115,7 @@ fun NotificationPermissionScreen(
                 Spacer(modifier = Modifier.height(10.dp))
 
                 Text(
-                    text = "Get instant notifications for new music releases, trending playlists, and Sonexa AI DJ recommendations.",
+                    text = "Get instant notifications for new music releases, trending playlists, and Zynera AI DJ recommendations.",
                     fontSize = 14.sp,
                     color = SonexaTextMuted,
                     textAlign = TextAlign.Center,

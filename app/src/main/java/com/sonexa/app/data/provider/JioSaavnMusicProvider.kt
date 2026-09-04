@@ -172,7 +172,7 @@ class JioSaavnMusicProvider : MusicProvider {
             providerUrl = "https://www.jiosaavn.com/song/$trackId",
             isPlayable = streamUrl.isNotBlank(),
             providerType = "audio",
-            availableProviders = listOf("JioSaavn", "Sonexa"),
+            availableProviders = listOf("JioSaavn", "Zynera"),
             isOfficial = true,
             genres = listOf(language.replaceFirstChar { it.uppercase() }),
             language = language.replaceFirstChar { it.uppercase() },

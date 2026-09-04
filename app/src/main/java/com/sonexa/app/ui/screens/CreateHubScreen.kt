@@ -201,7 +201,7 @@ fun CreateHubScreen(
                                 Spacer(modifier = Modifier.width(10.dp))
                                 Column {
                                     Text("AI Signature Music Generator", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Color.White)
-                                    Text("Powered by Sonexa Neural Audio Engine", fontSize = 11.5.sp, color = Color(0xFFC4B5FD))
+                                    Text("Powered by Zynera Neural Audio Engine", fontSize = 11.5.sp, color = Color(0xFFC4B5FD))
                                 }
                             }
                         }
@@ -247,7 +247,7 @@ fun CreateHubScreen(
                                         val newTrack = TrackDto(
                                             id = "ai_" + System.currentTimeMillis(),
                                             title = res.vibeTitle.ifBlank { "AI $selectedAiMood Mix" },
-                                            artist = "Sonexa AI Studio",
+                                            artist = "Zynera AI Studio",
                                             album = "AI Signatures",
                                             durationMs = 180000L,
                                             audioUrl = res.aiGeneratedAudioUrl.ifBlank { "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3" },
@@ -547,7 +547,7 @@ fun CreateHubScreen(
                                 val newTrack = TrackDto(
                                     id = "ai_" + System.currentTimeMillis(),
                                     title = res.vibeTitle.ifBlank { "Studio AI: $selectedAiGenre" },
-                                    artist = "Sonexa AI Studio",
+                                    artist = "Zynera AI Studio",
                                     album = "AI Generator",
                                     durationMs = 180000L,
                                     audioUrl = res.aiGeneratedAudioUrl.ifBlank { "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3" },
@@ -574,7 +574,7 @@ fun CreateHubScreen(
 
     // 3. Friend Blend Invitation Dialog
     if (showBlendDialog) {
-        val blendCode = remember { "SONEXA-BLEND-${(1000..9999).random()}" }
+        val blendCode = remember { "ZYNERA-BLEND-${(1000..9999).random()}" }
         AlertDialog(
             onDismissRequest = { showBlendDialog = false },
             containerColor = Color(0xFF242424),
@@ -599,7 +599,7 @@ fun CreateHubScreen(
                     onClick = {
                         val shareIntent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
                             type = "text/plain"
-                            putExtra(android.content.Intent.EXTRA_TEXT, "Join my Sonexa Blend Session with code $blendCode!\nhttps://sonexa.app/blend/$blendCode")
+                            putExtra(android.content.Intent.EXTRA_TEXT, "Join my Zynera Blend Session with code $blendCode!\nhttps://zynera.app/blend/$blendCode")
                         }
                         context.startActivity(android.content.Intent.createChooser(shareIntent, "Share Blend Invite"))
                         showBlendDialog = false

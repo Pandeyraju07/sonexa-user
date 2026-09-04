@@ -55,7 +55,7 @@ fun ExploreScreen(
     }
 
     val liveRadioStations = listOf(
-        Pair("Sonexa Hits Radio", "24/7 Non-stop Hits"),
+        Pair("Zynera Hits Radio", "24/7 Non-stop Hits"),
         Pair("Lo-Fi Chill Radio", "Beats to Study/Relax"),
         Pair("Bollywood Retro FM", "Gold 90s Hits"),
         Pair("Global Top 40 FM", "Worldwide Trending")

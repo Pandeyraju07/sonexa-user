@@ -376,7 +376,7 @@ fun SettingsScreen(
                     item {
                         Spacer(modifier = Modifier.height(6.dp))
                         SonexaGradientButton(
-                            text = "Log Out of Sonexa",
+                            text = "Log Out of Zynera",
                             onClick = { showLogoutConfirm = true }
                         )
                     }
@@ -678,7 +678,7 @@ private fun AccountDialog(
         Spacer(modifier = Modifier.height(12.dp))
         Text("Plan", color = SonexaTextMuted, fontSize = 12.sp)
         Text(
-            if (model.profile?.isPremium == true) "Sonexa Premium" else "Free",
+            if (model.profile?.isPremium == true) "Zynera Premium" else "Free",
             color = SonexaPurpleLight,
             fontSize = 14.sp,
             fontWeight = FontWeight.Bold

@@ -23,7 +23,7 @@ import com.sonexa.app.data.model.AudioQuality
  * Features:
  * - Audius as Primary decentralized full-length audio stream provider.
  * - In-memory stream caching for 0ms instant playback on track changes.
- * - Multi-provider racing (Audius, Jamendo, Sonexa Backend, Open Mirrors).
+ * - Multi-provider racing (Audius, Jamendo, Zynera Backend, Open Mirrors).
  * - Fast background queue prefetching.
  * - Guarantees full-length song playback without 30-second preview cutoffs.
  * - Real-time bitrate adaptation (Lossless 320kbps, 160kbps, 96kbps, 48kbps).

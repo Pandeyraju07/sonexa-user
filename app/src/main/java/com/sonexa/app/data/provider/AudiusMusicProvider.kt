@@ -35,7 +35,7 @@ class AudiusMusicProvider : MusicProvider {
         "https://dn-usa.audius.metadata.fyi/v1",
         "https://discoveryprovider.openplayer.org/v1"
     )
-    private val appName = "Sonexa"
+    private val appName = "Zynera"
 
     override suspend fun search(query: String, filter: String, limit: Int): Result<List<TrackDto>> =
         withContext(Dispatchers.IO) {
@@ -48,7 +48,7 @@ class AudiusMusicProvider : MusicProvider {
                     val url = "$host/tracks/search?query=$encoded&app_name=$appName&limit=$limit"
                     val request = Request.Builder()
                         .url(url)
-                        .header("User-Agent", "Sonexa-Android/1.0")
+                        .header("User-Agent", "Zynera-Android/1.0")
                         .build()
 
                     client.newCall(request).execute().use { response ->
@@ -88,7 +88,7 @@ class AudiusMusicProvider : MusicProvider {
             val url = "$host/users/search?query=$encoded&app_name=$appName"
             val request = Request.Builder()
                 .url(url)
-                .header("User-Agent", "Sonexa-Android/1.0")
+                .header("User-Agent", "Zynera-Android/1.0")
                 .build()
 
             client.newCall(request).execute().use { response ->
@@ -148,7 +148,7 @@ class AudiusMusicProvider : MusicProvider {
                 val url = "$host/users/$userId/tracks?offset=$offset&limit=$limit&app_name=$appName"
                 val request = Request.Builder()
                     .url(url)
-                    .header("User-Agent", "Sonexa-Android/1.0")
+                    .header("User-Agent", "Zynera-Android/1.0")
                     .build()
 
                 client.newCall(request).execute().use { response ->
@@ -184,7 +184,7 @@ class AudiusMusicProvider : MusicProvider {
                 val url = "$host/users/$userId/albums?app_name=$appName"
                 val request = Request.Builder()
                     .url(url)
-                    .header("User-Agent", "Sonexa-Android/1.0")
+                    .header("User-Agent", "Zynera-Android/1.0")
                     .build()
 
                 client.newCall(request).execute().use { response ->
@@ -234,7 +234,7 @@ class AudiusMusicProvider : MusicProvider {
             val url = "$host/tracks/trending?app_name=$appName&limit=$limit"
             val request = Request.Builder()
                 .url(url)
-                .header("User-Agent", "Sonexa-Android/1.0")
+                .header("User-Agent", "Zynera-Android/1.0")
                 .build()
 
             client.newCall(request).execute().use { response ->

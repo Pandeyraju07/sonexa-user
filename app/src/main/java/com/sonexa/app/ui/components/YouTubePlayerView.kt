@@ -245,7 +245,7 @@ private fun createYouTubeWebView(
                       'enablejsapi': 1,
                       'modestbranding': 1,
                       'fs': 1,
-                      'origin': 'https://sonexa.app'
+                      'origin': 'https://zynera.app'
                     },
                     events: {
                       'onReady': onPlayerReady,
@@ -292,6 +292,6 @@ private fun createYouTubeWebView(
             </html>
         """.trimIndent()
 
-        loadDataWithBaseURL("https://sonexa.app", htmlContent, "text/html", "UTF-8", null)
+        loadDataWithBaseURL("https://zynera.app", htmlContent, "text/html", "UTF-8", null)
     }
 }

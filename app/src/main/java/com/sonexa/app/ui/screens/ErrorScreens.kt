@@ -87,7 +87,7 @@ fun NoInternetScreen(onRetry: () -> Unit) {
 fun ServerErrorScreen(onRetry: () -> Unit) {
     GenericErrorScreen(
         title = "Server Maintenance Error (500)",
-        message = "Sonexa servers are experiencing high traffic. Our engineers are on it!",
+        message = "Zynera servers are experiencing high traffic. Our engineers are on it!",
         icon = Icons.Default.CloudOff,
         buttonText = "Refresh Server",
         onRetry = onRetry
@@ -109,7 +109,7 @@ fun EmptyStateScreen(onAction: () -> Unit) {
 fun MaintenanceScreen(onAction: () -> Unit) {
     GenericErrorScreen(
         title = "Scheduled Maintenance",
-        message = "Sonexa is upgrading its Lossless Audio engine. We will be back online shortly.",
+        message = "Zynera is upgrading its Lossless Audio engine. We will be back online shortly.",
         icon = Icons.Default.Build,
         buttonText = "Check Status",
         onRetry = onAction
@@ -131,7 +131,7 @@ fun SessionExpiredScreen(onReLogin: () -> Unit) {
 fun UpdateRequiredScreen(onUpdate: () -> Unit) {
     GenericErrorScreen(
         title = "App Update Required",
-        message = "A mandatory Sonexa update (v2.4.0) with AI Voice features is ready for download.",
+        message = "A mandatory Zynera update (v2.4.0) with AI Voice features is ready for download.",
         icon = Icons.Default.SystemUpdate,
         buttonText = "Update Now",
         onRetry = onUpdate

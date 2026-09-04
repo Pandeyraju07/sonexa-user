@@ -34,9 +34,9 @@ fun AppUpdateCheckScreen(
     val uiState by viewModel.uiState.collectAsState()
     val isChecking = uiState is CatalogUiState.Loading
     val message = when (val s = uiState) {
-        is CatalogUiState.Ready -> s.data.message.ifBlank { "You're running the latest Sonexa v${s.data.latestVersion}" }
+        is CatalogUiState.Ready -> s.data.message.ifBlank { "You're running the latest Zynera v${s.data.latestVersion}" }
         is CatalogUiState.Error -> s.message
-        else -> "Verifying Sonexa version & security features"
+        else -> "Verifying Zynera version & security features"
     }
 
     Box(
@@ -101,7 +101,7 @@ fun AppUpdateCheckScreen(
 
                 Text(
                     text = if (isChecking)
-                        "Verifying Sonexa version & security features"
+                        "Verifying Zynera version & security features"
                     else
                         message,
                     fontSize = 13.sp,

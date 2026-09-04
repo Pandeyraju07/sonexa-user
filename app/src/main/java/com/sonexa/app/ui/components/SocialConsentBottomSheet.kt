@@ -76,7 +76,7 @@ fun SocialConsentBottomSheet(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                BrandChip(label = "S", color = SonexaPurpleLight)
+                BrandChip(label = "Z", color = SonexaPurpleLight)
                 Text(text = "↔", color = SonexaTextMuted, fontSize = 18.sp)
                 BrandChip(
                     label = if (isGoogle) "G" else "",
@@ -96,7 +96,7 @@ fun SocialConsentBottomSheet(
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = "Sonexa uses $providerName to let you sign in securely. " +
+                text = "Zynera uses $providerName to let you sign in securely. " +
                     "You’ll choose your $providerName account next and review Google/Apple’s consent screen.",
                 fontSize = 13.sp,
                 color = SonexaTextMuted,
@@ -116,7 +116,7 @@ fun SocialConsentBottomSheet(
             ) {
                 Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
                     Text(
-                        text = "Sonexa will receive",
+                        text = "Zynera will receive",
                         fontSize = 12.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = SonexaPurpleLight,
@@ -125,7 +125,7 @@ fun SocialConsentBottomSheet(
                     ConsentRow(
                         icon = Icons.Outlined.Person,
                         title = "Name & profile photo",
-                        subtitle = "Used to personalize your Sonexa profile"
+                        subtitle = "Used to personalize your Zynera profile"
                     )
                     ConsentRow(
                         icon = Icons.Outlined.Email,
@@ -138,7 +138,7 @@ fun SocialConsentBottomSheet(
             Spacer(modifier = Modifier.height(16.dp))
 
             Text(
-                text = "By continuing, you agree to Sonexa’s Terms and Privacy Policy. " +
+                text = "By continuing, you agree to Zynera’s Terms and Privacy Policy. " +
                     "We never post on your behalf.",
                 fontSize = 11.sp,
                 color = Color(0xFF7A7194),

@@ -53,7 +53,7 @@ class YouTubeMusicProvider(
                 val tracks = if (apiKey.isNotBlank()) {
                     searchWithOfficialApi(trimmedQuery, apiKey, limit)
                 } else {
-                    // Fallback to Sonexa server-side proxy or authorized discovery catalog
+                    // Fallback to Zynera server-side proxy or authorized discovery catalog
                     searchViaServerOrFallback(trimmedQuery, limit)
                 }
 
@@ -231,7 +231,7 @@ class YouTubeMusicProvider(
                 providerUrl = "https://www.youtube.com/watch?v=BddP6PYo2gs",
                 isPlayable = true,
                 providerType = "youtube_video",
-                availableProviders = listOf("YouTube", "Sonexa"),
+                availableProviders = listOf("YouTube", "Zynera"),
                 channelTitle = "SonyMusicIndiaVEVO",
                 isOfficial = true
             ),

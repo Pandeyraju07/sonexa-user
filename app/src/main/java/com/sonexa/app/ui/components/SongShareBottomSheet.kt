@@ -1,4 +1,4 @@
-﻿package com.sonexa.app.ui.components
+package com.sonexa.app.ui.components
 
 import android.content.ClipData
 import android.content.ClipboardManager
@@ -57,7 +57,7 @@ fun SongShareBottomSheet(
     var isCopied by remember { mutableStateOf(false) }
 
     val shareUrl = remember(track) { SonexaShareHelper.generateTrackShareUrl(track) }
-    val shareText = "🎵 Listen to \"${track.title}\" by ${track.artist} on Sonexa:\n$shareUrl\n\nExperience Lossless 320kbps audio & AI vibes on Sonexa."
+    val shareText = "🎵 Listen to \"${track.title}\" by ${track.artist} on Zynera:\n$shareUrl\n\nExperience Lossless 320kbps audio & AI vibes on Zynera."
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -349,7 +349,7 @@ fun SongShareBottomSheet(
                         .border(1.dp, Color.White.copy(alpha = 0.10f), RoundedCornerShape(14.dp))
                         .clickable {
                             val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                            val clip = ClipData.newPlainText("Sonexa Song Link", shareUrl)
+                            val clip = ClipData.newPlainText("Zynera Song Link", shareUrl)
                             clipboard.setPrimaryClip(clip)
                             isCopied = true
                             Toast.makeText(context, "Link copied!", Toast.LENGTH_SHORT).show()

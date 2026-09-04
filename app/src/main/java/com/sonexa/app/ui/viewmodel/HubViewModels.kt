@@ -367,7 +367,7 @@ class PlaylistDetailViewModel(
                     artworkType = "gradient",
                     coverUrl = tracks.firstOrNull()?.effectiveCoverUrl.orEmpty(),
                     trackCount = tracks.size,
-                    creatorName = "Sonexa",
+                    creatorName = "Zynera",
                     isUserCreated = false
                 )
                 _uiState.value = CatalogUiState.Ready(PlaylistDetailResponse(true, playlist, tracks))
@@ -751,7 +751,7 @@ class SettingsViewModel(
     private fun getLocalSettings(): MutableMap<String, Any?> {
         val defaultMap = mutableMapOf<String, Any?>(
             "aiSensitivity" to "High",
-            "aiVoiceModel" to "Sonexa Voice v2.4",
+            "aiVoiceModel" to "Zynera Voice v2.4",
             "smartLyrics" to true,
             "audioQuality" to "High",
             "crossfade" to true,

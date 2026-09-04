@@ -91,7 +91,7 @@ fun AISignatureScreen(
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        text = "Sonexa AI Hub",
+                        text = "Zynera AI Hub",
                         fontSize = 26.sp,
                         fontWeight = FontWeight.ExtraBold,
                         color = Color(0xFFC084FC)
@@ -242,7 +242,7 @@ fun AISignatureScreen(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(imageVector = Icons.Default.Chat, contentDescription = null, tint = Color(0xFFE534B2), modifier = Modifier.size(24.dp))
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text(text = "Ask Sonexa AI Assistant", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = SonexaTextWhite)
+                        Text(text = "Ask Zynera AI Assistant", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = SonexaTextWhite)
                     }
                 },
                 text = {
@@ -255,7 +255,7 @@ fun AISignatureScreen(
                                 .padding(12.dp)
                         ) {
                             Text(
-                                text = "🤖 AI: 'Hello Dhiraj! I am your Sonexa Music Assistant. What mood or genre would you like to explore today?'",
+                                text = "🤖 AI: 'Hello Dhiraj! I am your Zynera Music Assistant. What mood or genre would you like to explore today?'",
                                 fontSize = 13.sp,
                                 color = SonexaTextWhite,
                                 lineHeight = 18.sp

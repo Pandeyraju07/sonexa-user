@@ -44,7 +44,7 @@ class JamendoProvider : MusicProvider {
                 val url = "$apiBase/tracks/?client_id=$clientId&format=json&namesearch=$encoded&include=musicinfo+licenses+stats&audioformat=mp32&limit=$limit"
                 val request = Request.Builder()
                     .url(url)
-                    .header("User-Agent", "Sonexa-Android/1.0")
+                    .header("User-Agent", "Zynera-Android/1.0")
                     .build()
 
                 client.newCall(request).execute().use { response ->
@@ -75,7 +75,7 @@ class JamendoProvider : MusicProvider {
             val url = "$apiBase/tracks/?client_id=$clientId&format=json&boost=popularity_total&include=musicinfo+licenses+stats&audioformat=mp32&limit=$limit"
             val request = Request.Builder()
                 .url(url)
-                .header("User-Agent", "Sonexa-Android/1.0")
+                .header("User-Agent", "Zynera-Android/1.0")
                 .build()
 
             client.newCall(request).execute().use { response ->

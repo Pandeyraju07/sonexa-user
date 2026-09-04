@@ -118,7 +118,7 @@ data class PlaylistDto(
     @SerializedName("artworkType") val artworkType: String = "",
     @SerializedName("coverUrl") val coverUrl: String = "",
     @SerializedName("trackCount") val trackCount: Int = 0,
-    @SerializedName("creatorName") val creatorName: String = "Sonexa",
+    @SerializedName("creatorName") val creatorName: String = "Zynera",
     @SerializedName("isUserCreated") val isUserCreated: Boolean = false,
     @SerializedName("isPinned") val isPinned: Boolean = false
 )

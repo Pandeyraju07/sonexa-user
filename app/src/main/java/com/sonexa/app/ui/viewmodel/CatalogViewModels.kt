@@ -34,7 +34,7 @@ class OnboardingViewModel(
                         listOf(
                             OnboardingSlideDto("AI Personal DJ", "Music adapted to your mood in real-time"),
                             OnboardingSlideDto("Lossless Audio", "Studio-quality sound with spatial audio"),
-                            OnboardingSlideDto("Smart Discovery", "Discover emerging tracks with Sonexa AI")
+                            OnboardingSlideDto("Smart Discovery", "Discover emerging tracks with Zynera AI")
                         )
                     )
                 }

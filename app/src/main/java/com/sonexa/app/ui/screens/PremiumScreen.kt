@@ -79,7 +79,7 @@ fun PremiumScreen(
             "🎧 Hi-Fi Lossless 24-bit/192kHz Audio Streaming",
             "🚫 100% Ad-Free Music Experience Across All Platforms",
             "📥 Unlimited Offline Downloads on 5 Devices",
-            "🤖 Unlimited Access to Sonexa AI DJ, Beat Generator & Studio",
+            "🤖 Unlimited Access to Zynera AI DJ, Beat Generator & Studio",
             "🎨 Exclusive AI Playlist Cover Generator Tools",
             "⚡ Unlimited Track Skips & Maximum Fidelity"
         )
@@ -123,7 +123,7 @@ fun PremiumScreen(
                         }
                         Spacer(modifier = Modifier.width(14.dp))
                         Text(
-                            text = "Sonexa Premium",
+                            text = "Zynera Premium",
                             fontSize = 20.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color.White
@@ -176,7 +176,7 @@ fun PremiumScreen(
                                 }
                                 Spacer(modifier = Modifier.width(12.dp))
                                 Column {
-                                    Text("You're on Sonexa Premium VIP", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                                    Text("You're on Zynera Premium VIP", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
                                     Text("High-Fidelity 24-bit Lossless Audio Active", fontSize = 12.sp, color = Color(0xFFE9D5FF))
                                 }
                             }
@@ -255,7 +255,7 @@ fun PremiumScreen(
                         Spacer(modifier = Modifier.width(12.dp))
                         Column {
                             Text("Have a promo code or gift card?", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color.White)
-                            Text("Redeem code 'SONEXA2026' for 3 months free VIP", fontSize = 11.5.sp, color = Color(0xFFA19BAE))
+                            Text("Redeem code 'ZYNERA2026' for 3 months free VIP", fontSize = 11.5.sp, color = Color(0xFFA19BAE))
                         }
                     }
                     Icon(Icons.Default.ChevronRight, contentDescription = null, tint = Color.White)
@@ -386,7 +386,7 @@ fun PremiumScreen(
                 Button(
                     onClick = {
                         if (isPremium) {
-                            Toast.makeText(context, "You are already a Sonexa VIP member!", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, "You are already a Zynera VIP member!", Toast.LENGTH_SHORT).show()
                         } else {
                             showPaymentModal = true
                         }
@@ -507,7 +507,7 @@ fun PremiumScreen(
                             showPaymentModal = false
                             if (success) {
                                 showInvoiceModal = true
-                                Toast.makeText(context, "Welcome to Sonexa Premium VIP!", Toast.LENGTH_LONG).show()
+                                Toast.makeText(context, "Welcome to Zynera Premium VIP!", Toast.LENGTH_LONG).show()
                             } else {
                                 Toast.makeText(context, "Subscription failed. Please try again.", Toast.LENGTH_SHORT).show()
                             }
@@ -540,7 +540,7 @@ fun PremiumScreen(
             },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Thank you for upgrading to Sonexa Premium!", color = Color.White, fontSize = 14.sp)
+                    Text("Thank you for upgrading to Zynera Premium!", color = Color.White, fontSize = 14.sp)
                     Spacer(modifier = Modifier.height(6.dp))
                     Box(
                         modifier = Modifier
@@ -581,7 +581,7 @@ fun PremiumScreen(
                     OutlinedTextField(
                         value = promoCodeInput,
                         onValueChange = { promoCodeInput = it.uppercase() },
-                        placeholder = { Text("e.g. SONEXA2026", color = Color(0xFFA19BAE)) },
+                        placeholder = { Text("e.g. ZYNERA2026", color = Color(0xFFA19BAE)) },
                         singleLine = true,
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedTextColor = Color.White,

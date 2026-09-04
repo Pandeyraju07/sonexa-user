@@ -34,7 +34,7 @@ class SonexaNativeProvider(
                             providerTrackId = track.id,
                             isPlayable = track.audioUrl.isNotBlank(),
                             providerType = "audio",
-                            availableProviders = listOf("Sonexa"),
+                            availableProviders = listOf("Zynera"),
                             isOfficial = true
                         )
                     }
@@ -62,7 +62,7 @@ class SonexaNativeProvider(
                         providerTrackId = track.id,
                         isPlayable = track.audioUrl.isNotBlank(),
                         providerType = "audio",
-                        availableProviders = listOf("Sonexa"),
+                        availableProviders = listOf("Zynera"),
                         isOfficial = true
                     )
                 }
