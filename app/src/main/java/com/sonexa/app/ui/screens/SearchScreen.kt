@@ -327,10 +327,18 @@ fun SearchScreen(
             }
 
             // Main Content Area
-            // Main Content Area
             if (!isSearchActive && query.isBlank()) {
                 val quickMoodChips = remember {
-                    listOf("🔥 Trending", "💖 Romance", "⚡ High Energy", "🎧 Lo-Fi Chill", "🪩 Party Hits", "🌿 Acoustic", "🧘 Alpha Focus", "🚗 Drive Mode")
+                    listOf(
+                        "🔥 Trending" to "Top Trending Songs India",
+                        "💖 Romance" to "Romantic Hindi Love Songs",
+                        "⚡ High Energy" to "High Energy Workout Songs",
+                        "🎧 Lo-Fi Chill" to "Lo-Fi Bollywood Beats",
+                        "🪩 Party Hits" to "Bollywood Party Songs",
+                        "🌿 Acoustic" to "Acoustic Hindi Songs",
+                        "🧘 Alpha Focus" to "Alpha Focus Study Music",
+                        "🚗 Drive Mode" to "Road Trip Songs Hindi"
+                    )
                 }
 
                 // Browse Home (Quick Chips + 2x2 Hero categories + Discover + Browse All)
@@ -345,17 +353,17 @@ fun SearchScreen(
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            items(quickMoodChips) { moodText ->
-                                val cleanQuery = moodText.substringAfter(" ").trim()
+                            items(quickMoodChips) { (moodText, genreQuery) ->
                                 Box(
                                     modifier = Modifier
                                         .clip(RoundedCornerShape(20.dp))
                                         .background(SonexaInputBg)
                                         .border(1.dp, SonexaCardBorder, RoundedCornerShape(20.dp))
                                         .clickable {
-                                            query = cleanQuery
+                                            // Use the proper genre query, not the chip label word
+                                            query = genreQuery
                                             isSearchActive = true
-                                            searchViewModel.onSearchQueryChanged(cleanQuery)
+                                            searchViewModel.onSearchQueryChanged(genreQuery)
                                         }
                                         .padding(horizontal = 14.dp, vertical = 8.dp)
                                 ) {
@@ -402,6 +410,7 @@ fun SearchScreen(
                             }
                         }
                     }
+
 
                     // 2. "Discover something new" (Redesigned with guaranteed covers & Play action)
                     item {

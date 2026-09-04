@@ -70,6 +70,106 @@ sealed interface SearchUiState {
     data class Error(val message: String) : SearchUiState
 }
 
+/**
+ * Maps genre/mood keyword searches (e.g. "Romance", "Lo-Fi Chill") to rich,
+ * Spotify-style genre queries so the search engine returns genre-type songs
+ * rather than songs with those words in their titles.
+ */
+object GenreQueryMapper {
+
+    private val genreMap: Map<String, List<String>> = mapOf(
+        // Romantic / Love
+        "romance" to listOf("Romantic Hindi Love Songs", "Best Bollywood Love Songs", "Dil Love Romantic"),
+        "romantic" to listOf("Romantic Hindi Love Songs", "Best Bollywood Love Songs", "Pyaar Mohabbat Songs"),
+        "love" to listOf("Romantic Hindi Love Songs", "Best Bollywood Love Songs"),
+        "love songs" to listOf("Romantic Hindi Love Songs", "Romantic English Love Songs"),
+
+        // Party / Dance
+        "party" to listOf("Bollywood Party Songs", "Best Dance Party Hits", "Club Anthem Dance Songs"),
+        "party hits" to listOf("Bollywood Party Songs", "Best Dance Party Hits"),
+        "dance" to listOf("Bollywood Dance Songs", "Best Dance Floor Hits"),
+        "club" to listOf("Club Anthem Dance Songs", "EDM Party Hits"),
+
+        // Sad / Emotional
+        "sad" to listOf("Sad Bollywood Songs", "Heart Break Hindi Songs", "Emotional Dard Songs"),
+        "heartbreak" to listOf("Heart Break Hindi Songs", "Sad Love Songs Hindi"),
+        "emotional" to listOf("Emotional Hindi Songs", "Feeling Sad Bollywood Songs"),
+
+        // Lo-Fi / Chill
+        "lo-fi" to listOf("Lo-Fi Bollywood Beats", "Chillhop Lo-Fi Songs", "Lo-Fi Hindi Chill"),
+        "lofi" to listOf("Lo-Fi Bollywood Beats", "Chillhop Lo-Fi Songs"),
+        "lo-fi chill" to listOf("Lo-Fi Bollywood Beats", "Lo-Fi Hindi Chill"),
+        "chill" to listOf("Chill Bollywood Songs", "Lo-Fi Chill Hits"),
+
+        // High Energy / Workout
+        "high energy" to listOf("High Energy Workout Songs", "Gym Motivation Bollywood", "Power Workout Hits"),
+        "energy" to listOf("High Energy Workout Songs", "Gym Motivation Bollywood"),
+        "workout" to listOf("Gym Workout Motivation Songs", "High Energy Workout Hits"),
+
+        // Party / Trending
+        "trending" to listOf("Top Trending Songs India", "Viral Hits Bollywood"),
+        "trending india" to listOf("Top Trending Songs India", "Viral Hindi Hits 2024"),
+
+        // Acoustic
+        "acoustic" to listOf("Acoustic Hindi Songs", "Unplugged Bollywood", "Soft Acoustic Hits"),
+
+        // Focus / Study / Alpha
+        "focus" to listOf("Study Focus Music", "Concentration Ambient Beats", "Alpha Focus Instrumental"),
+        "alpha focus" to listOf("Alpha Focus Study Music", "Deep Focus Concentration"),
+        "study" to listOf("Study Music Instrumental", "Focus Ambient Beats"),
+
+        // Drive / Road Trip
+        "drive mode" to listOf("Road Trip Songs Hindi", "Car Drive Music Bollywood", "Highway Drive Songs"),
+        "drive" to listOf("Road Trip Songs Hindi", "Car Drive Music Bollywood"),
+
+        // Devotional / Bhakti
+        "devotional" to listOf("Bhakti Songs Devotional", "Aarti Bhajan Top Songs"),
+        "bhakti" to listOf("Bhakti Songs Devotional", "Mantra Bhajan Songs"),
+
+        // Hindi / Bollywood genres
+        "bollywood" to listOf("Top Bollywood Songs 2024", "Best Hindi Film Songs"),
+        "hindi" to listOf("Top Hindi Songs 2024", "Best Hindi Bollywood Hits"),
+        "punjabi" to listOf("Top Punjabi Songs 2024", "Best Punjabi Hits"),
+        "pop" to listOf("Pop Hits India 2024", "Best Pop Songs"),
+        "retro" to listOf("Classic Bollywood Retro Songs", "Old Hindi Songs Golden Era"),
+        "classical" to listOf("Indian Classical Music", "Raga Hindustani Classical"),
+
+        // Motivation / Confidence
+        "motivation" to listOf("Motivational Songs Hindi", "Inspirational Bollywood", "Confidence Power Songs"),
+        "motivational" to listOf("Motivational Songs Hindi", "Power Motivational Hits"),
+
+        // Melancholic / Nostalgia
+        "nostalgia" to listOf("90s Bollywood Hits", "Classic Retro Hindi Songs"),
+        "nostalgic" to listOf("90s Bollywood Hits", "Classic Retro Hindi Songs"),
+        "melancholy" to listOf("Melancholic Sad Hindi Songs", "Painful Dard Songs Bollywood")
+    )
+
+    /**
+     * Returns true if the query is a pure genre/mood keyword (not a song title or artist name).
+     * Used to decide whether to expand the query.
+     */
+    fun isGenreKeyword(query: String): Boolean {
+        val q = query.trim().lowercase()
+        return genreMap.containsKey(q)
+    }
+
+    /**
+     * Returns the expanded genre query list for a genre keyword, or null if not a known genre.
+     * Returns multiple queries to search in parallel for best coverage.
+     */
+    fun expandGenreQuery(query: String): List<String>? {
+        val q = query.trim().lowercase()
+        return genreMap[q]
+    }
+
+    /**
+     * Returns the primary genre search query suitable for passing to a single search call.
+     */
+    fun primaryGenreQuery(query: String): String {
+        return expandGenreQuery(query)?.firstOrNull() ?: query
+    }
+}
+
 class SearchViewModel(
     val aggregationEngine: MusicAggregationEngine = MusicAggregationEngine(),
     private val musicRepository: MusicRepository = MusicRepository()
@@ -290,7 +390,9 @@ class SearchViewModel(
         onPlay: (List<TrackDto>, Int, String) -> Unit
     ) {
         viewModelScope.launch {
-            val result = aggregationEngine.searchAll(query = query, limit = 20)
+            // Expand genre keywords (e.g. "Romance") to proper genre queries
+            val effectiveQuery = GenreQueryMapper.primaryGenreQuery(query)
+            val result = aggregationEngine.searchAll(query = effectiveQuery, limit = 20)
             if (result.tracks.isNotEmpty()) {
                 onPlay(result.tracks, 0, title)
             }
@@ -344,9 +446,17 @@ class SearchViewModel(
             currentCursor = 0
 
             try {
+                // Expand pure genre/mood keywords to rich genre queries before searching
+                // This ensures "Romance" filter → romantic genre songs, not songs titled "Romance"
+                val effectiveQuery = if (GenreQueryMapper.isGenreKeyword(query)) {
+                    GenreQueryMapper.primaryGenreQuery(query)
+                } else {
+                    query
+                }
+
                 // Execute deep orchestration pipeline (NLP, Devanagari transliteration, typo correction, parallel search, ranking)
                 val searchResponse = aggregationEngine.searchUnifiedDeep(
-                    query = query,
+                    query = effectiveQuery,
                     selectedCategory = category,
                     limit = 40
                 )
