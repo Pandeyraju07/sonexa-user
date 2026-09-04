@@ -869,6 +869,14 @@ internal fun FullPlayerOverlays(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val queue = playbackState.queue.ifEmpty { listOfNotNull(track) }
+    var showShareSheet by remember { mutableStateOf(false) }
+
+    if (showShareSheet && track != null) {
+        com.sonexa.app.ui.components.SongShareBottomSheet(
+            track = track,
+            onDismiss = { showShareSheet = false }
+        )
+    }
 
     if (showQualityDialog) {
         AlertDialog(
@@ -1163,7 +1171,7 @@ internal fun FullPlayerOverlays(
                             .fillMaxWidth()
                             .clickable {
                                 onDismissMore()
-                                track?.let { com.sonexa.app.util.SonexaShareHelper.shareTrack(context, it) }
+                                showShareSheet = true
                             },
                         verticalAlignment = Alignment.CenterVertically
                     ) {

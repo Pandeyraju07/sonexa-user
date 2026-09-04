@@ -12,47 +12,35 @@ object IntentDetector {
         "kumar sanu", "alka yagnik", "neha kakkar", "armaan malik", "darshan raval",
         "jubin nautiyal", "anuv jain", "prateek kuhad", "king", "ritviz", "ap dhillon",
         "karan aujla", "lata mangeshkar", "kishore kumar", "mohammed rafi", "mukesh",
-        "the weeknd", "taylor swift", "ed sheeran", "drake", "dua lipa", "billie eilish", "justin bieber"
+        "kk", "mohit chauhan", "udit narayan", "b praak", "jasleen royal", "vishal mishra",
+        "sachet tandon", "guru randhawa", "himesh reshammiya", "shankar mahadevan",
+        "the weeknd", "taylor swift", "ed sheeran", "drake", "dua lipa", "billie eilish",
+        "justin bieber", "charlie puth", "post malone", "bruno mars", "eminem"
     )
 
     private val KNOWN_TRACKS = listOf(
         "tum hi ho", "kesariya", "channa mereya", "apna bana le", "raataan lambiyan",
         "tera yaar hoon main", "kal ho naa ho", "pal pal dil ke paas", "mera man",
         "agar tum saath ho", "shayad", "tujhe kitna chahne lage", "bekhayali",
-        "ghungroo", "jai jai shivshankar", "nashe si chadh gayi"
-    )
-
-    private val KNOWN_MOVIES = mapOf(
-        "kabir singh" to "Kabir Singh",
-        "shershaah" to "Shershaah",
-        "shershah" to "Shershaah",
-        "rockstar" to "Rockstar",
-        "tamasha" to "Tamasha",
-        "yeh jawaani hai deewani" to "Yeh Jawaani Hai Deewani",
-        "yjhd" to "Yeh Jawaani Hai Deewani",
-        "jab we met" to "Jab We Met",
-        "kal ho naa ho" to "Kal Ho Naa Ho",
-        "aashiqui 2" to "Aashiqui 2",
-        "aashiqui" to "Aashiqui 2",
-        "animal" to "Animal",
-        "gully boy" to "Gully Boy",
-        "cocktail" to "Cocktail",
-        "dhurandhar" to "Dhurandhar",
-        "dunki" to "Dunki",
-        "jawan" to "Jawan",
-        "pathaan" to "Pathaan"
+        "ghungroo", "jai jai shivshankar", "nashe si chadh gayi", "satranga", "heeriye",
+        "o maahi", "ve kamleya", "chaleya", "tere pyaar mein", "aaj ki raat"
     )
 
     private val MOOD_MAP = mapOf(
         "romantic" to "ROMANTIC", "romance" to "ROMANTIC", "love" to "ROMANTIC", "ishq" to "ROMANTIC",
         "pyaar" to "ROMANTIC", "pyar" to "ROMANTIC", "dil" to "ROMANTIC", "heart touching" to "ROMANTIC",
+        "mohabbat" to "ROMANTIC", "aashiqui" to "ROMANTIC", "couple" to "ROMANTIC", "valentine" to "ROMANTIC",
         "sad" to "SAD", "dard" to "SAD", "breakup" to "SAD", "heartbreak" to "SAD", "judaai" to "SAD", "gam" to "SAD",
+        "alone" to "SAD", "crying" to "SAD", "dukh" to "SAD", "bewafa" to "SAD",
         "party" to "PARTY", "club" to "PARTY", "dance" to "PARTY", "dhol" to "PARTY", "dj" to "PARTY", "masti" to "PARTY",
+        "celebration" to "PARTY", "wedding" to "PARTY", "shaadi" to "PARTY",
         "gym" to "ENERGETIC", "workout" to "ENERGETIC", "energy" to "ENERGETIC", "hard" to "ENERGETIC", "motivational" to "ENERGETIC", "power" to "ENERGETIC",
+        "running" to "ENERGETIC", "pump" to "ENERGETIC", "fitness" to "ENERGETIC",
         "chill" to "CHILL", "relax" to "RELAXING", "relaxing" to "RELAXING", "calm" to "CALM", "peaceful" to "PEACEFUL", "feel good" to "HAPPY", "happy" to "HAPPY",
-        "lofi" to "CHILL", "lo-fi" to "CHILL", "slowed" to "CHILL", "reverb" to "CHILL",
+        "lofi" to "CHILL", "lo-fi" to "CHILL", "slowed" to "CHILL", "reverb" to "CHILL", "aesthetic" to "CHILL",
         "bhakti" to "DEVOTIONAL", "devotional" to "DEVOTIONAL", "aarti" to "DEVOTIONAL", "chalisa" to "DEVOTIONAL", "bhajan" to "DEVOTIONAL",
-        "acoustic" to "ACOUSTIC", "unplugged" to "ACOUSTIC", "melody" to "MELODY"
+        "krishna" to "DEVOTIONAL", "shiva" to "DEVOTIONAL", "hanuman" to "DEVOTIONAL", "ram" to "DEVOTIONAL",
+        "acoustic" to "ACOUSTIC", "unplugged" to "ACOUSTIC", "melody" to "MELODY", "soothing" to "MELODY"
     )
 
     private val GENRE_MAP = mapOf(
@@ -88,33 +76,12 @@ object IntentDetector {
             )
         }
 
-        // 2. Check for Explicit Movie / Soundtrack intent (e.g. "Kabir Singh songs", "songs of dhurandhar", "Animal soundtrack", "Animal album")
-        val hasMovieKeywords = queryForIntent.contains("songs of") ||
-                queryForIntent.contains(" songs") ||
-                queryForIntent.contains(" song") ||
-                queryForIntent.contains("soundtrack") ||
-                queryForIntent.contains("ost") ||
-                queryForIntent.contains("full album") ||
-                queryForIntent.contains("all songs") ||
-                queryForIntent.contains("movie songs") ||
-                queryForIntent.contains("film songs") ||
-                queryForIntent.contains("album of") ||
-                queryForIntent.contains(" album") ||
-                queryForIntent.contains(" movie")
-
+        // 2. Check for Movie / Soundtrack intent (e.g. "Kabir Singh songs", "Animal soundtrack", "Aashiqui 2", "Shershaah")
         val movieQuery = MovieSoundtrackCatalog.extractMovieQuery(queryForIntent)
-        val matchedMovie = if (hasMovieKeywords) {
-            KNOWN_MOVIES.entries.firstOrNull {
-                queryClean == it.key || queryForIntent.contains(it.key) || movieQuery == it.key
-            }?.value ?: MovieSoundtrackCatalog.findMovieSoundtrack(movieQuery.ifBlank { queryForIntent })?.movieTitle
-        } else {
-            // Only exact movie title matches that are not track names
-            KNOWN_MOVIES.entries.firstOrNull {
-                queryClean == it.key && !KNOWN_TRACKS.contains(queryClean) && queryClean != "rockstar"
-            }?.value
-        }
+        val matchedMovieOST = MovieSoundtrackCatalog.findMovieSoundtrack(movieQuery.ifBlank { queryForIntent })
+            ?: MovieSoundtrackCatalog.findMovieSoundtrack(queryClean)
 
-        if (matchedMovie != null) {
+        if (matchedMovieOST != null) {
             return SearchIntent(
                 type = SearchIntentType.MOVIE_SOUNDTRACK,
                 query = rawQuery,
@@ -122,7 +89,7 @@ object IntentDetector {
                 detectedLanguage = langResult.language,
                 isDevanagari = langResult.isDevanagari,
                 transliteratedQuery = transliterated,
-                movieName = matchedMovie,
+                movieName = matchedMovieOST.movieTitle,
                 confidence = 0.98
             )
         }
