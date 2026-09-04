@@ -103,12 +103,21 @@ class PlaybackManager(
     fun stop() {
         nativeProvider.stop()
         youtubeProvider.stop()
+        stopPlaybackService()
     }
 
     fun release() {
         nativeProvider.release()
         youtubeProvider.release()
+        stopPlaybackService()
         scope.cancel()
+    }
+
+    private fun stopPlaybackService() {
+        val intent = Intent(appContext, SonexaPlaybackService::class.java)
+        runCatching {
+            appContext.stopService(intent)
+        }
     }
 
     private fun startPlaybackService() {

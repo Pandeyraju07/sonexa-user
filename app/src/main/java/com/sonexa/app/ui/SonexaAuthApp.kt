@@ -66,6 +66,7 @@ fun SonexaAuthApp() {
             )
             AuthScreen.HOME -> HomeScreen(
                 onLogout = {
+                    playbackViewModel.stopPlayback()
                     authViewModel.logout { currentScreen = AuthScreen.LOGIN }
                 },
                 playbackViewModel = playbackViewModel

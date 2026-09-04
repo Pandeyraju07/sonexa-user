@@ -323,6 +323,25 @@ class PlaybackViewModel : AndroidViewModel {
         }
     }
 
+    fun stopPlayback() {
+        sleepJob?.cancel()
+        playbackManager.stop()
+        _elapsedMs.value = 0L
+        _uiState.update {
+            it.copy(
+                track = null,
+                queue = emptyList(),
+                queueIndex = 0,
+                isPlaying = false,
+                positionMs = 0L,
+                durationMs = 0L,
+                sourceTitle = "",
+                sleepTimerRemainingMs = null,
+                isYouTubeMode = false
+            )
+        }
+    }
+
     fun playFromQueueIndex(index: Int) {
         if (index !in _uiState.value.queue.indices) return
         startTrackAt(index)

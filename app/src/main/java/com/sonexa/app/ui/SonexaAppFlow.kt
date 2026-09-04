@@ -230,6 +230,7 @@ fun SonexaAppFlow() {
                     }
                     HomeScreen(
                     onLogout = {
+                        playbackViewModel.stopPlayback()
                         authViewModel.logout { currentStep = AppStep.WELCOME }
                     },
                     onOpenFullPlayer = { currentStep = AppStep.FULL_PLAYER },
@@ -368,12 +369,14 @@ fun SonexaAppFlow() {
                     onOpenMusicDna = { currentStep = AppStep.MUSIC_DNA },
                     onOpenMusicJourney = { currentStep = AppStep.MUSIC_JOURNEY },
                     onLogout = {
+                        playbackViewModel.stopPlayback()
                         authViewModel.logout { currentStep = AppStep.WELCOME }
                     }
                 )
                 AppStep.SETTINGS -> SettingsScreen(
                     onNavigateBack = ::goHome,
                     onLogout = {
+                        playbackViewModel.stopPlayback()
                         authViewModel.logout { currentStep = AppStep.WELCOME }
                     }
                 )

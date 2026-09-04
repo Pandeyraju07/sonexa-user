@@ -188,8 +188,10 @@ class NativeAudioPlaybackProvider(
     }
 
     override fun stop() {
+        player.playWhenReady = false
         player.stop()
-        _state.update { it.copy(isPlaying = false, isBuffering = false) }
+        player.clearMediaItems()
+        _state.update { it.copy(isPlaying = false, isBuffering = false, positionMs = 0L) }
     }
 
     override fun release() {
