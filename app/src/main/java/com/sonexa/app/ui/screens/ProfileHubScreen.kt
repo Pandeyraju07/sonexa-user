@@ -9,6 +9,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -444,11 +445,18 @@ fun ProfileHubScreen(
         if (showEditProfileModal) {
             EditProfileDialog(
                 initialName = profileName,
+                initialHandle = handle,
                 initialBio = bio,
+                initialPhotoUrl = profile?.profilePicUrl.orEmpty(),
                 busy = busy,
                 onDismiss = { showEditProfileModal = false },
-                onSave = { name, nextBio ->
-                    viewModel.updateProfile(name, nextBio) {
+                onSave = { name, nextHandle, nextBio, nextPhotoUrl ->
+                    viewModel.updateProfile(
+                        name = name,
+                        bio = nextBio,
+                        handle = nextHandle,
+                        profilePicUrl = nextPhotoUrl
+                    ) {
                         showEditProfileModal = false
                         Toast.makeText(context, "Profile updated successfully!", Toast.LENGTH_SHORT).show()
                     }
@@ -1131,13 +1139,26 @@ private fun ProfileCircleButton(
 @Composable
 private fun EditProfileDialog(
     initialName: String,
+    initialHandle: String,
     initialBio: String,
+    initialPhotoUrl: String,
     busy: Boolean,
     onDismiss: () -> Unit,
-    onSave: (String, String) -> Unit
+    onSave: (String, String, String, String) -> Unit
 ) {
     var editName by remember { mutableStateOf(initialName) }
+    var editHandle by remember { mutableStateOf(initialHandle.removePrefix("@")) }
     var editBio by remember { mutableStateOf(initialBio) }
+    var editPhotoUrl by remember { mutableStateOf(initialPhotoUrl) }
+
+    val avatarPresets = listOf(
+        "https://api.dicebear.com/7.x/initials/svg?seed=VIP&backgroundColor=6b3ce9,e534b2&textColor=ffffff",
+        "https://api.dicebear.com/7.x/initials/svg?seed=Star&backgroundColor=06b6d4,3b82f6&textColor=ffffff",
+        "https://api.dicebear.com/7.x/initials/svg?seed=Wave&backgroundColor=10b981,059669&textColor=ffffff",
+        "https://api.dicebear.com/7.x/initials/svg?seed=Fire&backgroundColor=f59e0b,ef4444&textColor=ffffff",
+        "https://api.dicebear.com/7.x/initials/svg?seed=Neon&backgroundColor=8b5cf6,ec4899&textColor=ffffff"
+    )
+
     val fieldColors = OutlinedTextFieldDefaults.colors(
         focusedTextColor = SonexaTextWhite,
         unfocusedTextColor = SonexaTextWhite,
@@ -1156,7 +1177,7 @@ private fun EditProfileDialog(
     ) {
         Column(
             modifier = Modifier
-                .fillMaxWidth(0.9f)
+                .fillMaxWidth(0.92f)
                 .clip(RoundedCornerShape(24.dp))
                 .background(
                     Brush.verticalGradient(
@@ -1165,9 +1186,79 @@ private fun EditProfileDialog(
                 )
                 .border(1.dp, SonexaPurplePrimary.copy(alpha = 0.4f), RoundedCornerShape(24.dp))
                 .padding(22.dp)
+                .verticalScroll(rememberScrollState())
         ) {
-            Text("Edit profile", color = SonexaTextWhite, fontWeight = FontWeight.ExtraBold, fontSize = 20.sp)
-            Spacer(modifier = Modifier.height(16.dp))
+            Text("Edit Profile", color = SonexaTextWhite, fontWeight = FontWeight.ExtraBold, fontSize = 20.sp)
+            Spacer(modifier = Modifier.height(14.dp))
+
+            // Avatar Preview & Quick Switcher
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(56.dp)
+                        .clip(CircleShape)
+                        .background(Brush.linearGradient(listOf(SonexaPurpleLight, SonexaMagenta)))
+                        .padding(2.5.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFF190C30)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (editPhotoUrl.isNotBlank()) {
+                        AsyncImage(
+                            model = ImageRequest.Builder(LocalContext.current)
+                                .data(editPhotoUrl)
+                                .crossfade(true)
+                                .build(),
+                            contentDescription = null,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize().clip(CircleShape)
+                        )
+                    } else {
+                        Text(
+                            text = editName.take(1).uppercase().ifBlank { "Z" },
+                            color = Color.White,
+                            fontSize = 22.sp,
+                            fontWeight = FontWeight.ExtraBold
+                        )
+                    }
+                }
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("Avatar Style", color = SonexaTextSubtle, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                    Spacer(modifier = Modifier.height(6.dp))
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        items(avatarPresets) { preset ->
+                            Box(
+                                modifier = Modifier
+                                    .size(32.dp)
+                                    .clip(CircleShape)
+                                    .border(
+                                        if (editPhotoUrl == preset) 2.dp else 0.dp,
+                                        if (editPhotoUrl == preset) Color.White else Color.Transparent,
+                                        CircleShape
+                                    )
+                                    .clickable { editPhotoUrl = preset }
+                            ) {
+                                AsyncImage(
+                                    model = ImageRequest.Builder(LocalContext.current)
+                                        .data(preset)
+                                        .crossfade(true)
+                                        .build(),
+                                    contentDescription = null,
+                                    modifier = Modifier.fillMaxSize().clip(CircleShape)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
+
             OutlinedTextField(
                 value = editName,
                 onValueChange = { editName = it },
@@ -1177,6 +1268,18 @@ private fun EditProfileDialog(
                 modifier = Modifier.fillMaxWidth()
             )
             Spacer(modifier = Modifier.height(10.dp))
+
+            OutlinedTextField(
+                value = editHandle,
+                onValueChange = { editHandle = it.replace("@", "").replace(" ", "_") },
+                label = { Text("Username (@handle)") },
+                prefix = { Text("@", color = SonexaPurpleLight) },
+                singleLine = true,
+                colors = fieldColors,
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(modifier = Modifier.height(10.dp))
+
             OutlinedTextField(
                 value = editBio,
                 onValueChange = { editBio = it },
@@ -1187,6 +1290,7 @@ private fun EditProfileDialog(
                 maxLines = 3
             )
             Spacer(modifier = Modifier.height(18.dp))
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -1205,7 +1309,8 @@ private fun EditProfileDialog(
                         .clip(RoundedCornerShape(14.dp))
                         .background(SonexaGradientBrush)
                         .clickable(enabled = !busy) {
-                            onSave(editName.trim(), editBio.trim())
+                            val formattedHandle = if (editHandle.isNotBlank()) "@${editHandle.trim()}" else ""
+                            onSave(editName.trim(), formattedHandle, editBio.trim(), editPhotoUrl.trim())
                         },
                     contentAlignment = Alignment.Center
                 ) {

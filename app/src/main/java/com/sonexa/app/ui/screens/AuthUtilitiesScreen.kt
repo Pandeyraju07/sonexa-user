@@ -33,6 +33,7 @@ fun AuthUtilitiesScreen(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+    val currentEmail = remember { com.sonexa.app.data.local.SessionManager.getInstance(context).userEmail ?: "your email" }
     var showPasswordModal by remember { mutableStateOf(false) }
     var showDeleteModal by remember { mutableStateOf(false) }
 
@@ -88,13 +89,13 @@ fun AuthUtilitiesScreen(
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(16.dp))
                         .background(SonexaInputBg)
-                        .clickable { Toast.makeText(context, "Verification email sent to yash@gmail.com", Toast.LENGTH_SHORT).show() }
+                        .clickable { Toast.makeText(context, "Verification email sent to $currentEmail", Toast.LENGTH_SHORT).show() }
                         .padding(16.dp)
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(imageVector = Icons.Default.Mail, contentDescription = null, tint = SonexaPurpleLight, modifier = Modifier.size(24.dp))
                         Spacer(modifier = Modifier.width(14.dp))
-                        Text(text = "Verify Email Address (yash@gmail.com)", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = SonexaTextWhite)
+                        Text(text = "Verify Email Address ($currentEmail)", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = SonexaTextWhite)
                     }
                 }
             }

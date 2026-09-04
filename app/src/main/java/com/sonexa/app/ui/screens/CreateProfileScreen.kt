@@ -40,8 +40,17 @@ fun CreateProfileScreen(
 ) {
     val context = LocalContext.current
     val setupState by profileViewModel.uiState.collectAsState()
-    var displayName by remember { mutableStateOf("Yash") }
-    var handle by remember { mutableStateOf("yash_zynera") }
+    val sessionManager = remember { com.sonexa.app.data.local.SessionManager.getInstance(context) }
+    val initialDisplayName = remember {
+        sessionManager.userName?.takeIf { it.isNotBlank() }
+            ?: sessionManager.userEmail?.substringBefore("@")?.replaceFirstChar { it.uppercase() }
+            ?: "Zynera Listener"
+    }
+    val initialHandle = remember {
+        initialDisplayName.lowercase().replace(" ", "_")
+    }
+    var displayName by remember { mutableStateOf(initialDisplayName) }
+    var handle by remember { mutableStateOf(initialHandle) }
     var selectedAvatarIndex by remember { mutableIntStateOf(0) }
 
     val avatarGradients = listOf(

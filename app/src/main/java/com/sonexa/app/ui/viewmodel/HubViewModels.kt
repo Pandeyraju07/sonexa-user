@@ -663,8 +663,10 @@ class PremiumViewModel(
 }
 
 class ProfileHubViewModel(
+    application: Application
+) : AndroidViewModel(application) {
+    private val sessionManager = com.sonexa.app.data.local.SessionManager.getInstance(application)
     private val userRepository: UserRepository = UserRepository()
-) : ViewModel() {
     private val _uiState = MutableStateFlow<CatalogUiState<UserProfileDto>>(CatalogUiState.Loading)
     val uiState: StateFlow<CatalogUiState<UserProfileDto>> = _uiState.asStateFlow()
     private val _busy = MutableStateFlow(false)
@@ -678,13 +680,15 @@ class ProfileHubViewModel(
             _uiState.value = CatalogUiState.Loading
             userRepository.getUserProfile().fold(
                 onSuccess = {
-                    val user = it.user ?: UserProfileDto(name = "Sonexa Listener")
+                    val defaultName = sessionManager.userName?.takeIf { it.isNotBlank() } ?: "Zynera Listener"
+                    val user = it.user ?: UserProfileDto(name = defaultName, email = sessionManager.userEmail.orEmpty())
                     val merged = if (user.bio.isBlank() && !cachedBio.isNullOrBlank()) {
                         user.copy(bio = cachedBio.orEmpty())
                     } else {
                         user
                     }
                     if (merged.bio.isNotBlank()) cachedBio = merged.bio
+                    if (merged.name.isNotBlank()) sessionManager.userName = merged.name
                     _uiState.value = CatalogUiState.Ready(merged)
                 },
                 onFailure = { e -> _uiState.value = CatalogUiState.Error(e.message ?: "Failed") }
@@ -692,12 +696,19 @@ class ProfileHubViewModel(
         }
     }
 
-    fun updateProfile(name: String, bio: String? = null, onDone: () -> Unit = {}) {
+    fun updateProfile(
+        name: String,
+        bio: String? = null,
+        handle: String? = null,
+        profilePicUrl: String? = null,
+        onDone: () -> Unit = {}
+    ) {
         viewModelScope.launch {
             _busy.value = true
             if (!bio.isNullOrBlank()) cachedBio = bio
-            userRepository.updateProfile(name = name, bio = bio).fold(
+            userRepository.updateProfile(name = name, bio = bio, handle = handle, profilePicUrl = profilePicUrl).fold(
                 onSuccess = {
+                    sessionManager.userName = name
                     load()
                     onDone()
                 },

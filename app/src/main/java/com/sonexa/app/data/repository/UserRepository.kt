@@ -10,11 +10,18 @@ class UserRepository(private val apiService: UserApiService = RetrofitClient.use
 
     suspend fun getUserProfile(): Result<UserProfileApiResponse> = apiCall { apiService.getUserProfile() }
 
-    suspend fun updateProfile(name: String? = null, bio: String? = null): Result<SimpleSuccessResponse> =
+    suspend fun updateProfile(
+        name: String? = null,
+        bio: String? = null,
+        handle: String? = null,
+        profilePicUrl: String? = null
+    ): Result<SimpleSuccessResponse> =
         apiCall {
             val body = mutableMapOf<String, String>()
             name?.let { body["name"] = it }
             bio?.let { body["bio"] = it }
+            handle?.let { body["handle"] = it }
+            profilePicUrl?.let { body["profilePicUrl"] = it }
             apiService.updateProfile(body)
         }
 

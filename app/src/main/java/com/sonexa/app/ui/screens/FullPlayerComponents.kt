@@ -480,13 +480,14 @@ internal fun FullPlayerVolumeBar() {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 6.dp, vertical = 2.dp),
+            .height(18.dp)
+            .padding(horizontal = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp)
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         Box(
             modifier = Modifier
-                .size(24.dp)
+                .size(20.dp)
                 .clickable {
                     if (isMuted || currentVolume == 0) {
                         val restore = if (previousVolume > 0) previousVolume else (maxVolume / 3)
@@ -501,8 +502,8 @@ internal fun FullPlayerVolumeBar() {
             Icon(
                 imageVector = if (isMuted || currentVolume == 0) Icons.Default.VolumeOff else Icons.Default.VolumeMute,
                 contentDescription = "Mute",
-                tint = if (isMuted || currentVolume == 0) Color(0xFFEF4444) else Color(0xFF9E95B0),
-                modifier = Modifier.size(17.dp)
+                tint = if (isMuted || currentVolume == 0) Color(0xFFEF4444) else Color(0xFF8E889D),
+                modifier = Modifier.size(14.dp)
             )
         }
 
@@ -514,7 +515,7 @@ internal fun FullPlayerVolumeBar() {
         BoxWithConstraints(
             modifier = Modifier
                 .weight(1f)
-                .height(24.dp)
+                .height(18.dp)
                 .pointerInput(Unit) {
                     detectTapGestures { offset ->
                         val frac = (offset.x / size.width).coerceIn(0f, 1f)
@@ -540,14 +541,14 @@ internal fun FullPlayerVolumeBar() {
             contentAlignment = Alignment.CenterStart
         ) {
             val widthPx = constraints.maxWidth.toFloat()
-            val trackHeight = if (isDragging) 5.dp else 3.5.dp
+            val trackHeight = if (isDragging) 4.dp else 2.5.dp
 
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(trackHeight)
                     .clip(RoundedCornerShape(2.dp))
-                    .background(Color.White.copy(alpha = 0.15f))
+                    .background(Color.White.copy(alpha = 0.12f))
             )
             Box(
                 modifier = Modifier
@@ -556,18 +557,18 @@ internal fun FullPlayerVolumeBar() {
                     .clip(RoundedCornerShape(2.dp))
                     .background(
                         Brush.horizontalGradient(
-                            listOf(Color(0xFFE2E8F0), PlayerGreen)
+                            listOf(Color(0xFF38BDF8), PlayerGreen)
                         )
                     )
             )
-            val thumbRadiusPx = with(LocalDensity.current) { (if (isDragging) 6.dp else 4.5.dp).toPx() }
+            val thumbRadiusPx = with(LocalDensity.current) { (if (isDragging) 5.dp else 3.5.dp).toPx() }
             val thumbOffsetPx = ((widthPx * activeFraction) - thumbRadiusPx)
                 .coerceIn(0f, (widthPx - thumbRadiusPx * 2).coerceAtLeast(0f))
             Box(
                 modifier = Modifier
                     .offset(x = with(LocalDensity.current) { thumbOffsetPx.toDp() })
-                    .size(if (isDragging) 12.dp else 9.dp)
-                    .shadow(4.dp, CircleShape, ambientColor = PlayerGreen, spotColor = Color.White)
+                    .size(if (isDragging) 10.dp else 7.dp)
+                    .shadow(3.dp, CircleShape, ambientColor = PlayerGreen, spotColor = Color.White)
                     .clip(CircleShape)
                     .background(Color.White)
             )
@@ -575,15 +576,15 @@ internal fun FullPlayerVolumeBar() {
 
         Box(
             modifier = Modifier
-                .size(24.dp)
+                .size(20.dp)
                 .clickable { updateVolume((currentVolume + 1).coerceAtMost(maxVolume)) },
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = Icons.Default.VolumeUp,
                 contentDescription = "Max Volume",
-                tint = Color(0xFF9E95B0),
-                modifier = Modifier.size(17.dp)
+                tint = Color(0xFF8E889D),
+                modifier = Modifier.size(14.dp)
             )
         }
     }
