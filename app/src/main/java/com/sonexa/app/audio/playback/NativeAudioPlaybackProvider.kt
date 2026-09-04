@@ -162,6 +162,13 @@ class NativeAudioPlaybackProvider(
         player.stop()
         player.setMediaItem(MediaItem.fromUri(url))
         player.prepare()
+        try {
+            val sid = player.audioSessionId
+            if (sid != 0) {
+                equalizerEngine.attach(sid)
+                onSessionIdChanged?.invoke(sid)
+            }
+        } catch (_: Exception) {}
         if (startPositionMs > 0) {
             player.seekTo(startPositionMs)
         }

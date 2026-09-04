@@ -169,9 +169,7 @@ fun FullPlayerScreen(
                 onNext = { playbackViewModel.skipNext() },
                 onRepeat = { playbackViewModel.cycleRepeatMode() }
             )
-            Spacer(modifier = Modifier.height(4.dp))
-            FullPlayerVolumeBar()
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(6.dp))
             FullPlayerUtilityBar(
                 isPodcast = isPodcast,
                 playbackSpeed = playbackState.playbackSpeed,

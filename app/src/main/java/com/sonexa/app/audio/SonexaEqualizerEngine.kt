@@ -6,7 +6,7 @@ import android.media.audiofx.Virtualizer
 import kotlin.math.roundToInt
 
 /**
- * Hardware/software equalizer bound to an ExoPlayer audio session.
+ * Hardware/software DSP Equalizer bound to ExoPlayer audio session with live realtime effects.
  */
 class SonexaEqualizerEngine {
 
@@ -19,11 +19,11 @@ class SonexaEqualizerEngine {
 
     data class Snapshot(
         val enabled: Boolean = true,
-        val supported: Boolean = false,
+        val supported: Boolean = true,
         val bands: List<Band> = emptyList(),
         val bassBoost: Float = 0f, // 0..1
         val virtualizer: Float = 0f, // 0..1
-        val presetName: String = "Custom",
+        val presetName: String = "Flat",
         val minLevelMb: Short = -1500,
         val maxLevelMb: Short = 1500
     )
@@ -37,9 +37,9 @@ class SonexaEqualizerEngine {
         private set
     var presetName: String = "Flat"
         private set
-    private var bandLevels: FloatArray = FloatArray(0) // -1..1
-    private var bassStrength: Float = 0f
-    private var virtualStrength: Float = 0f
+    private var bandLevels: FloatArray = FloatArray(5) { 0f } // -1..1
+    private var bassStrength: Float = 0.25f
+    private var virtualStrength: Float = 0.20f
 
     fun attach(audioSessionId: Int): Snapshot {
         if (audioSessionId == 0) return snapshot()
@@ -49,9 +49,10 @@ class SonexaEqualizerEngine {
         try {
             val eq = Equalizer(0, audioSessionId)
             equalizer = eq
-            val count = eq.numberOfBands.toInt()
+            val count = eq.numberOfBands.toInt().coerceAtLeast(5)
             if (bandLevels.size != count) {
-                bandLevels = FloatArray(count) { 0f }
+                val old = bandLevels
+                bandLevels = FloatArray(count) { old.getOrElse(it) { 0f } }
             }
             applyAll()
 
@@ -138,10 +139,18 @@ class SonexaEqualizerEngine {
     fun snapshot(): Snapshot {
         val eq = equalizer
         if (eq == null) {
+            val defaultBands = DEFAULT_HZ.mapIndexed { i, hz ->
+                Band(
+                    index = i,
+                    centerHz = hz,
+                    label = formatHz(hz),
+                    level = bandLevels.getOrElse(i) { 0f }
+                )
+            }
             return Snapshot(
                 enabled = enabled,
-                supported = false,
-                bands = emptyList(),
+                supported = true,
+                bands = defaultBands,
                 bassBoost = bassStrength,
                 virtualizer = virtualStrength,
                 presetName = presetName
@@ -224,21 +233,24 @@ class SonexaEqualizerEngine {
 
     companion object {
         val PRESET_NAMES = listOf(
-            "Flat", "Bass Boost", "Treble", "Vocal", "Rock", "Electronic", "Jazz", "Classical", "Soft"
+            "Flat", "Bass Boost", "Deep Bass", "Club & Dance", "Rock", "Pop", "Hip Hop", "Jazz", "Classical", "Acoustic", "Vocal Booster", "Lounge"
         )
 
         private data class Preset(val bands: FloatArray, val bass: Float, val virtual: Float)
 
         private val PRESETS = mapOf(
             "Flat" to Preset(floatArrayOf(0f, 0f, 0f, 0f, 0f), 0f, 0f),
-            "Bass Boost" to Preset(floatArrayOf(0.85f, 0.55f, 0.1f, -0.05f, 0f), 0.7f, 0.15f),
-            "Treble" to Preset(floatArrayOf(-0.1f, 0f, 0.2f, 0.55f, 0.8f), 0.1f, 0.25f),
-            "Vocal" to Preset(floatArrayOf(-0.25f, 0.15f, 0.65f, 0.45f, 0.1f), 0.05f, 0.2f),
-            "Rock" to Preset(floatArrayOf(0.55f, 0.25f, -0.15f, 0.3f, 0.5f), 0.35f, 0.3f),
-            "Electronic" to Preset(floatArrayOf(0.7f, 0.35f, 0f, 0.25f, 0.6f), 0.55f, 0.45f),
-            "Jazz" to Preset(floatArrayOf(0.25f, 0.1f, 0f, 0.2f, 0.35f), 0.2f, 0.35f),
-            "Classical" to Preset(floatArrayOf(0.15f, 0.1f, 0f, 0.15f, 0.25f), 0.1f, 0.4f),
-            "Soft" to Preset(floatArrayOf(0.2f, 0.15f, 0.05f, -0.1f, -0.2f), 0.15f, 0.1f)
+            "Bass Boost" to Preset(floatArrayOf(0.85f, 0.55f, 0.1f, -0.05f, 0f), 0.75f, 0.20f),
+            "Deep Bass" to Preset(floatArrayOf(0.95f, 0.70f, 0.25f, 0f, -0.1f), 0.90f, 0.25f),
+            "Club & Dance" to Preset(floatArrayOf(0.70f, 0.40f, 0.15f, 0.35f, 0.65f), 0.60f, 0.45f),
+            "Rock" to Preset(floatArrayOf(0.55f, 0.25f, -0.15f, 0.3f, 0.55f), 0.40f, 0.30f),
+            "Pop" to Preset(floatArrayOf(0.20f, 0.40f, 0.55f, 0.30f, 0.15f), 0.30f, 0.25f),
+            "Hip Hop" to Preset(floatArrayOf(0.80f, 0.50f, 0.10f, 0.25f, 0.45f), 0.70f, 0.35f),
+            "Jazz" to Preset(floatArrayOf(0.30f, 0.15f, 0f, 0.20f, 0.40f), 0.20f, 0.35f),
+            "Classical" to Preset(floatArrayOf(0.20f, 0.15f, 0.05f, 0.20f, 0.35f), 0.15f, 0.45f),
+            "Acoustic" to Preset(floatArrayOf(0.25f, 0.35f, 0.45f, 0.50f, 0.30f), 0.20f, 0.25f),
+            "Vocal Booster" to Preset(floatArrayOf(-0.25f, 0.20f, 0.70f, 0.50f, 0.15f), 0.10f, 0.20f),
+            "Lounge" to Preset(floatArrayOf(0.40f, 0.20f, 0.10f, 0.25f, 0.10f), 0.35f, 0.40f)
         )
 
         private val DEFAULT_HZ = listOf(60, 230, 910, 3600, 14000)

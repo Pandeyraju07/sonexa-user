@@ -6,11 +6,13 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.sonexa.app.auth.social.SocialAuthEvents
 import com.sonexa.app.data.local.SessionManager
+import com.sonexa.app.ui.components.FloatingVolumeHud
 import com.sonexa.app.ui.screens.*
 import com.sonexa.app.ui.viewmodel.AuthViewModel
 import com.sonexa.app.ui.viewmodel.PlaybackViewModel
@@ -398,5 +400,7 @@ fun SonexaAppFlow() {
                 )
             }
         }
+
+        FloatingVolumeHud(modifier = Modifier.align(Alignment.TopCenter))
     }
 }
