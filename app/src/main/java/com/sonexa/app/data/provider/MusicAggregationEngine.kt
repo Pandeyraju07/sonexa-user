@@ -17,22 +17,34 @@ data class UnifiedSearchResult(
 )
 
 class MusicAggregationEngine(
-    val audiusProvider: AudiusMusicProvider = AudiusMusicProvider(),
     val jiosaavnProvider: JioSaavnMusicProvider = JioSaavnMusicProvider(),
+    val audiusProvider: AudiusMusicProvider = AudiusMusicProvider(),
     val sonexaProvider: SonexaNativeProvider = SonexaNativeProvider(),
     val jamendoProvider: JamendoProvider = JamendoProvider(),
+    val deezerProvider: DeezerMusicProvider = DeezerMusicProvider(),
     val deduplicationService: TrackDeduplicationService = TrackDeduplicationService(),
     val searchRankingEngine: SearchRankingEngine = SearchRankingEngine(),
     val artistResolver: ArtistResolver = ArtistResolver(),
     val artistCatalogService: ArtistCatalogService = ArtistCatalogService(),
     val recommendationEngine: HybridRecommendationEngine = HybridRecommendationEngine(),
-    val understandingService: TrackUnderstandingService = TrackUnderstandingService()
+    val understandingService: TrackUnderstandingService = TrackUnderstandingService(),
+    val searchOrchestrator: com.sonexa.app.data.search.SearchOrchestrator = com.sonexa.app.data.search.SearchOrchestrator(
+        jiosaavnProvider = jiosaavnProvider,
+        audiusProvider = audiusProvider,
+        sonexaProvider = sonexaProvider,
+        jamendoProvider = jamendoProvider,
+        deezerProvider = deezerProvider,
+        deduplicationService = deduplicationService,
+        artistResolver = artistResolver,
+        artistCatalogService = artistCatalogService
+    )
 ) {
     val allProviders: List<MusicProvider> = listOf(
-        audiusProvider,
         jiosaavnProvider,
+        audiusProvider,
         sonexaProvider,
-        jamendoProvider
+        jamendoProvider,
+        deezerProvider
     )
 
     suspend fun searchAll(
@@ -40,92 +52,29 @@ class MusicAggregationEngine(
         selectedCategory: ProviderCategory = ProviderCategory.ALL,
         limit: Int = 35
     ): UnifiedSearchResult = coroutineScope {
-        val trimmed = query.trim()
-        if (trimmed.isBlank()) {
-            return@coroutineScope UnifiedSearchResult(emptyList())
-        }
-
-        // 1. Resolve Artist candidate in parallel
-        val resolvedArtistDeferred = async {
-            runCatching { artistResolver.resolve(trimmed) }.getOrNull()
-        }
-
-        // 2. Filter providers based on category tab
-        val targetProviders = when (selectedCategory) {
-            ProviderCategory.ALL -> allProviders.filter { it.isEnabled }
-            ProviderCategory.AUDIUS -> listOf(audiusProvider)
-            ProviderCategory.JIOSAAVN -> listOf(jiosaavnProvider)
-            ProviderCategory.SONEXA -> listOf(sonexaProvider)
-            ProviderCategory.JAMENDO -> listOf(jamendoProvider)
-            ProviderCategory.AUDIOMACK -> listOf(jamendoProvider) // mapped to legal open provider
-        }
-
-        val counts = mutableMapOf<String, Int>()
-        val latencies = mutableMapOf<String, Long>()
-        val errors = mutableMapOf<String, String>()
-
-        // 3. Execute searches concurrently across providers with 8s timeout
-        val deferred = targetProviders.map { provider ->
-            async {
-                val start = System.currentTimeMillis()
-                val res = withTimeoutOrNull(8000L) {
-                    provider.search(trimmed, limit = limit)
-                } ?: Result.failure(Exception("Timeout"))
-
-                val duration = System.currentTimeMillis() - start
-                latencies[provider.providerId] = duration
-
-                res.fold(
-                    onSuccess = { list ->
-                        counts[provider.providerId] = list.size
-                        Pair(provider.providerId, list)
-                    },
-                    onFailure = { err ->
-                        errors[provider.providerId] = err.message ?: "Search failed"
-                        Pair(provider.providerId, emptyList())
-                    }
-                )
-            }
-        }
-
-        val results = deferred.awaitAll()
-        val allRawTracks = results.flatMap { it.second }
-
-        // 4. Intelligent Deduplication across providers
-        val deduplicated = deduplicationService.deduplicate(allRawTracks)
-
-        // 5. Multi-Signal Search Ranking
-        val ranked = searchRankingEngine.rankSearchResults(deduplicated, trimmed)
-
-        val resolved = resolvedArtistDeferred.await()
-
+        val orchestrated = searchOrchestrator.search(query, selectedCategory, limit)
         UnifiedSearchResult(
-            tracks = ranked.take(limit),
-            resolvedArtist = resolved,
-            providerCounts = counts,
-            providerLatencies = latencies,
-            providerErrors = errors
+            tracks = orchestrated.allTracks,
+            resolvedArtist = orchestrated.resolvedArtist,
+            providerCounts = orchestrated.providerCounts,
+            providerLatencies = orchestrated.providerLatencies
         )
+    }
+
+    suspend fun searchUnifiedDeep(
+        query: String,
+        selectedCategory: ProviderCategory = ProviderCategory.ALL,
+        limit: Int = 40
+    ): com.sonexa.app.data.search.UnifiedSearchResponse {
+        return searchOrchestrator.search(query, selectedCategory, limit)
     }
 
     suspend fun getArtistFullCatalog(artistQuery: String, cursor: Int = 0, pageSize: Int = 30): ArtistCatalogResponse {
         return artistCatalogService.getFullArtistCatalog(artistQuery, cursor, pageSize)
     }
 
-    suspend fun getSearchSuggestions(prefix: String): List<SearchSuggestionDto> = coroutineScope {
-        val q = prefix.trim().lowercase(Locale.ROOT)
-        if (q.isBlank()) return@coroutineScope emptyList()
-
-        val list = mutableListOf<SearchSuggestionDto>()
-        list.add(SearchSuggestionDto(title = prefix, subtitle = "Search all music", type = "search", query = prefix))
-
-        // Artist suggestion
-        list.add(SearchSuggestionDto(title = prefix.replaceFirstChar { it.uppercase() }, subtitle = "Artist", type = "artist", query = prefix))
-        list.add(SearchSuggestionDto(title = "$prefix Songs", subtitle = "Top Tracks", type = "track", query = prefix))
-        list.add(SearchSuggestionDto(title = "$prefix Radio", subtitle = "Artist Station", type = "genre", query = "$prefix Radio"))
-        list.add(SearchSuggestionDto(title = "Best of $prefix", subtitle = "Playlist", type = "album", query = "Best of $prefix"))
-
-        list
+    suspend fun getSearchSuggestions(prefix: String): List<SearchSuggestionDto> {
+        return searchOrchestrator.getSuggestions(prefix)
     }
 
     suspend fun getTrendingUnified(limit: Int = 20): List<TrackDto> = coroutineScope {

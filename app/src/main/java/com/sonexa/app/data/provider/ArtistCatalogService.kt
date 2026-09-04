@@ -7,8 +7,9 @@ import java.util.Locale
 
 class ArtistCatalogService(
     private val artistResolver: ArtistResolver = ArtistResolver(),
+    private val jiosaavnProvider: JioSaavnMusicProvider = JioSaavnMusicProvider(),
     private val audiusProvider: AudiusMusicProvider = AudiusMusicProvider(),
-    private val saavnProvider: JioSaavnMusicProvider = JioSaavnMusicProvider(),
+    private val deezerProvider: DeezerMusicProvider = DeezerMusicProvider(),
     private val jamendoProvider: JamendoProvider = JamendoProvider(),
     private val deduplicationService: TrackDeduplicationService = TrackDeduplicationService(),
     private val searchRankingEngine: SearchRankingEngine = SearchRankingEngine()
@@ -25,7 +26,11 @@ class ArtistCatalogService(
 
         // 2. Fetch Multi-Tier Catalogs Concurrently
         val directSaavnDeferred = async {
-            saavnProvider.search(canonicalName, limit = 50).getOrDefault(emptyList())
+            jiosaavnProvider.search(canonicalName, limit = 50).getOrDefault(emptyList())
+        }
+
+        val directDeezerDeferred = async {
+            deezerProvider.search(canonicalName, limit = 40).getOrDefault(emptyList())
         }
 
         val audiusUserId = resolved.providerIds["audius"].orEmpty()
@@ -44,11 +49,11 @@ class ArtistCatalogService(
         }
 
         val collabDeferred = async {
-            saavnProvider.search("$canonicalName Duet Hits", limit = 20).getOrDefault(emptyList())
+            jiosaavnProvider.search("$canonicalName Duet Hits", limit = 20).getOrDefault(emptyList())
         }
 
         val remixDeferred = async {
-            saavnProvider.search("$canonicalName Remix", limit = 15).getOrDefault(emptyList())
+            jiosaavnProvider.search("$canonicalName Remix", limit = 15).getOrDefault(emptyList())
         }
 
         val jamendoDeferred = async {
@@ -56,6 +61,7 @@ class ArtistCatalogService(
         }
 
         val saavnTracks = directSaavnDeferred.await()
+        val deezerTracks = directDeezerDeferred.await()
         val audiusTracks = audiusTracksDeferred.await()
         val audiusAlbums = audiusAlbumsDeferred.await()
         val collabTracks = collabDeferred.await()
@@ -63,7 +69,7 @@ class ArtistCatalogService(
         val jamendoTracks = jamendoDeferred.await()
 
         // 3. Aggregate all candidate tracks
-        val allRaw = (saavnTracks + audiusTracks + collabTracks + remixTracks + jamendoTracks)
+        val allRaw = (saavnTracks + deezerTracks + audiusTracks + collabTracks + remixTracks + jamendoTracks)
         val deduplicated = deduplicationService.deduplicate(allRaw)
         val rankedAll = searchRankingEngine.rankSearchResults(deduplicated, canonicalName)
 
@@ -144,10 +150,11 @@ class ArtistCatalogService(
         pageSize: Int = 30
     ): List<TrackDto> = coroutineScope {
         val resolved = artistResolver.resolve(artistName)
-        val tracksDeferred = async { saavnProvider.search(resolved.canonicalName, limit = cursor + pageSize + 20).getOrDefault(emptyList()) }
+        val saavnDeferred = async { jiosaavnProvider.search(resolved.canonicalName, limit = cursor + pageSize + 20).getOrDefault(emptyList()) }
+        val deezerDeferred = async { deezerProvider.search(resolved.canonicalName, limit = cursor + pageSize + 20).getOrDefault(emptyList()) }
         val audiusDeferred = async { audiusProvider.search(resolved.canonicalName, limit = 30).getOrDefault(emptyList()) }
 
-        val combined = (tracksDeferred.await() + audiusDeferred.await())
+        val combined = (saavnDeferred.await() + deezerDeferred.await() + audiusDeferred.await())
         val deduplicated = deduplicationService.deduplicate(combined)
         val ranked = searchRankingEngine.rankSearchResults(deduplicated, resolved.canonicalName)
 

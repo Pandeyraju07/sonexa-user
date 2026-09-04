@@ -50,7 +50,9 @@ sealed interface SearchUiState {
     object Idle : SearchUiState
     object Loading : SearchUiState
     data class Success(
+        val response: com.sonexa.app.data.search.UnifiedSearchResponse,
         val tracks: List<TrackDto>,
+        val movieSoundtrack: com.sonexa.app.data.provider.MovieSoundtrack? = null,
         val topArtist: ArtistDto? = null,
         val resolvedArtist: ResolvedArtist? = null,
         val artistCatalog: ArtistCatalogResponse? = null,
@@ -62,7 +64,8 @@ sealed interface SearchUiState {
         val activeCategory: ProviderCategory = ProviderCategory.ALL,
         val hasMoreTracks: Boolean = true,
         val isLoadingMore: Boolean = false,
-        val suggestions: List<SearchSuggestionDto> = emptyList()
+        val suggestions: List<SearchSuggestionDto> = emptyList(),
+        val didYouMean: com.sonexa.app.data.search.DidYouMeanSuggestion? = null
     ) : SearchUiState
     data class Error(val message: String) : SearchUiState
 }
@@ -72,7 +75,7 @@ class SearchViewModel(
     private val musicRepository: MusicRepository = MusicRepository()
 ) : ViewModel() {
 
-    private val gson = Gson()
+    private val gson = com.sonexa.app.data.api.RetrofitClient.gson
     private val _uiState = MutableStateFlow<SearchUiState>(SearchUiState.Idle)
     val uiState: StateFlow<SearchUiState> = _uiState.asStateFlow()
 
@@ -146,7 +149,7 @@ class SearchViewModel(
             try {
                 val type = object : TypeToken<List<RecentSearchItem>>() {}.type
                 val list: List<RecentSearchItem> = gson.fromJson(json, type)
-                _recents.value = list
+                _recents.value = list.map { it.copy(track = it.track?.sanitized()) }
             } catch (_: Exception) {}
         }
     }
@@ -154,7 +157,8 @@ class SearchViewModel(
     private fun persistRecents(items: List<RecentSearchItem>) {
         appContext?.let { ctx ->
             val prefs = ctx.getSharedPreferences("sonexa_search_recents", Context.MODE_PRIVATE)
-            prefs.edit().putString("recent_items", gson.toJson(items)).apply()
+            val cleanItems = items.map { it.copy(track = it.track?.sanitized()) }
+            prefs.edit().putString("recent_items", gson.toJson(cleanItems)).apply()
         }
     }
 
@@ -340,47 +344,19 @@ class SearchViewModel(
             currentCursor = 0
 
             try {
-                // 1. Search using Unified Aggregation Engine (Audius, JioSaavn, Jamendo, Sonexa)
-                val result: UnifiedSearchResult = aggregationEngine.searchAll(
+                // Execute deep orchestration pipeline (NLP, Devanagari transliteration, typo correction, parallel search, ranking)
+                val searchResponse = aggregationEngine.searchUnifiedDeep(
                     query = query,
                     selectedCategory = category,
                     limit = 40
                 )
 
-                // 2. Also query backend catalog for native tracks & albums
-                val backendSearch = musicRepository.searchMusic(query).getOrNull()
-                val nativeTracks = backendSearch?.tracks.orEmpty()
-                val matchingAlbums = backendSearch?.albums.orEmpty()
+                val mergedTracks = searchResponse.allTracks
+                val movieMatch = searchResponse.movieSoundtrack
+                val topArtist = searchResponse.topArtist
+                val resolvedArtist = searchResponse.resolvedArtist
 
-                // Merge native tracks on top of streaming tracks
-                val mergedTracks = (nativeTracks + result.tracks).distinctBy { it.id }
-
-                // 3. Resolve Artist & Catalog Breakdown
-                val resolvedArtist = result.resolvedArtist
-                val topArtist = if (resolvedArtist != null) {
-                    ArtistDto(
-                        id = resolvedArtist.canonicalId,
-                        name = resolvedArtist.canonicalName,
-                        genre = resolvedArtist.genres.firstOrNull() ?: "Artist",
-                        bio = resolvedArtist.bio,
-                        imageUrl = resolvedArtist.imageUrl,
-                        followersCount = resolvedArtist.followersCount.toInt(),
-                        verified = resolvedArtist.isVerified
-                    )
-                } else if (mergedTracks.isNotEmpty()) {
-                    val first = mergedTracks.first()
-                    ArtistDto(
-                        id = "art_" + first.artist.lowercase().replace(" ", "_"),
-                        name = first.artist,
-                        genre = "Top Artist",
-                        bio = "Top matching artist for $query",
-                        imageUrl = first.effectiveCoverUrl,
-                        followersCount = 1250000,
-                        verified = true
-                    )
-                } else null
-
-                // 4. If query matches an artist strongly, retrieve rich discography catalog
+                // If query matches an artist strongly, retrieve rich discography catalog
                 var artistCatalog: ArtistCatalogResponse? = null
                 if (topArtist != null) {
                     val isArtistQuery = topArtist.name.contains(query, ignoreCase = true) ||
@@ -392,38 +368,23 @@ class SearchViewModel(
                     }
                 }
 
-                // Construct matching dynamic playlists
-                val matchingPlaylists = listOf(
-                    PlaylistDto(
-                        id = "pl_srch_${query.lowercase().replace(" ", "_")}",
-                        title = "$query Radio",
-                        subtitle = "Playlist • Top tracks & artists related to $query",
-                        coverUrl = mergedTracks.firstOrNull()?.effectiveCoverUrl.orEmpty(),
-                        trackCount = mergedTracks.size
-                    ),
-                    PlaylistDto(
-                        id = "pl_best_${query.lowercase().replace(" ", "_")}",
-                        title = "Best of $query",
-                        subtitle = "Playlist • Essential Hits",
-                        coverUrl = mergedTracks.getOrNull(1)?.effectiveCoverUrl.orEmpty(),
-                        trackCount = mergedTracks.size
-                    )
-                )
-
                 _uiState.value = SearchUiState.Success(
+                    response = searchResponse,
                     tracks = mergedTracks,
+                    movieSoundtrack = movieMatch,
                     topArtist = topArtist,
                     resolvedArtist = resolvedArtist,
                     artistCatalog = artistCatalog,
-                    matchingPlaylists = matchingPlaylists,
-                    matchingAlbums = matchingAlbums,
+                    matchingPlaylists = searchResponse.matchingPlaylists,
+                    matchingAlbums = searchResponse.matchingAlbums,
                     artists = mergedTracks.map { it.artist }.distinct().take(6),
-                    providerCounts = result.providerCounts,
-                    providerLatencies = result.providerLatencies,
+                    providerCounts = searchResponse.providerCounts,
+                    providerLatencies = searchResponse.providerLatencies,
                     activeCategory = category,
                     hasMoreTracks = mergedTracks.size >= 15,
                     isLoadingMore = false,
-                    suggestions = _suggestions.value
+                    suggestions = _suggestions.value,
+                    didYouMean = searchResponse.didYouMean
                 )
             } catch (e: Exception) {
                 _uiState.value = SearchUiState.Error(e.message ?: "Search failed. Please try again.")

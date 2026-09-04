@@ -10,14 +10,12 @@ import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
 import androidx.media3.common.Player
-import androidx.media3.common.util.UnstableApi
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
 import com.sonexa.app.MainActivity
 import com.sonexa.app.R
 import com.sonexa.app.SonexaApp
 
-@OptIn(UnstableApi::class)
 class SonexaPlaybackService : MediaSessionService() {
 
     private var mediaSession: MediaSession? = null
@@ -25,7 +23,6 @@ class SonexaPlaybackService : MediaSessionService() {
     override fun onCreate() {
         super.onCreate()
         ensureNotificationChannel()
-        enterForeground("Starting playback")
         val player: Player = (application as SonexaApp).playbackManager.nativeProvider.player
         val sessionActivity = PendingIntent.getActivity(
             this,
@@ -38,13 +35,13 @@ class SonexaPlaybackService : MediaSessionService() {
         mediaSession = MediaSession.Builder(this, player)
             .setSessionActivity(sessionActivity)
             .build()
+        enterForeground("Zynera Playback")
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        enterForeground("Playing")
-        val result = super.onStartCommand(intent, flags, startId)
-        enterForeground("Playing")
-        return result
+        ensureNotificationChannel()
+        enterForeground("Zynera Playback")
+        return super.onStartCommand(intent, flags, startId)
     }
 
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? {

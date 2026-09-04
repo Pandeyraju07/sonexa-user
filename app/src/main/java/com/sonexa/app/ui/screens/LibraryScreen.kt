@@ -99,9 +99,11 @@ fun LibraryScreen(
     val likedSongs by LikedSongsStore.likedSongs.collectAsState()
     val likedCount = likedSongs.size
     val downloadedEpisodes by PodcastDownloadManager.downloadedEpisodes.collectAsState()
+    val libraryUiState by viewModel.uiState.collectAsState()
+    val apiLibrary = (libraryUiState as? com.sonexa.app.ui.viewmodel.CatalogUiState.Ready)?.data
 
-    // Aggregate all library items
-    val allItems = remember(userPlaylists, likedCount, downloadedEpisodes, userDisplayName) {
+    // Aggregate 100% Dynamic Library Items directly from User & API responses
+    val allItems = remember(userPlaylists, likedCount, downloadedEpisodes, userDisplayName, apiLibrary) {
         val list = mutableListOf<LibraryItemModel>()
 
         // 1. Liked Songs (Always on top / pinned)
@@ -118,13 +120,14 @@ fun LibraryScreen(
         )
 
         // 2. User Created & Synced Playlists
-        userPlaylists.forEach { pl ->
+        val combinedPlaylists = (userPlaylists + (apiLibrary?.playlists.orEmpty())).distinctBy { it.id }
+        combinedPlaylists.forEach { pl ->
             if (pl.id != "pl_liked") {
                 list.add(
                     LibraryItemModel(
                         id = pl.id,
                         title = pl.title,
-                        subtitle = pl.subtitle.ifBlank { "Playlist • ${pl.creatorName} • ${pl.trackCount} songs" },
+                        subtitle = pl.subtitle.ifBlank { "Playlist • ${pl.creatorName.ifBlank { userDisplayName }} • ${pl.trackCount} songs" },
                         imageUrl = pl.coverUrl,
                         isPinned = pl.isPinned,
                         isUserCreated = pl.isUserCreated,
@@ -134,46 +137,33 @@ fun LibraryScreen(
             }
         }
 
-        // 3. System Curated Playlists / Albums / Artists
-        list.add(
-            LibraryItemModel(
-                id = "alb_vaapas",
-                title = "Main Vaapas Aaunga (Original Motion Picture)",
-                subtitle = "Album • A.R. Rahman",
-                imageUrl = "https://c.saavncdn.com/712/Main-Vaapas-Aaunga-Hindi-2024-20240321154032-500x500.jpg",
-                type = "album"
+        // 3. Saved Albums (From API)
+        apiLibrary?.savedAlbums.orEmpty().forEach { alb ->
+            list.add(
+                LibraryItemModel(
+                    id = alb.id,
+                    title = alb.title,
+                    subtitle = "Album • ${alb.artist}",
+                    imageUrl = alb.coverUrl,
+                    type = "album"
+                )
             )
-        )
-        list.add(
-            LibraryItemModel(
-                id = "alb_chand",
-                title = "Chand Mera Dil",
-                subtitle = "Album • Pritam",
-                imageUrl = "https://c.saavncdn.com/492/Chand-Mera-Dil-Hindi-2024-20241021111624-500x500.jpg",
-                type = "album"
-            )
-        )
-        list.add(
-            LibraryItemModel(
-                id = "pod_1542452346",
-                title = "The Ranveer Show (TRS हिंदी)",
-                subtitle = "Podcast • BeerBiceps • New episode today",
-                imageUrl = "https://is1-ssl.mzstatic.com/image/thumb/Podcasts126/v4/4a/12/f9/4a12f915-0557-0a2a-281b-5e60d2ecb3fb/mza_16382103562699898858.jpg/600x600bb.jpg",
-                isPinned = true,
-                type = "podcast"
-            )
-        )
-        list.add(
-            LibraryItemModel(
-                id = "art_arijit",
-                title = "Arijit Singh",
-                subtitle = "Artist",
-                imageUrl = "https://c.saavncdn.com/artists/Arijit_Singh_002_20230323062147_500x500.jpg",
-                type = "artist"
-            )
-        )
+        }
 
-        // 4. Downloaded Podcast Episodes
+        // 4. Followed Artists (From API)
+        apiLibrary?.followedArtists.orEmpty().forEach { art ->
+            list.add(
+                LibraryItemModel(
+                    id = "art_${art.name}",
+                    title = art.name,
+                    subtitle = "Artist • ${if (art.followersCount > 0) "${art.followersCount / 1000}K Listeners" else "Followed"}",
+                    imageUrl = art.imageUrl,
+                    type = "artist"
+                )
+            )
+        }
+
+        // 5. Downloaded Podcast Episodes
         downloadedEpisodes.forEach { ep ->
             list.add(
                 LibraryItemModel(

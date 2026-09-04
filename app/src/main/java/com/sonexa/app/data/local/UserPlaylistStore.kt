@@ -1,4 +1,4 @@
-﻿package com.sonexa.app.data.local
+package com.sonexa.app.data.local
 
 import android.content.Context
 import com.google.gson.Gson
@@ -10,7 +10,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 object UserPlaylistStore {
-    private val gson = Gson()
+    private val gson = com.sonexa.app.data.api.RetrofitClient.gson
     private val _playlists = MutableStateFlow<List<PlaylistDto>>(emptyList())
     val playlists: StateFlow<List<PlaylistDto>> = _playlists.asStateFlow()
 
@@ -70,7 +70,7 @@ object UserPlaylistStore {
             try {
                 val type = object : TypeToken<Map<String, List<TrackDto>>>() {}.type
                 val map: Map<String, List<TrackDto>> = gson.fromJson(trJson, type)
-                _playlistTracks.value = map
+                _playlistTracks.value = map.mapValues { entry -> entry.value.map { it.sanitized() } }
             } catch (e: Exception) {
                 e.printStackTrace()
             }
@@ -175,12 +175,13 @@ object UserPlaylistStore {
     }
 
     fun addTrack(context: Context, playlistId: String, track: TrackDto): Boolean {
+        val safeTrack = track.sanitized()
         val tracksMap = _playlistTracks.value.toMutableMap()
         val currentList = tracksMap[playlistId]?.toMutableList() ?: mutableListOf()
-        if (currentList.any { it.id == track.id }) {
+        if (currentList.any { it.id == safeTrack.id }) {
             return false // Already exists
         }
-        currentList.add(track)
+        currentList.add(safeTrack)
         tracksMap[playlistId] = currentList
         _playlistTracks.value = tracksMap
         persistTracksMap(context, tracksMap)
@@ -190,7 +191,7 @@ object UserPlaylistStore {
             if (pl.id == playlistId) {
                 val newCount = currentList.size
                 val updatedSub = "Playlist • ${pl.creatorName} • $newCount songs"
-                pl.copy(trackCount = newCount, subtitle = updatedSub, coverUrl = pl.coverUrl.ifBlank { track.effectiveCoverUrl })
+                pl.copy(trackCount = newCount, subtitle = updatedSub, coverUrl = pl.coverUrl.ifBlank { safeTrack.effectiveCoverUrl })
             } else pl
         }
         _playlists.value = currentPls
@@ -219,12 +220,13 @@ object UserPlaylistStore {
     }
 
     fun getTracks(playlistId: String): List<TrackDto> {
-        return _playlistTracks.value[playlistId] ?: emptyList()
+        return _playlistTracks.value[playlistId]?.map { it.sanitized() } ?: emptyList()
     }
 
     fun setTracks(context: Context, playlistId: String, tracks: List<TrackDto>) {
+        val safeTracks = tracks.map { it.sanitized() }
         val tracksMap = _playlistTracks.value.toMutableMap()
-        tracksMap[playlistId] = tracks
+        tracksMap[playlistId] = safeTracks
         _playlistTracks.value = tracksMap
         persistTracksMap(context, tracksMap)
     }

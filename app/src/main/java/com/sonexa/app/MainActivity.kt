@@ -17,6 +17,8 @@ import com.sonexa.app.data.api.RetrofitClient
 import com.sonexa.app.data.local.SessionManager
 import com.sonexa.app.ui.SonexaAppFlow
 import com.sonexa.app.ui.theme.SonexaBgDark
+import androidx.compose.foundation.layout.Box
+import com.sonexa.app.ui.components.AppToastHost
 import com.sonexa.app.ui.theme.SonexaTheme
 import com.sonexa.app.ui.viewmodel.PlaybackViewModel
 
@@ -37,7 +39,10 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = SonexaBgDark
                 ) {
-                    SonexaAppFlow()
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        SonexaAppFlow()
+                        AppToastHost()
+                    }
                 }
             }
         }

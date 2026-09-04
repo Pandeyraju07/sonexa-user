@@ -48,7 +48,10 @@ class NativeAudioPlaybackProvider(
     private val _state = MutableStateFlow(EngineState())
     override val state: StateFlow<EngineState> = _state.asStateFlow()
 
+    private var currentTrackDurationMs: Long = 0L
+
     var onTrackEnded: (() -> Unit)? = null
+    var onTrackError: ((String) -> Unit)? = null
     var onSessionIdChanged: ((Int) -> Unit)? = null
 
     init {
@@ -63,7 +66,14 @@ class NativeAudioPlaybackProvider(
                         _state.update { it.copy(isBuffering = true) }
                     }
                     Player.STATE_READY -> {
-                        val duration = player.duration.takeIf { it > 0 } ?: 0L
+                        val rawDuration = player.duration.takeIf { it > 0 } ?: 0L
+                        val duration = if (currentTrackDurationMs > 30000L && rawDuration in 1..31000L) {
+                            currentTrackDurationMs
+                        } else if (rawDuration > 0) {
+                            rawDuration
+                        } else {
+                            currentTrackDurationMs
+                        }
                         _state.update {
                             it.copy(
                                 isBuffering = false,
@@ -83,13 +93,15 @@ class NativeAudioPlaybackProvider(
             }
 
             override fun onPlayerError(error: PlaybackException) {
+                val msg = error.message ?: "Native playback error"
                 _state.update {
                     it.copy(
                         isPlaying = false,
                         isBuffering = false,
-                        errorMessage = error.message ?: "Native playback error"
+                        errorMessage = msg
                     )
                 }
+                onTrackError?.invoke(msg)
             }
         })
 
@@ -112,7 +124,14 @@ class NativeAudioPlaybackProvider(
             while (isActive) {
                 delay(300)
                 if (player.playbackState == Player.STATE_READY || player.isPlaying) {
-                    val duration = player.duration.takeIf { it > 0 } ?: _state.value.durationMs
+                    val rawDuration = player.duration.takeIf { it > 0 } ?: _state.value.durationMs
+                    val duration = if (currentTrackDurationMs > 30000L && rawDuration in 1..31000L) {
+                        currentTrackDurationMs
+                    } else if (rawDuration > 0) {
+                        rawDuration
+                    } else {
+                        _state.value.durationMs
+                    }
                     _state.update {
                         it.copy(
                             positionMs = player.currentPosition.coerceAtLeast(0),
@@ -131,6 +150,7 @@ class NativeAudioPlaybackProvider(
             _state.update { it.copy(errorMessage = "No audio stream available for this track") }
             return
         }
+        currentTrackDurationMs = track.durationMs
         _state.update {
             it.copy(
                 errorMessage = null,

@@ -30,8 +30,9 @@ class TrackUnderstandingService {
         val isRomantic = isRomanticTrack(titleLower, allTags, mood, language)
         val energy = calculateNormalizedEnergy(track, mood, allTags)
         val tempo = if (track.bpm > 0) track.bpm else estimateTempo(energy, mood)
+        val primaryGenre = track.genres.firstOrNull() ?: track.genre.ifBlank { "Pop" }
         val era = detectEra(track.album, allTags)
-        val acousticness = if (track.acousticness > 0) track.acousticness else estimateAcousticness(genre = track.genre, mood = mood)
+        val acousticness = if (track.acousticness != 0.45 && track.acousticness > 0) track.acousticness else estimateAcousticness(genre = primaryGenre, mood = mood)
         val danceability = if (track.danceability > 0) track.danceability else estimateDanceability(energy, tempo)
         val isInstrumental = track.isInstrumental || allTags.any { it.contains("instrumental") || it.contains("piano") || it.contains("ambient") }
 

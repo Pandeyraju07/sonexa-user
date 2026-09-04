@@ -53,7 +53,7 @@ class HomeViewModel(
             val feedResult = feedDeferred.await()
             val serverFeed = feedResult.getOrNull()
 
-            if (serverFeed != null && serverFeed.trendingNow.isNotEmpty()) {
+            if (serverFeed != null && (serverFeed.trendingNow.isNotEmpty() || serverFeed.continueListening.isNotEmpty())) {
                 val artists = artistsDeferred.await().getOrNull()?.artists.orEmpty()
                 val moods = moodsDeferred.await().getOrNull()?.moods.orEmpty()
                 val podcasts = podcastsDeferred.await().getOrNull()?.podcasts.orEmpty()
@@ -61,8 +61,8 @@ class HomeViewModel(
                 val name = profile?.name.orEmpty().ifBlank { "Music Lover" }
 
                 _uiState.value = HomeUiState.Success(
-                    continueListening = serverFeed.continueListening,
-                    trendingNow = serverFeed.trendingNow,
+                    continueListening = serverFeed.continueListening.map { it.sanitized() },
+                    trendingNow = serverFeed.trendingNow.map { it.sanitized() },
                     popularAlbums = serverFeed.popularAlbums,
                     madeForYou = serverFeed.madeForYou,
                     recommendedArtists = artists,
@@ -71,28 +71,32 @@ class HomeViewModel(
                     userDisplayName = name
                 )
             } else {
-                // Fallback: Dynamically generate complete rich Home feed from JioSaavn and native providers
+                // Fallback: Dynamically generate complete rich Home feed from active aggregation providers
                 try {
-                    val trendingTracksDeferred = async { aggregationEngine.jiosaavnProvider.getTrending(20) }
-                    val popHitsDeferred = async { aggregationEngine.jiosaavnProvider.search("Top Hits", limit = 15) }
-                    val globalHitsDeferred = async { aggregationEngine.jiosaavnProvider.search("Global Trending", limit = 15) }
+                    val trendingTracksDeferred = async { aggregationEngine.getTrendingUnified(20) }
+                    val popHitsDeferred = async { aggregationEngine.searchAll("Bollywood Hits", limit = 15).tracks }
+                    val artistsResultDeferred = async { musicRepository.getArtists() }
+                    val moodsResultDeferred = async { musicRepository.getMoods() }
+                    val podcastsResultDeferred = async { musicRepository.getPodcasts() }
 
-                    val trendingTracks = trendingTracksDeferred.await().getOrDefault(emptyList())
-                    val popHits = popHitsDeferred.await().getOrDefault(emptyList())
-                    val globalHits = globalHitsDeferred.await().getOrDefault(emptyList())
+                    val trendingTracks = trendingTracksDeferred.await().map { it.sanitized() }
+                    val popHits = popHitsDeferred.await().map { it.sanitized() }
+                    val artistsFromApi = artistsResultDeferred.await().getOrNull()?.artists.orEmpty()
+                    val moodsFromApi = moodsResultDeferred.await().getOrNull()?.moods.orEmpty()
+                    val podcastsFromApi = podcastsResultDeferred.await().getOrNull()?.podcasts.orEmpty()
 
                     val continueListening = if (popHits.isNotEmpty()) popHits.take(6) else trendingTracks.take(6)
                     val trendingNow = if (trendingTracks.isNotEmpty()) trendingTracks else popHits
 
                     // Derive dynamic albums from top tracks
-                    val dynamicAlbums = (trendingNow + globalHits).map { track ->
+                    val dynamicAlbums = (trendingNow + popHits).map { track ->
                         AlbumDto(
                             id = "alb_${track.id}",
-                            title = track.album.ifBlank { track.title },
+                            title = track.album?.ifBlank { track.title } ?: track.title,
                             artist = track.artist,
                             year = "2026",
                             coverUrl = track.effectiveCoverUrl,
-                            trackCount = 12
+                            trackCount = 10
                         )
                     }.distinctBy { it.title }.take(8)
 
@@ -101,23 +105,27 @@ class HomeViewModel(
                         PlaylistDto("pl_1", "Today's Top Hits", "Most played tracks right now", "gradient", continueListening.firstOrNull()?.effectiveCoverUrl.orEmpty()),
                         PlaylistDto("pl_2", "Viral Hits 2026", "Trending sounds & anthems", "gradient", trendingNow.getOrNull(1)?.effectiveCoverUrl.orEmpty()),
                         PlaylistDto("pl_3", "Deep Focus & Chill", "Ambient beats to zone in", "gradient", popHits.getOrNull(2)?.effectiveCoverUrl.orEmpty()),
-                        PlaylistDto("pl_4", "Mega Hit Mix", "Your daily curated mix", "gradient", globalHits.firstOrNull()?.effectiveCoverUrl.orEmpty())
+                        PlaylistDto("pl_4", "Mega Hit Mix", "Your daily curated mix", "gradient", trendingNow.firstOrNull()?.effectiveCoverUrl.orEmpty())
                     )
 
-                    // Derive dynamic artists
-                    val dynamicArtists = (trendingNow + popHits).map { track ->
-                        val cleanArtist = track.artist.split(",", "&", "feat.").first().trim()
-                        ArtistDto(
-                            id = "art_${cleanArtist.hashCode()}",
-                            name = cleanArtist,
-                            genre = "Top Artist",
-                            imageUrl = track.effectiveCoverUrl,
-                            followersCount = 1250000,
-                            verified = true
-                        )
-                    }.distinctBy { it.name }.take(8)
+                    // Derive dynamic artists if API artists is empty
+                    val resolvedArtists = if (artistsFromApi.isNotEmpty()) {
+                        artistsFromApi
+                    } else {
+                        (trendingNow + popHits).map { track ->
+                            val cleanArtist = track.artist.split(",", "&", "feat.").first().trim()
+                            ArtistDto(
+                                id = "art_${cleanArtist.hashCode()}",
+                                name = cleanArtist,
+                                genre = "Top Artist",
+                                imageUrl = track.effectiveCoverUrl,
+                                followersCount = 1250000,
+                                verified = true
+                            )
+                        }.distinctBy { it.name }.take(8)
+                    }
 
-                    val defaultMoods = listOf(
+                    val defaultMoods = if (moodsFromApi.isNotEmpty()) moodsFromApi else listOf(
                         MoodDto("1", "Chill", "headphones", "#8B5CF6"),
                         MoodDto("2", "Workout", "flash_on", "#EC4899"),
                         MoodDto("3", "Focus", "lightbulb", "#3B82F6"),
@@ -125,19 +133,14 @@ class HomeViewModel(
                         MoodDto("5", "Romance", "favorite", "#EF4444")
                     )
 
-                    val defaultPodcasts = listOf(
-                        PodcastDto("pod_1", "The Daily Music Podcast", "Sonexa Radio", "Daily music news & stories", continueListening.firstOrNull()?.effectiveCoverUrl.orEmpty(), "Music & Culture"),
-                        PodcastDto("pod_2", "Tech & Beats", "Alex Rivera", "Audio innovation and DJ life", trendingNow.firstOrNull()?.effectiveCoverUrl.orEmpty(), "Technology")
-                    )
-
                     _uiState.value = HomeUiState.Success(
                         continueListening = continueListening,
                         trendingNow = trendingNow,
                         popularAlbums = dynamicAlbums,
                         madeForYou = dynamicPlaylists,
-                        recommendedArtists = dynamicArtists,
+                        recommendedArtists = resolvedArtists,
                         moods = defaultMoods,
-                        podcasts = defaultPodcasts,
+                        podcasts = podcastsFromApi,
                         userDisplayName = "Music Lover"
                     )
                 } catch (e: Exception) {

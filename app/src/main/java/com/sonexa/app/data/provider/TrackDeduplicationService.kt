@@ -45,18 +45,31 @@ class TrackDeduplicationService {
                 }
 
                 for (subCluster in durationSubClusters) {
-                    // Pick the highest quality streamable track
-                    val primary = subCluster.firstOrNull { it.isOfficial && it.isPlayable }
-                        ?: subCluster.firstOrNull { it.isPlayable && it.audioUrl.isNotBlank() }
-                        ?: subCluster.first()
+                    // Check for full-length playable streams (Audius, JioSaavn, Jamendo, Sonexa)
+                    val fullStreamCandidate = subCluster.firstOrNull { candidate ->
+                        candidate.isPlayable &&
+                                candidate.audioUrl.isNotBlank() &&
+                                !candidate.audioUrl.contains("deezer.com") &&
+                                candidate.provider != "deezer"
+                    }
 
+                    val jiosaavnCandidate = subCluster.firstOrNull { it.provider == "jiosaavn" && it.isPlayable }
+                    val audiusCandidate = subCluster.firstOrNull { it.provider == "audius" && it.isPlayable }
+                    val canonicalMetadata = jiosaavnCandidate ?: subCluster.firstOrNull { it.provider == "deezer" }
+
+                    val primaryAudio = jiosaavnCandidate ?: audiusCandidate ?: fullStreamCandidate ?: subCluster.firstOrNull { it.isPlayable && it.audioUrl.isNotBlank() } ?: subCluster.first()
+
+                    // Merge best metadata (high-res artwork from canonical catalog if available)
+                    val bestCover = canonicalMetadata?.coverUrl?.takeIf { it.isNotBlank() } ?: primaryAudio.effectiveCoverUrl
                     val allProviders = subCluster.map { it.provider.replaceFirstChar { c -> c.uppercase() } }.distinct()
 
                     deduplicated.add(
-                        primary.copy(
+                        primaryAudio.copy(
+                            coverUrl = bestCover,
+                            album = primaryAudio.album.ifBlank { canonicalMetadata?.album.orEmpty() },
                             availableProviders = allProviders,
-                            versionType = detectVersionType(primary.title),
-                            qualityTier = determineQualityTier(primary)
+                            versionType = detectVersionType(primaryAudio.title),
+                            qualityTier = determineQualityTier(primaryAudio)
                         )
                     )
                 }

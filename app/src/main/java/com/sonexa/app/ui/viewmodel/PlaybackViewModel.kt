@@ -62,6 +62,19 @@ class PlaybackViewModel : AndroidViewModel {
             onTrackEnded()
         }
 
+        playbackManager.onTrackError = { errorMsg ->
+            viewModelScope.launch {
+                val currentTrack = _uiState.value.track
+                if (currentTrack != null) {
+                    com.sonexa.app.data.provider.FullAudioStreamResolver.invalidate(currentTrack)
+                    if (currentTrack.effectiveVideoId.isNotBlank() && !_uiState.value.isYouTubeMode) {
+                        _uiState.update { it.copy(isYouTubeMode = true, errorMessage = null) }
+                        playbackManager.play(currentTrack.copy(provider = "youtube", providerType = "youtube_video"))
+                    }
+                }
+            }
+        }
+
         playbackManager.nativeProvider.onSessionIdChanged = { sessionId ->
             bindEqualizer(sessionId)
         }
@@ -72,7 +85,19 @@ class PlaybackViewModel : AndroidViewModel {
             playbackManager.engineState.collectLatest { engine ->
                 _elapsedMs.value = engine.positionMs
                 _uiState.update { current ->
-                    val duration = if (engine.durationMs > 0) engine.durationMs else current.durationMs
+                    val activeTrack = current.track
+                    val trackMetadataDuration = activeTrack?.durationMs ?: 0L
+                    // Never downgrade a full-length track duration to a 30-sec preview duration!
+                    val duration = if (trackMetadataDuration > 30000L && engine.durationMs in 1..31000L) {
+                        trackMetadataDuration
+                    } else if (engine.durationMs > 0) {
+                        engine.durationMs
+                    } else if (trackMetadataDuration > 0) {
+                        trackMetadataDuration
+                    } else {
+                        current.durationMs
+                    }
+
                     val error = engine.errorMessage ?: current.errorMessage
                     if (current.isPlaying == engine.isPlaying &&
                         current.durationMs == duration &&
@@ -108,12 +133,13 @@ class PlaybackViewModel : AndroidViewModel {
             com.sonexa.app.data.local.LikedSongsStore.likedSongs.collectLatest { likedList ->
                 val likedSet = likedList.map { it.id }.toSet()
                 _uiState.update { state ->
-                    val currentTrack = state.track
+                    val currentTrack = state.track?.sanitized()
                     val updatedTrack = if (currentTrack != null) {
                         currentTrack.copy(isLiked = likedSet.contains(currentTrack.id))
                     } else null
                     val updatedQueue = state.queue.map {
-                        it.copy(isLiked = likedSet.contains(it.id))
+                        val safe = it.sanitized()
+                        safe.copy(isLiked = likedSet.contains(safe.id))
                     }
                     state.copy(track = updatedTrack, queue = updatedQueue)
                 }
@@ -416,11 +442,52 @@ class PlaybackViewModel : AndroidViewModel {
                 positionMs = 0,
                 durationMs = (track.durationMs ?: 0L).coerceAtLeast(0),
                 sourceTitle = it.sourceTitle.ifBlank { track.album.orEmpty() },
-                isYouTubeMode = track.isYouTube && track.audioUrl.isNullOrBlank()
+                isYouTubeMode = false
             )
         }
 
-        playbackManager.play(track, 0L)
+        viewModelScope.launch {
+            val cachedStream = com.sonexa.app.data.provider.FullAudioStreamResolver.getCachedStream(track)
+            val isInitialPreview = com.sonexa.app.data.provider.FullAudioStreamResolver.isAudioPreview(track.audioUrl, track.provider)
+
+            if (!cachedStream.isNullOrBlank()) {
+                val fullTrack = track.copy(audioUrl = cachedStream, isPlayable = true)
+                _uiState.update { current ->
+                    if (current.track?.id == track.id) current.copy(track = fullTrack) else current
+                }
+                playbackManager.play(fullTrack, 0L)
+            } else if (!isInitialPreview && track.audioUrl.isNotBlank()) {
+                playbackManager.play(track, 0L)
+            } else if (track.isYouTube && track.effectiveVideoId.isNotBlank()) {
+                playbackManager.play(track, 0L)
+            } else {
+                // If track has a preview URL, begin playing immediately so user hears sound instantly
+                if (track.audioUrl.isNotBlank()) {
+                    playbackManager.play(track, 0L)
+                }
+
+                // Simultaneously resolve full-length stream
+                val fullStream = com.sonexa.app.data.provider.FullAudioStreamResolver.resolveFullStreamUrl(track)
+                if (fullStream.isNotBlank() && fullStream != track.audioUrl) {
+                    val currentPos = playbackManager.engineState.value.positionMs.coerceAtLeast(0L)
+                    val fullTrack = track.copy(audioUrl = fullStream, isPlayable = true)
+                    _uiState.update { current ->
+                        if (current.track?.id == track.id) current.copy(track = fullTrack) else current
+                    }
+                    playbackManager.play(fullTrack, currentPos)
+                } else if (track.audioUrl.isBlank() && fullStream.isNotBlank()) {
+                    val fullTrack = track.copy(audioUrl = fullStream, isPlayable = true)
+                    _uiState.update { current ->
+                        if (current.track?.id == track.id) current.copy(track = fullTrack) else current
+                    }
+                    playbackManager.play(fullTrack, 0L)
+                }
+            }
+
+            // Prefetch upcoming tracks in queue for instant switching
+            com.sonexa.app.data.provider.FullAudioStreamResolver.prefetch(queue.getOrNull(index + 1))
+            com.sonexa.app.data.provider.FullAudioStreamResolver.prefetch(queue.getOrNull(index + 2))
+        }
     }
 
     private fun buildShuffledQueue(tracks: List<TrackDto>, preferIndex: Int): List<TrackDto> {
@@ -433,6 +500,7 @@ class PlaybackViewModel : AndroidViewModel {
     override fun onCleared() {
         sleepJob?.cancel()
         playbackManager.onTrackEnded = null
+        playbackManager.onTrackError = null
         super.onCleared()
     }
 

@@ -10,8 +10,9 @@ import java.util.Locale
 class HybridRecommendationEngine(
     private val trackUnderstandingService: TrackUnderstandingService = TrackUnderstandingService(),
     private val deduplicationService: TrackDeduplicationService = TrackDeduplicationService(),
+    private val jiosaavnProvider: JioSaavnMusicProvider = JioSaavnMusicProvider(),
     private val audiusProvider: AudiusMusicProvider = AudiusMusicProvider(),
-    private val saavnProvider: JioSaavnMusicProvider = JioSaavnMusicProvider(),
+    private val deezerProvider: DeezerMusicProvider = DeezerMusicProvider(),
     private val jamendoProvider: JamendoProvider = JamendoProvider()
 ) {
 
@@ -34,8 +35,8 @@ class HybridRecommendationEngine(
         val queryB = "${seedTrack.artist} Best Tracks"
         val queryC = "${seedProfile.primaryGenre} Top Songs"
 
-        val tracksADeferred = async { saavnProvider.search(queryA, limit = 25).getOrDefault(emptyList()) }
-        val tracksBDeferred = async { saavnProvider.search(queryB, limit = 25).getOrDefault(emptyList()) }
+        val tracksADeferred = async { jiosaavnProvider.search(queryA, limit = 25).getOrDefault(emptyList()) }
+        val tracksBDeferred = async { deezerProvider.search(queryB, limit = 25).getOrDefault(emptyList()) }
         val tracksCDeferred = async { audiusProvider.search(queryC, limit = 20).getOrDefault(emptyList()) }
 
         val combined = (tracksADeferred.await() + tracksBDeferred.await() + tracksCDeferred.await())
@@ -78,9 +79,9 @@ class HybridRecommendationEngine(
      * Artist Radio: Generates a dynamic mix of the artist + similar artists + genre matches
      */
     suspend fun getArtistRadio(artistName: String, count: Int = 30): List<TrackDto> = coroutineScope {
-        val directDeferred = async { saavnProvider.search(artistName, limit = 20).getOrDefault(emptyList()) }
+        val directDeferred = async { jiosaavnProvider.search(artistName, limit = 20).getOrDefault(emptyList()) }
         val similarArtistsQuery = "$artistName Radio Top Hits"
-        val similarDeferred = async { saavnProvider.search(similarArtistsQuery, limit = 25).getOrDefault(emptyList()) }
+        val similarDeferred = async { jiosaavnProvider.search(similarArtistsQuery, limit = 25).getOrDefault(emptyList()) }
         val genreDeferred = async { audiusProvider.search("Bollywood Pop", limit = 15).getOrDefault(emptyList()) }
 
         val combined = (directDeferred.await() + similarDeferred.await() + genreDeferred.await())
@@ -102,10 +103,10 @@ class HybridRecommendationEngine(
             else -> "Late Night Romantic Chill"
         }
 
-        val saavnDeferred = async { saavnProvider.search(timeVibe, limit = 25).getOrDefault(emptyList()) }
+        val jiosaavnDeferred = async { jiosaavnProvider.search(timeVibe, limit = 25).getOrDefault(emptyList()) }
         val trendingDeferred = async { audiusProvider.getTrending(limit = 15).getOrDefault(emptyList()) }
 
-        val combined = (likedTracks.take(8) + saavnDeferred.await() + trendingDeferred.await())
+        val combined = (likedTracks.take(8) + jiosaavnDeferred.await() + trendingDeferred.await())
         val deduplicated = deduplicationService.deduplicate(combined)
         val ranked = deduplicated.map { track ->
             val profile = trackUnderstandingService.analyzeTrack(track)
@@ -177,7 +178,7 @@ class HybridRecommendationEngine(
 
         val expansionDeferred = async {
             if (currentQueue.size < 12) {
-                saavnProvider.search(expansionSearchQuery, limit = 20).getOrDefault(emptyList())
+                jiosaavnProvider.search(expansionSearchQuery, limit = 20).getOrDefault(emptyList())
             } else {
                 emptyList()
             }
@@ -193,9 +194,9 @@ class HybridRecommendationEngine(
 
         val expansionTracks = expansionDeferred.await() + audiusAuxDeferred.await()
 
-        // 2. Combine with existing queue (keeping seed track on top if present)
-        val seed = currentTrack ?: currentQueue.firstOrNull()
-        val existingWithoutSeed = currentQueue.filter { it.id != seed?.id }
+        // 2. Combine with existing queue (keeping seed track on top if currently playing)
+        val seed = currentTrack
+        val existingWithoutSeed = if (seed != null) currentQueue.filter { it.id != seed.id } else currentQueue
         val pool = (existingWithoutSeed + expansionTracks).distinctBy { it.id }
 
         // 3. Re-order based on targeted vibe profile
@@ -286,7 +287,7 @@ class HybridRecommendationEngine(
     /**
      * Anti-Bubble Diversity Penalty: Enforces max consecutive tracks from same artist and prevents artist dominance
      */
-    private fun applyDiversityFilter(tracks: List<TrackDto>, maxConsecutiveSameArtist: Int = 2): List<TrackDto> {
+    fun applyDiversityFilter(tracks: List<TrackDto>, maxConsecutiveSameArtist: Int = 2): List<TrackDto> {
         if (tracks.size <= 2) return tracks
 
         val result = mutableListOf<TrackDto>()

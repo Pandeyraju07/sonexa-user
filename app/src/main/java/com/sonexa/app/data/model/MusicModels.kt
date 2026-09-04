@@ -12,7 +12,7 @@ data class TrackDto(
     @SerializedName("coverUrl") val coverUrl: String = "",
     @SerializedName("playsCount") val playsCount: String = "",
     @SerializedName("isLiked") val isLiked: Boolean = false,
-    @SerializedName("provider") val provider: String = "sonexa",
+    @SerializedName("provider") val provider: String = "zynera",
     @SerializedName("providerTrackId") val providerTrackId: String = "",
     @SerializedName("videoId") val videoId: String = "",
     @SerializedName("providerUrl") val providerUrl: String = "",
@@ -37,30 +37,69 @@ data class TrackDto(
     @SerializedName("recommendationReason") val recommendationReason: String = "",
     @SerializedName("qualityTier") val qualityTier: String = "EXACT_MATCH"
 ) {
+    fun sanitized(): TrackDto {
+        return TrackDto(
+            id = (id as? CharSequence)?.toString() ?: "",
+            title = (title as? CharSequence)?.toString() ?: "",
+            artist = (artist as? CharSequence)?.toString() ?: "",
+            album = (album as? CharSequence)?.toString() ?: "",
+            durationMs = durationMs,
+            audioUrl = (audioUrl as? CharSequence)?.toString() ?: "",
+            coverUrl = (coverUrl as? CharSequence)?.toString() ?: "",
+            playsCount = (playsCount as? CharSequence)?.toString() ?: "",
+            isLiked = isLiked,
+            provider = if ((provider as? CharSequence).isNullOrBlank()) "zynera" else (provider as? CharSequence)?.toString() ?: "zynera",
+            providerTrackId = (providerTrackId as? CharSequence)?.toString() ?: "",
+            videoId = (videoId as? CharSequence)?.toString() ?: "",
+            providerUrl = (providerUrl as? CharSequence)?.toString() ?: "",
+            isPlayable = isPlayable,
+            providerType = if ((providerType as? CharSequence).isNullOrBlank()) "audio" else (providerType as? CharSequence)?.toString() ?: "audio",
+            availability = if ((availability as? CharSequence).isNullOrBlank()) "AVAILABLE" else (availability as? CharSequence)?.toString() ?: "AVAILABLE",
+            availableProviders = availableProviders ?: emptyList(),
+            channelTitle = (channelTitle as? CharSequence)?.toString() ?: "",
+            isOfficial = isOfficial,
+            bpm = bpm,
+            energy = energy,
+            mood = if ((mood as? CharSequence).isNullOrBlank()) "Chill" else (mood as? CharSequence)?.toString() ?: "Chill",
+            moods = moods ?: emptyList(),
+            genres = genres ?: emptyList(),
+            language = if ((language as? CharSequence).isNullOrBlank()) "Hindi" else (language as? CharSequence)?.toString() ?: "Hindi",
+            eraDecade = if ((eraDecade as? CharSequence).isNullOrBlank()) "2020s" else (eraDecade as? CharSequence)?.toString() ?: "2020s",
+            acousticness = acousticness,
+            danceability = danceability,
+            isInstrumental = isInstrumental,
+            tags = tags ?: emptyList(),
+            versionType = if ((versionType as? CharSequence).isNullOrBlank()) "Original" else (versionType as? CharSequence)?.toString() ?: "Original",
+            recommendationReason = (recommendationReason as? CharSequence)?.toString() ?: "",
+            qualityTier = if ((qualityTier as? CharSequence).isNullOrBlank()) "EXACT_MATCH" else (qualityTier as? CharSequence)?.toString() ?: "EXACT_MATCH"
+        )
+    }
+
     val isYouTube: Boolean
-        get() = provider?.equals("youtube", ignoreCase = true) == true ||
-                providerType?.equals("youtube_video", ignoreCase = true) == true ||
-                !videoId.isNullOrBlank() ||
-                (!providerTrackId.isNullOrBlank() && provider?.equals("youtube", ignoreCase = true) == true)
+        get() = (provider as? CharSequence)?.toString().equals("youtube", ignoreCase = true) ||
+                (providerType as? CharSequence)?.toString().equals("youtube_video", ignoreCase = true) ||
+                (videoId as? CharSequence)?.toString()?.isNotBlank() == true ||
+                ((providerTrackId as? CharSequence)?.toString()?.isNotBlank() == true && (provider as? CharSequence)?.toString().equals("youtube", ignoreCase = true))
 
     val effectiveVideoId: String
         get() {
-            val vid = videoId.orEmpty()
-            val prov = provider.orEmpty()
-            val pid = providerTrackId.orEmpty()
-            return if (vid.isNotBlank()) vid else if (prov.equals("youtube", ignoreCase = true)) pid else ""
+            val vid = (videoId as? CharSequence)?.toString().orEmpty()
+            if (vid.isNotBlank()) return vid
+            val prov = (provider as? CharSequence)?.toString().orEmpty()
+            val pid = (providerTrackId as? CharSequence)?.toString().orEmpty()
+            return if (prov.equals("youtube", ignoreCase = true)) pid else ""
         }
 
     val effectiveCoverUrl: String
         get() {
-            val cover = coverUrl.orEmpty()
-            if (cover.isNotBlank()) return cover
+            val cov = (coverUrl as? CharSequence)?.toString().orEmpty()
+            if (cov.isNotBlank()) return cov
             val vid = effectiveVideoId
             return if (vid.isNotBlank()) "https://img.youtube.com/vi/$vid/hqdefault.jpg" else ""
         }
 
     val genre: String
-        get() = genres.firstOrNull()?.ifBlank { album } ?: album
+        get() = genres?.firstOrNull()?.ifBlank { (album as? CharSequence)?.toString().orEmpty() } ?: (album as? CharSequence)?.toString().orEmpty()
 }
 
 data class AlbumDto(

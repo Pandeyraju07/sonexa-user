@@ -25,6 +25,16 @@ class AudiusMusicProvider : MusicProvider {
 
     private val gson = Gson()
     private val host = "https://discoveryprovider.audius.co/v1"
+    private val discoveryHosts = listOf(
+        "https://api.audius.co/v1",
+        "https://discoveryprovider.audius.co/v1",
+        "https://audius-discovery-1.cultur3stake.com/v1",
+        "https://audius-dp.amsterdam.creatorseed.com/v1",
+        "https://discoveryprovider2.audius.co/v1",
+        "https://discoveryprovider3.audius.co/v1",
+        "https://dn-usa.audius.metadata.fyi/v1",
+        "https://discoveryprovider.openplayer.org/v1"
+    )
     private val appName = "Sonexa"
 
     override suspend fun search(query: String, filter: String, limit: Int): Result<List<TrackDto>> =
@@ -32,34 +42,38 @@ class AudiusMusicProvider : MusicProvider {
             val q = query.trim()
             if (q.isBlank()) return@withContext Result.success(emptyList())
 
-            try {
-                val encoded = URLEncoder.encode(q, "UTF-8")
-                val url = "$host/tracks/search?query=$encoded&app_name=$appName&limit=$limit"
-                val request = Request.Builder()
-                    .url(url)
-                    .header("User-Agent", "Sonexa-Android/1.0")
-                    .build()
+            val encoded = URLEncoder.encode(q, "UTF-8")
+            for (host in discoveryHosts) {
+                try {
+                    val url = "$host/tracks/search?query=$encoded&app_name=$appName&limit=$limit"
+                    val request = Request.Builder()
+                        .url(url)
+                        .header("User-Agent", "Sonexa-Android/1.0")
+                        .build()
 
-                client.newCall(request).execute().use { response ->
-                    if (!response.isSuccessful) {
-                        return@withContext Result.failure(Exception("Audius API error: ${response.code}"))
+                    client.newCall(request).execute().use { response ->
+                        if (!response.isSuccessful) return@use
+
+                        val bodyString = response.body?.string() ?: return@use
+                        val json = gson.fromJson(bodyString, JsonObject::class.java)
+                        val dataArray = json.getAsJsonArray("data") ?: return@use
+
+                        val tracks = mutableListOf<TrackDto>()
+                        for (element in dataArray) {
+                            val obj = element.asJsonObject
+                            val track = parseTrack(obj)
+                            if (track != null) tracks.add(track)
+                        }
+
+                        if (tracks.isNotEmpty()) {
+                            return@withContext Result.success(tracks)
+                        }
                     }
-
-                    val bodyString = response.body?.string() ?: return@withContext Result.success(emptyList())
-                    val json = gson.fromJson(bodyString, JsonObject::class.java)
-                    val dataArray = json.getAsJsonArray("data") ?: return@withContext Result.success(emptyList())
-
-                    val tracks = mutableListOf<TrackDto>()
-                    for (element in dataArray) {
-                        val obj = element.asJsonObject
-                        val track = parseTrack(obj)
-                        if (track != null) tracks.add(track)
-                    }
-                    Result.success(tracks)
+                } catch (_: Exception) {
+                    // Failover to next discovery node
                 }
-            } catch (e: Exception) {
-                Result.failure(e)
             }
+            Result.success(emptyList())
         }
 
     /**

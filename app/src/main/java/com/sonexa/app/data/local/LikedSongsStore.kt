@@ -9,7 +9,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 object LikedSongsStore {
-    private val gson = Gson()
+    private val gson = com.sonexa.app.data.api.RetrofitClient.gson
     private val _likedSongs = MutableStateFlow<List<TrackDto>>(emptyList())
     val likedSongs: StateFlow<List<TrackDto>> = _likedSongs.asStateFlow()
 
@@ -20,7 +20,7 @@ object LikedSongsStore {
             try {
                 val type = object : TypeToken<List<TrackDto>>() {}.type
                 val list: List<TrackDto> = gson.fromJson(json, type)
-                _likedSongs.value = list
+                _likedSongs.value = list.map { it.sanitized() }
             } catch (e: Exception) {
                 e.printStackTrace()
             }
@@ -34,21 +34,26 @@ object LikedSongsStore {
 
     fun withLikedStatus(track: TrackDto?): TrackDto? {
         if (track == null) return null
-        return track.copy(isLiked = isLiked(track.id))
+        val safeTrack = track.sanitized()
+        return safeTrack.copy(isLiked = isLiked(safeTrack.id))
     }
 
     fun withLikedStatus(tracks: List<TrackDto>): List<TrackDto> {
-        return tracks.map { it.copy(isLiked = isLiked(it.id)) }
+        return tracks.map { 
+            val safe = it.sanitized()
+            safe.copy(isLiked = isLiked(safe.id)) 
+        }
     }
 
     fun toggleLike(context: Context, track: TrackDto): Boolean {
+        val safe = track.sanitized()
         val current = _likedSongs.value.toMutableList()
-        val exists = current.any { it.id == track.id }
+        val exists = current.any { it.id == safe.id }
         val nowLiked = if (exists) {
-            current.removeAll { it.id == track.id }
+            current.removeAll { it.id == safe.id }
             false
         } else {
-            current.add(0, track.copy(isLiked = true))
+            current.add(0, safe.copy(isLiked = true))
             true
         }
         _likedSongs.value = current

@@ -141,53 +141,28 @@ fun HomeScreen(
     val allAlbums = feed?.popularAlbums.orEmpty()
     val allPlaylists = feed?.madeForYou.orEmpty()
     val allArtists = feed?.recommendedArtists.orEmpty()
+    val continueListening = feed?.continueListening.orEmpty()
 
-    val quickGridItems = listOf(
-        QuickCardItem("quick_liked", "Liked Songs", "", isLiked = true),
-        QuickCardItem("quick_peace", "Peace 🖤", "https://c.saavncdn.com/492/Chand-Mera-Dil-Hindi-2024-20241021111624-500x500.jpg"),
-        QuickCardItem("quick_10s", "<10s", "https://c.saavncdn.com/152/Jodi-Punjabi-2023-20230509183424-500x500.jpg"),
-        QuickCardItem("quick_bolly", "Bollywood spicy 🔥", "https://c.saavncdn.com/264/Love-Exit-Punjabi-2023-20230606132711-500x500.jpg"),
-        QuickCardItem("quick_workout", "WORKOUT PLAYLIST 2026", "https://c.saavncdn.com/177/Barsaat-Lagdi-Ae-Hindi-2023-20230713123847-500x500.jpg"),
-        QuickCardItem("quick_holly", "Hollywood ✨", "https://c.saavncdn.com/602/Dooron-Dooron-Punjabi-2022-20220914180808-500x500.jpg"),
-        QuickCardItem("quick_metro", "Metro In Dino - All Songs", "https://c.saavncdn.com/001/Cocktail-2-Hindi-2024-20240214152011-500x500.jpg"),
-        QuickCardItem("quick_vaapas", "Main Vaapas Aaunga (Origi...", "https://c.saavncdn.com/712/Main-Vaapas-Aaunga-Hindi-2024-20240321154032-500x500.jpg")
-    )
-
-    val radioStations = listOf(
-        RadioStationItem(
-            title = "Sajjan Raazi",
-            artists = "Satinder Sartaaj, Harrdy Sandhu, Garry Sandhu...",
-            color = Color(0xFF90CAF9),
-            artistImages = listOf(
-                "https://c.saavncdn.com/artists/Satinder_Sartaaj_500x500.jpg",
-                "https://c.saavncdn.com/artists/Harrdy_Sandhu_500x500.jpg",
-                "https://c.saavncdn.com/artists/Garry_Sandhu_500x500.jpg"
-            ),
-            query = "Sajjan Raazi Satinder Sartaaj"
-        ),
-        RadioStationItem(
-            title = "The PropheC",
-            artists = "Sidhu Moose Wala, AP Dhillon, Chani Nattan, I...",
-            color = Color(0xFFA7F3D0),
-            artistImages = listOf(
-                "https://c.saavncdn.com/artists/The_PropheC_500x500.jpg",
-                "https://c.saavncdn.com/artists/Sidhu_Moose_Wala_500x500.jpg",
-                "https://c.saavncdn.com/artists/AP_Dhillon_500x500.jpg"
-            ),
-            query = "The PropheC Sidhu Moose Wala"
-        ),
-        RadioStationItem(
-            title = "Arijit Singh",
-            artists = "Pritam, Jasleen Royal, Vishal Mishra, Atif Aslam...",
-            color = Color(0xFFFFCC80),
-            artistImages = listOf(
-                "https://c.saavncdn.com/artists/Arijit_Singh_002_20230323062147_500x500.jpg",
-                "https://c.saavncdn.com/artists/Pritam_500x500.jpg",
-                "https://c.saavncdn.com/artists/Atif_Aslam_500x500.jpg"
-            ),
-            query = "Arijit Singh"
-        )
-    )
+    // 100% Dynamic Quick Access Grid derived directly from API feed + Liked Songs
+    val quickAccessItems: List<QuickCardItem> = remember(allTrending, continueListening, likedSongsList) {
+        val list = mutableListOf<QuickCardItem>()
+        // 1. Liked Songs
+        list.add(QuickCardItem("quick_liked", "Liked Songs", "", isLiked = true))
+        
+        // 2. Top API tracks / trending entries
+        val pool = (continueListening + allTrending).distinctBy { it.id }
+        pool.take(7).forEachIndexed { idx, track ->
+            list.add(
+                QuickCardItem(
+                    id = track.id,
+                    title = track.title,
+                    imageUrl = track.effectiveCoverUrl,
+                    isLiked = false
+                )
+            )
+        }
+        list
+    }
 
     val sessionManager = remember { com.sonexa.app.data.local.SessionManager.getInstance(context) }
     val apiDisplayName = feed?.userDisplayName?.takeIf { it.isNotBlank() && it != "Music Lover" }
@@ -204,260 +179,38 @@ fun HomeScreen(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(Color(0xFF121212))
+            .background(Color(0xFF0F0B18))
             .statusBarsPadding()
             .navigationBarsPadding()
     ) {
         when (selectedNavTab) {
             "Home" -> {
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(bottom = 125.dp)
-                        .verticalScroll(rememberScrollState())
-                ) {
-                    // Top App Bar with User Avatar & Filter Chips (Screenshot 1)
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        // User Avatar
-                        Box(
-                            modifier = Modifier
-                                .size(34.dp)
-                                .clip(CircleShape)
-                                .background(Color(0xFFC4B5FD))
-                                .clickable { showProfileDrawer = true },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = avatarInitial,
-                                color = Color(0xFF1B1629),
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.ExtraBold
-                            )
+                HomeFeedContent(
+                    avatarInitial = avatarInitial,
+                    selectedFeedCategory = selectedFeedCategory,
+                    onSelectFeedCategory = { cat ->
+                        selectedFeedCategory = cat
+                        when (cat) {
+                            "Podcasts" -> onOpenPodcasts()
+                            "Live Events" -> onOpenLiveEvents()
+                            "I-Pop" -> onOpenIPop()
                         }
-
-                        Spacer(modifier = Modifier.width(12.dp))
-
-                        // Filter Chips: All, Music, Podcasts, Live Events, I-Pop
-                        Row(
-                            modifier = Modifier.horizontalScroll(rememberScrollState()),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            listOf("All", "Music", "Podcasts", "Live Events", "I-Pop").forEach { cat ->
-                                val isSelected = selectedFeedCategory == cat
-                                Box(
-                                    modifier = Modifier
-                                        .clip(RoundedCornerShape(16.dp))
-                                        .background(if (isSelected) SonexaPurplePrimary else Color(0xFF221A33))
-                                        .border(
-                                            1.dp,
-                                            if (isSelected) SonexaPurpleLight.copy(alpha = 0.6f) else Color.White.copy(alpha = 0.08f),
-                                            RoundedCornerShape(16.dp)
-                                        )
-                                        .clickable {
-                                            selectedFeedCategory = cat
-                                            when (cat) {
-                                                "Podcasts" -> onOpenPodcasts()
-                                                "Live Events" -> onOpenLiveEvents()
-                                                "I-Pop" -> onOpenIPop()
-                                            }
-                                        }
-                                        .padding(horizontal = 14.dp, vertical = 6.dp)
-                                ) {
-                                    Text(
-                                        text = cat,
-                                        fontSize = 13.sp,
-                                        fontWeight = FontWeight.SemiBold,
-                                        color = if (isSelected) Color.White else Color(0xFFA19BAE)
-                                    )
-                                }
-                            }
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(6.dp))
-
-                    // Top 8-Card 2-Column Grid (Screenshot 1)
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        quickGridItems.chunked(2).forEach { pair ->
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                QuickAccessCard(
-                                    item = pair[0],
-                                    modifier = Modifier.weight(1f),
-                                    onClick = {
-                                        if (pair[0].isLiked) {
-                                            onOpenPlaylist("pl_liked")
-                                        } else {
-                                            val match = allTrending.firstOrNull() ?: allTrending.getOrNull(0)
-                                            playTrack(match, allTrending, pair[0].title)
-                                        }
-                                    }
-                                )
-                                if (pair.size > 1) {
-                                    QuickAccessCard(
-                                        item = pair[1],
-                                        modifier = Modifier.weight(1f),
-                                        onClick = {
-                                            val match = allTrending.getOrNull(1) ?: allTrending.firstOrNull()
-                                            playTrack(match, allTrending, pair[1].title)
-                                        }
-                                    )
-                                } else {
-                                    Spacer(modifier = Modifier.weight(1f))
-                                }
-                            }
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    // AI Intelligence Cards (Music DNA & AI Journey)
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .weight(1f)
-                                .clip(RoundedCornerShape(16.dp))
-                                .background(
-                                    Brush.linearGradient(listOf(Color(0xFF2E1065), Color(0xFF1E1B4B)))
-                                )
-                                .border(1.dp, Color(0xFF7C3AED).copy(alpha = 0.5f), RoundedCornerShape(16.dp))
-                                .clickable { onOpenMusicDna() }
-                                .padding(12.dp)
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(32.dp)
-                                        .clip(CircleShape)
-                                        .background(SpotifyGreen.copy(alpha = 0.2f)),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(Icons.Default.Psychology, contentDescription = null, tint = SpotifyGreen, modifier = Modifier.size(18.dp))
-                                }
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Column {
-                                    Text("Music DNA", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                                    Text("Your Taste", color = Color(0xFFDDD6FE), fontSize = 11.sp)
-                                }
-                            }
-                        }
-
-                        Box(
-                            modifier = Modifier
-                                .weight(1f)
-                                .clip(RoundedCornerShape(16.dp))
-                                .background(
-                                    Brush.linearGradient(listOf(Color(0xFF0F172A), Color(0xFF064E3B)))
-                                )
-                                .border(1.dp, SpotifyGreen.copy(alpha = 0.5f), RoundedCornerShape(16.dp))
-                                .clickable { onOpenMusicJourney() }
-                                .padding(12.dp)
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(32.dp)
-                                        .clip(CircleShape)
-                                        .background(SpotifyGreen.copy(alpha = 0.2f)),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = SpotifyGreen, modifier = Modifier.size(18.dp))
-                                }
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Column {
-                                    Text("AI Journey", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                                    Text("Vibe Flow", color = Color(0xFFA7F3D0), fontSize = 11.sp)
-                                }
-                            }
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(20.dp))
-
-                    // Section: Recommended Stations (Screenshot 1)
-                    Text(
-                        text = "Recommended Stations",
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                    )
-
-                    LazyRow(
-                        contentPadding = PaddingValues(horizontal = 16.dp),
-                        horizontalArrangement = Arrangement.spacedBy(14.dp)
-                    ) {
-                        items(radioStations) { station ->
-                            RadioStationCard(station) {
-                                onOpenArtist(station.query)
-                            }
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(24.dp))
-
-                    // Section: Jump back in (Screenshot 1)
-                    Text(
-                        text = "Jump back in",
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                    )
-
-                    LazyRow(
-                        contentPadding = PaddingValues(horizontal = 16.dp),
-                        horizontalArrangement = Arrangement.spacedBy(14.dp)
-                    ) {
-                        itemsIndexed(allTrending.take(8)) { idx, track ->
-                            MediaSquareCard(
-                                title = track.title,
-                                subtitle = "Song • ${track.artist}",
-                                imageUrl = track.effectiveCoverUrl,
-                                onClick = { playTrack(track, allTrending, "Jump back in") }
-                            )
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(24.dp))
-
-                    // Section: Popular Artists
-                    Text(
-                        text = "Popular Artists",
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                    )
-
-                    LazyRow(
-                        contentPadding = PaddingValues(horizontal = 16.dp),
-                        horizontalArrangement = Arrangement.spacedBy(16.dp)
-                    ) {
-                        items(allArtists) { artist ->
-                            ArtistCircleCard(artist) {
-                                onOpenArtist(artist.name)
-                            }
-                        }
-                    }
-                }
+                    },
+                    onOpenProfileDrawer = { showProfileDrawer = true },
+                    onOpenMusicDna = onOpenMusicDna,
+                    onOpenMusicJourney = onOpenMusicJourney,
+                    quickAccessItems = quickAccessItems,
+                    continueListening = continueListening,
+                    allTrending = allTrending,
+                    allAlbums = allAlbums,
+                    allArtists = allArtists,
+                    playbackState = playbackState,
+                    onPlayTrack = { track, queue, src -> playTrack(track, queue, src) },
+                    onOpenLikedPlaylist = { onOpenPlaylist("pl_liked") },
+                    onOpenAlbum = onOpenAlbum,
+                    onOpenArtist = onOpenArtist,
+                    onTogglePlayPause = { playbackViewModel.togglePlayPause() }
+                )
             }
 
             "Search" -> SearchScreen(
@@ -644,7 +397,7 @@ fun HomeScreen(
 }
 
 @Composable
-private fun QuickAccessCard(
+internal fun QuickAccessCard(
     item: QuickCardItem,
     modifier: Modifier = Modifier,
     onClick: () -> Unit
@@ -755,21 +508,27 @@ private fun RadioStationCard(
 }
 
 @Composable
-private fun MediaSquareCard(
+internal fun MediaSquareCard(
     title: String,
     subtitle: String,
     imageUrl: String,
+    tag: String? = null,
+    isPlayingThis: Boolean = false,
+    onQuickPlay: (() -> Unit)? = null,
     onClick: () -> Unit
 ) {
     Column(
         modifier = Modifier
-            .width(145.dp)
+            .width(155.dp)
+            .clip(RoundedCornerShape(8.dp))
             .clickable { onClick() }
+            .padding(4.dp)
     ) {
         Box(
             modifier = Modifier
-                .size(145.dp)
-                .clip(RoundedCornerShape(6.dp))
+                .fillMaxWidth()
+                .aspectRatio(1f)
+                .clip(RoundedCornerShape(8.dp))
                 .background(Color(0xFF282828))
         ) {
             AsyncImage(
@@ -778,42 +537,89 @@ private fun MediaSquareCard(
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize()
             )
+
+            // Top-left Tag Badge (e.g. "TRENDING #1")
+            if (!tag.isNullOrBlank()) {
+                Box(
+                    modifier = Modifier
+                        .padding(8.dp)
+                        .clip(RoundedCornerShape(4.dp))
+                        .background(Color.Black.copy(alpha = 0.7f))
+                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                        .align(Alignment.TopStart)
+                ) {
+                    Text(
+                        text = tag,
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = SpotifyGreen,
+                        letterSpacing = 0.5.sp
+                    )
+                }
+            }
+
+            // Spotify Signature Floating Green Quick-Play Action
+            Box(
+                modifier = Modifier
+                    .padding(8.dp)
+                    .size(38.dp)
+                    .clip(CircleShape)
+                    .background(SpotifyGreen)
+                    .align(Alignment.BottomEnd)
+                    .clickable {
+                        if (onQuickPlay != null) onQuickPlay() else onClick()
+                    },
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = if (isPlayingThis) Icons.Default.Pause else Icons.Default.PlayArrow,
+                    contentDescription = "Play",
+                    tint = Color.Black,
+                    modifier = Modifier.size(22.dp)
+                )
+            }
         }
 
-        Spacer(modifier = Modifier.height(6.dp))
+        Spacer(modifier = Modifier.height(8.dp))
 
         Text(
             text = title,
-            fontSize = 13.5.sp,
+            fontSize = 14.sp,
             fontWeight = FontWeight.Bold,
-            color = Color.White,
+            color = if (isPlayingThis) SpotifyGreen else Color.White,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
         )
+        Spacer(modifier = Modifier.height(2.dp))
         Text(
             text = subtitle,
             fontSize = 12.sp,
             color = Color(0xFFA19BAE),
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+            lineHeight = 15.sp
         )
     }
 }
 
 @Composable
-private fun ArtistCircleCard(
+internal fun ArtistCircleCard(
     artist: ArtistDto,
+    isRadioPlaying: Boolean = false,
+    onQuickPlay: (() -> Unit)? = null,
     onClick: () -> Unit
 ) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
-            .width(120.dp)
+            .width(140.dp)
+            .clip(RoundedCornerShape(12.dp))
             .clickable { onClick() }
+            .padding(6.dp)
     ) {
         Box(
             modifier = Modifier
-                .size(120.dp)
+                .size(130.dp)
                 .clip(CircleShape)
                 .background(Color(0xFF282828))
         ) {
@@ -823,17 +629,58 @@ private fun ArtistCircleCard(
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize()
             )
+
+            // Spotify Signature Floating Green Quick-Play on Artist
+            Box(
+                modifier = Modifier
+                    .padding(4.dp)
+                    .size(36.dp)
+                    .clip(CircleShape)
+                    .background(SpotifyGreen)
+                    .align(Alignment.BottomEnd)
+                    .clickable {
+                        if (onQuickPlay != null) onQuickPlay() else onClick()
+                    },
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = if (isRadioPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                    contentDescription = "Play Artist",
+                    tint = Color.Black,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
         }
 
         Spacer(modifier = Modifier.height(8.dp))
 
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center
+        ) {
+            Text(
+                text = artist.name,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold,
+                color = if (isRadioPlaying) SpotifyGreen else Color.White,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            if (artist.verified) {
+                Spacer(modifier = Modifier.width(4.dp))
+                Icon(
+                    Icons.Default.CheckCircle,
+                    contentDescription = "Verified",
+                    tint = Color(0xFF3B82F6),
+                    modifier = Modifier.size(14.dp)
+                )
+            }
+        }
+        
         Text(
-            text = artist.name,
-            fontSize = 13.sp,
-            fontWeight = FontWeight.SemiBold,
-            color = Color.White,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
+            text = if (artist.followersCount > 0) "${artist.followersCount / 1000}K Listeners" else "Artist",
+            fontSize = 12.sp,
+            color = Color(0xFFA19BAE)
         )
     }
 }

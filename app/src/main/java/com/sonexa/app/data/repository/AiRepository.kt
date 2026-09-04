@@ -506,40 +506,106 @@ class AiRepository(private val apiService: AiApiService = RetrofitClient.aiApiSe
         }
     }
 
-    private fun fallbackParseIntent(rawText: String): MusicIntentDto {
+    fun fallbackParseIntent(rawText: String): MusicIntentDto {
         val text = rawText.lowercase(Locale.ROOT)
         var intentType = "PLAY_MUSIC"
         var action = "PLAY"
+        var artist: String? = null
+        var track: String? = null
         val moods = mutableListOf<String>()
         val languages = mutableListOf<String>()
+        val genres = mutableListOf<String>()
 
-        if (text.contains("skip") || text.contains("next")) {
-            intentType = "NEXT"
-            action = "NEXT"
-        } else if (text.contains("pause") || text.contains("stop")) {
-            intentType = "PAUSE"
-            action = "PAUSE"
-        } else if (text.contains("vibe") || text.contains("energetic") || text.contains("relax")) {
-            intentType = "CHANGE_VIBE"
-            action = "CHANGE_VIBE"
+        // Commands & Actions
+        when {
+            text.contains("next song") || text.contains("next") || text.contains("skip") -> {
+                intentType = "NEXT"
+                action = "NEXT"
+            }
+            text.contains("pause") || text.contains("stop") -> {
+                intentType = "PAUSE"
+                action = "PAUSE"
+            }
+            text.contains("resume") || text.contains("unpause") -> {
+                intentType = "RESUME"
+                action = "RESUME"
+            }
+            text.contains("like this song") || text.contains("like song") || text.contains("favorite") -> {
+                intentType = "LIKE"
+                action = "LIKE"
+            }
+            text.contains("add this to my playlist") || text.contains("add to playlist") || text.contains("save to playlist") -> {
+                intentType = "ADD_TO_PLAYLIST"
+                action = "ADD_TO_PLAYLIST"
+            }
+            text.contains("surprise me") -> {
+                intentType = "SURPRISE"
+                action = "SURPRISE"
+            }
+            text.contains("something new") || text.contains("discover") -> {
+                intentType = "DISCOVERY"
+                action = "DISCOVER"
+            }
+            text.contains("make it more energetic") || text.contains("give me something energetic") || text.contains("more energetic") -> {
+                intentType = "CHANGE_VIBE"
+                action = "CHANGE_VIBE"
+                moods.add("Energetic")
+            }
+            text.contains("change vibe") || text.contains("vibe") -> {
+                intentType = "CHANGE_VIBE"
+                action = "CHANGE_VIBE"
+            }
+            text.startsWith("find") || text.startsWith("search") -> {
+                intentType = "SEARCH"
+                action = "SEARCH"
+            }
         }
 
-        if (text.contains("hindi") || text.contains("bollywood")) languages.add("Hindi")
+        // Entity Detection: Artists
+        if (text.contains("arijit") || text.contains("arjit")) artist = "Arijit Singh"
+        else if (text.contains("shreya")) artist = "Shreya Ghoshal"
+        else if (text.contains("atif")) artist = "Atif Aslam"
+        else if (text.contains("diljit")) artist = "Diljit Dosanjh"
+        else if (text.contains("badshah")) artist = "Badshah"
+        else if (text.contains("honey singh")) artist = "Yo Yo Honey Singh"
+        else if (text.contains("sonu nigam")) artist = "Sonu Nigam"
+        else if (text.contains("kumar sanu")) artist = "Kumar Sanu"
+
+        // Entity Detection: Tracks & Movies
+        if (text.contains("tum hi ho") || text.contains("tumhiho")) track = "Tum Hi Ho"
+        else if (text.contains("kesariya")) track = "Kesariya"
+        else if (text.contains("kabir singh")) track = "Kabir Singh"
+
+        // Languages
+        if (text.contains("hindi") || text.contains("bollywood") || text.contains("gaane") || text.contains("gaana")) languages.add("Hindi")
         if (text.contains("punjabi")) languages.add("Punjabi")
+        if (text.contains("tamil")) languages.add("Tamil")
+        if (text.contains("telugu")) languages.add("Telugu")
         if (text.contains("english")) languages.add("English")
 
-        if (text.contains("romantic") || text.contains("love")) moods.add("Romantic")
-        if (text.contains("calm") || text.contains("relax") || text.contains("peaceful")) moods.add("Calm")
-        if (text.contains("party") || text.contains("dance")) moods.add("Party")
-        if (text.contains("workout") || text.contains("gym")) moods.add("Workout")
+        // Moods
+        if (text.contains("romantic") || text.contains("love") || text.contains("pyaar") || text.contains("dil")) moods.add("Romantic")
+        if (text.contains("calm") || text.contains("relax") || text.contains("relaxing") || text.contains("peaceful")) moods.add("Calm")
+        if (text.contains("party") || text.contains("dance") || text.contains("club")) moods.add("Party")
+        if (text.contains("workout") || text.contains("gym") || text.contains("energetic") || text.contains("power")) moods.add("Energetic")
+        if (text.contains("sad") || text.contains("dard") || text.contains("breakup")) moods.add("Sad")
+
+        // Genres
+        if (text.contains("bollywood")) genres.add("Bollywood")
+        if (text.contains("pop")) genres.add("Pop")
+        if (text.contains("edm")) genres.add("EDM")
+        if (text.contains("lofi") || text.contains("lo-fi")) genres.add("Lo-Fi")
 
         return MusicIntentDto(
             intentType = intentType,
             query = rawText,
+            artist = artist,
+            track = track,
+            genres = genres,
             languages = languages,
             moods = moods,
             action = action,
-            confidence = 0.88
+            confidence = 0.92
         )
     }
 }

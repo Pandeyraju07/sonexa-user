@@ -90,11 +90,17 @@ object RetrofitClient {
         .authenticator(tokenAuthenticator)
         .build()
 
+    val gson: com.google.gson.Gson by lazy {
+        com.google.gson.GsonBuilder()
+            .registerTypeAdapter(com.sonexa.app.data.model.TrackDto::class.java, SafeTrackDtoDeserializer())
+            .create()
+    }
+
     private val retrofit: Retrofit by lazy {
         Retrofit.Builder()
             .baseUrl(baseUrl)
             .client(okHttpClient)
-            .addConverterFactory(GsonConverterFactory.create())
+            .addConverterFactory(GsonConverterFactory.create(gson))
             .build()
     }
 

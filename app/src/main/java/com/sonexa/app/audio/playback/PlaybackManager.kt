@@ -30,10 +30,12 @@ class PlaybackManager(
     val activeProviderType: StateFlow<String> = _activeProviderType.asStateFlow()
 
     var onTrackEnded: (() -> Unit)? = null
+    var onTrackError: ((String) -> Unit)? = null
 
     init {
         nativeProvider.onTrackEnded = { onTrackEnded?.invoke() }
         youtubeProvider.onTrackEnded = { onTrackEnded?.invoke() }
+        nativeProvider.onTrackError = { onTrackError?.invoke(it) }
     }
 
     val engineState: StateFlow<EngineState> = combine(
@@ -112,9 +114,9 @@ class PlaybackManager(
     private fun startPlaybackService() {
         val intent = Intent(appContext, SonexaPlaybackService::class.java)
         runCatching {
-            ContextCompat.startForegroundService(appContext, intent)
+            appContext.startService(intent)
         }.onFailure {
-            runCatching { appContext.startService(intent) }
+            runCatching { ContextCompat.startForegroundService(appContext, intent) }
         }
     }
 }

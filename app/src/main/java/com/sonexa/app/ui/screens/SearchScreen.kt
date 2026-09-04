@@ -705,105 +705,538 @@ fun SearchScreen(
                     is SearchUiState.Success -> {
                         val tracks = state.tracks
                         val topArtist = state.topArtist
+                        val movieSoundtrack = state.movieSoundtrack
                         val artistCatalog = state.artistCatalog
+                        val didYouMean = state.didYouMean
 
                         LazyColumn(
                             modifier = Modifier.fillMaxSize(),
                             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                             verticalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
-                            // 1. Top Artist Match (if singer searched e.g. Arijit Singh)
-                            if (topArtist != null) {
+                            // -1. "Did You Mean?" Typo-Correction Banner
+                            if (didYouMean != null && !didYouMean.correctedQuery.equals(query, ignoreCase = true)) {
                                 item {
                                     Row(
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .clip(RoundedCornerShape(14.dp))
-                                            .background(SonexaInputBg)
-                                            .border(1.dp, SonexaCardBorder, RoundedCornerShape(14.dp))
-                                            .clickable { onOpenArtistProfile(topArtist.id) }
-                                            .padding(12.dp),
+                                            .clip(RoundedCornerShape(12.dp))
+                                            .background(Color(0xFF1E1E2E))
+                                            .border(1.dp, SpotifyGreen.copy(alpha = 0.4f), RoundedCornerShape(12.dp))
+                                            .clickable {
+                                                query = didYouMean.correctedQuery
+                                                searchViewModel.onSearchQueryChanged(didYouMean.correctedQuery)
+                                            }
+                                            .padding(horizontal = 14.dp, vertical = 10.dp),
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        Box(
-                                            modifier = Modifier
-                                                .size(60.dp)
-                                                .clip(CircleShape)
-                                                .background(SonexaGradientBrush)
-                                        ) {
-                                            AsyncImage(
-                                                model = ImageRequest.Builder(context).data(topArtist.imageUrl).crossfade(true).build(),
-                                                contentDescription = topArtist.name,
-                                                contentScale = ContentScale.Crop,
-                                                modifier = Modifier.fillMaxSize()
-                                            )
-                                        }
-                                        Spacer(modifier = Modifier.width(14.dp))
-                                        Column(modifier = Modifier.weight(1f)) {
-                                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                                Text(
-                                                    text = topArtist.name,
-                                                    fontSize = 17.sp,
-                                                    fontWeight = FontWeight.Bold,
-                                                    color = Color.White
-                                                )
-                                                if (topArtist.verified) {
-                                                    Spacer(modifier = Modifier.width(6.dp))
-                                                    Icon(
-                                                        Icons.Default.CheckCircle,
-                                                        contentDescription = "Verified",
-                                                        tint = Color(0xFF3B82F6),
-                                                        modifier = Modifier.size(16.dp)
-                                                    )
-                                                }
-                                            }
-                                            Spacer(modifier = Modifier.height(2.dp))
+                                        Icon(
+                                            imageVector = Icons.Default.AutoAwesome,
+                                            contentDescription = "Correction",
+                                            tint = SpotifyGreen,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(10.dp))
+                                        Column {
                                             Text(
-                                                text = "Artist • ${topArtist.followersCount / 1000000}M Followers",
+                                                text = "Showing results for ${didYouMean.correctedQuery}",
                                                 fontSize = 13.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = Color.White
+                                            )
+                                            Text(
+                                                text = "Search instead for \"${didYouMean.originalQuery}\"",
+                                                fontSize = 11.sp,
                                                 color = Color(0xFFA19BAE)
                                             )
-                                        }
-                                        Box(
-                                            modifier = Modifier
-                                                .clip(RoundedCornerShape(8.dp))
-                                                .background(SonexaPurplePrimary)
-                                                .clickable {
-                                                    val artistTracks = artistCatalog?.popularTracks ?: tracks
-                                                    if (artistTracks.isNotEmpty()) {
-                                                        playTrackList(artistTracks, 0, "${topArtist.name} Radio")
-                                                    }
-                                                }
-                                                .padding(horizontal = 10.dp, vertical = 6.dp)
-                                        ) {
-                                            Text(text = "Play Radio", fontSize = 12.sp, color = Color.White, fontWeight = FontWeight.Bold)
                                         }
                                     }
                                 }
                             }
 
-                            // 2. Discography / Albums Shelf
-                            if (artistCatalog?.albums?.isNotEmpty() == true) {
+                            // 0. Top Result (Spotify-Grade Best Match)
+                            val topItem = state.response.topResult
+                            if (topItem != null) {
                                 item {
-                                    Column {
+                                    Column(modifier = Modifier.padding(bottom = 6.dp)) {
                                         Text(
-                                            text = "Albums & Singles",
-                                            fontSize = 17.sp,
+                                            text = "Top result",
+                                            fontSize = 20.sp,
+                                            fontWeight = FontWeight.ExtraBold,
+                                            color = Color.White,
+                                            modifier = Modifier.padding(bottom = 8.dp)
+                                        )
+
+                                        when (topItem) {
+                                            is TrackDto -> {
+                                                // Spotify-Style Top Result: Song Card
+                                                Box(
+                                                    modifier = Modifier
+                                                        .fillMaxWidth()
+                                                        .clip(RoundedCornerShape(16.dp))
+                                                        .background(Color(0xFF181818))
+                                                        .border(1.dp, Color(0xFF282828), RoundedCornerShape(16.dp))
+                                                        .clickable {
+                                                            searchViewModel.addRecentTrack(topItem)
+                                                            playTrackList(listOf(topItem) + tracks.filter { it.id != topItem.id }, 0, topItem.title)
+                                                        }
+                                                        .padding(14.dp)
+                                                ) {
+                                                    Row(
+                                                        modifier = Modifier.fillMaxWidth(),
+                                                        verticalAlignment = Alignment.CenterVertically
+                                                    ) {
+                                                        Box(
+                                                            modifier = Modifier
+                                                                .size(72.dp)
+                                                                .clip(RoundedCornerShape(8.dp))
+                                                                .background(Color(0xFF282828))
+                                                        ) {
+                                                            AsyncImage(
+                                                                model = ImageRequest.Builder(context).data(topItem.effectiveCoverUrl).crossfade(true).build(),
+                                                                contentDescription = topItem.title,
+                                                                contentScale = ContentScale.Crop,
+                                                                modifier = Modifier.fillMaxSize()
+                                                            )
+                                                        }
+
+                                                        Spacer(modifier = Modifier.width(14.dp))
+
+                                                        Column(modifier = Modifier.weight(1f)) {
+                                                            Text(
+                                                                text = topItem.title,
+                                                                fontSize = 18.sp,
+                                                                fontWeight = FontWeight.Bold,
+                                                                color = Color.White,
+                                                                maxLines = 1,
+                                                                overflow = TextOverflow.Ellipsis
+                                                            )
+                                                            Spacer(modifier = Modifier.height(3.dp))
+                                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                                Box(
+                                                                    modifier = Modifier
+                                                                        .clip(RoundedCornerShape(4.dp))
+                                                                        .background(Color(0xFF333333))
+                                                                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                                                                ) {
+                                                                    Text(
+                                                                        text = "SONG",
+                                                                        fontSize = 9.sp,
+                                                                        fontWeight = FontWeight.Bold,
+                                                                        color = Color(0xFFA19BAE)
+                                                                    )
+                                                                }
+                                                                Spacer(modifier = Modifier.width(6.dp))
+                                                                Text(
+                                                                    text = topItem.artist,
+                                                                    fontSize = 13.sp,
+                                                                    color = Color(0xFFA19BAE),
+                                                                    maxLines = 1,
+                                                                    overflow = TextOverflow.Ellipsis
+                                                                )
+                                                            }
+                                                        }
+
+                                                        Box(
+                                                            modifier = Modifier
+                                                                .size(44.dp)
+                                                                .clip(CircleShape)
+                                                                .background(SpotifyGreen)
+                                                                .clickable {
+                                                                    searchViewModel.addRecentTrack(topItem)
+                                                                    playTrackList(listOf(topItem) + tracks.filter { it.id != topItem.id }, 0, topItem.title)
+                                                                },
+                                                            contentAlignment = Alignment.Center
+                                                        ) {
+                                                            Icon(
+                                                                imageVector = Icons.Default.PlayArrow,
+                                                                contentDescription = "Play",
+                                                                tint = Color.Black,
+                                                                modifier = Modifier.size(26.dp)
+                                                            )
+                                                        }
+                                                    }
+                                                }
+                                            }
+
+                                            is com.sonexa.app.data.model.ArtistDto -> {
+                                                // Spotify-Style Top Result: Artist Card
+                                                Row(
+                                                    modifier = Modifier
+                                                        .fillMaxWidth()
+                                                        .clip(RoundedCornerShape(16.dp))
+                                                        .background(Color(0xFF181818))
+                                                        .border(1.dp, Color(0xFF282828), RoundedCornerShape(16.dp))
+                                                        .clickable { onOpenArtistProfile(topItem.id) }
+                                                        .padding(14.dp),
+                                                    verticalAlignment = Alignment.CenterVertically
+                                                ) {
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .size(68.dp)
+                                                            .clip(CircleShape)
+                                                            .background(SonexaGradientBrush)
+                                                    ) {
+                                                        AsyncImage(
+                                                            model = ImageRequest.Builder(context).data(topItem.imageUrl).crossfade(true).build(),
+                                                            contentDescription = topItem.name,
+                                                            contentScale = ContentScale.Crop,
+                                                            modifier = Modifier.fillMaxSize()
+                                                        )
+                                                    }
+                                                    Spacer(modifier = Modifier.width(14.dp))
+                                                    Column(modifier = Modifier.weight(1f)) {
+                                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                                            Text(
+                                                                text = topItem.name,
+                                                                fontSize = 18.sp,
+                                                                fontWeight = FontWeight.Bold,
+                                                                color = Color.White
+                                                            )
+                                                            if (topItem.verified) {
+                                                                Spacer(modifier = Modifier.width(6.dp))
+                                                                Icon(
+                                                                    Icons.Default.CheckCircle,
+                                                                    contentDescription = "Verified",
+                                                                    tint = Color(0xFF3B82F6),
+                                                                    modifier = Modifier.size(16.dp)
+                                                                )
+                                                            }
+                                                        }
+                                                        Spacer(modifier = Modifier.height(3.dp))
+                                                        Text(
+                                                            text = "Artist • ${topItem.followersCount / 1000000}M Followers",
+                                                            fontSize = 13.sp,
+                                                            color = Color(0xFFA19BAE)
+                                                        )
+                                                    }
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .clip(RoundedCornerShape(8.dp))
+                                                            .background(SpotifyGreen)
+                                                            .clickable {
+                                                                val artistTracks = artistCatalog?.popularTracks ?: tracks
+                                                                if (artistTracks.isNotEmpty()) {
+                                                                    playTrackList(artistTracks, 0, "${topItem.name} Radio")
+                                                                }
+                                                            }
+                                                            .padding(horizontal = 12.dp, vertical = 8.dp)
+                                                    ) {
+                                                        Text(text = "Play Radio", fontSize = 12.sp, color = Color.Black, fontWeight = FontWeight.Bold)
+                                                    }
+                                                }
+                                            }
+
+                                            is com.sonexa.app.data.provider.MovieSoundtrack -> {
+                                                // Spotify-Style Top Result: Soundtrack Card
+                                                Box(
+                                                    modifier = Modifier
+                                                        .fillMaxWidth()
+                                                        .clip(RoundedCornerShape(16.dp))
+                                                        .background(
+                                                            Brush.horizontalGradient(
+                                                                listOf(Color(0xFF2E1065), Color(0xFF1E1B4B))
+                                                            )
+                                                        )
+                                                        .border(1.dp, SonexaPurpleLight.copy(alpha = 0.5f), RoundedCornerShape(16.dp))
+                                                        .padding(14.dp)
+                                                ) {
+                                                    Row(
+                                                        modifier = Modifier.fillMaxWidth(),
+                                                        verticalAlignment = Alignment.CenterVertically
+                                                    ) {
+                                                        Box(
+                                                            modifier = Modifier
+                                                                .size(68.dp)
+                                                                .clip(RoundedCornerShape(10.dp))
+                                                                .background(Color(0xFF1E1B4B))
+                                                        ) {
+                                                            AsyncImage(
+                                                                model = ImageRequest.Builder(context).data(topItem.bannerUrl).crossfade(true).build(),
+                                                                contentDescription = topItem.movieTitle,
+                                                                contentScale = ContentScale.Crop,
+                                                                modifier = Modifier.fillMaxSize()
+                                                            )
+                                                        }
+
+                                                        Spacer(modifier = Modifier.width(14.dp))
+
+                                                        Column(modifier = Modifier.weight(1f)) {
+                                                            Box(
+                                                                modifier = Modifier
+                                                                    .clip(RoundedCornerShape(4.dp))
+                                                                    .background(SpotifyGreen.copy(alpha = 0.2f))
+                                                                    .padding(horizontal = 6.dp, vertical = 2.dp)
+                                                            ) {
+                                                                Text(
+                                                                    text = "MOVIE SOUNDTRACK",
+                                                                    fontSize = 9.sp,
+                                                                    fontWeight = FontWeight.ExtraBold,
+                                                                    color = SpotifyGreen,
+                                                                    letterSpacing = 0.5.sp
+                                                                )
+                                                            }
+                                                            Spacer(modifier = Modifier.height(3.dp))
+                                                            Text(
+                                                                text = topItem.movieTitle,
+                                                                fontSize = 18.sp,
+                                                                fontWeight = FontWeight.ExtraBold,
+                                                                color = Color.White
+                                                            )
+                                                            Text(
+                                                                text = "${topItem.tracks.size} Songs • ${topItem.musicDirector} • ${topItem.releaseYear}",
+                                                                fontSize = 12.sp,
+                                                                color = SonexaTextMuted,
+                                                                maxLines = 1
+                                                            )
+                                                        }
+
+                                                        Box(
+                                                            modifier = Modifier
+                                                                .size(42.dp)
+                                                                .clip(CircleShape)
+                                                                .background(SpotifyGreen)
+                                                                .clickable {
+                                                                    playTrackList(topItem.tracks, 0, "${topItem.movieTitle} Soundtrack")
+                                                                },
+                                                            contentAlignment = Alignment.Center
+                                                        ) {
+                                                            Icon(
+                                                                imageVector = Icons.Default.PlayArrow,
+                                                                contentDescription = "Play Full Soundtrack",
+                                                                tint = Color.Black,
+                                                                modifier = Modifier.size(24.dp)
+                                                            )
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            // 1. Songs Header & Track List (Spotify puts Songs directly below Top Result)
+                            val songsToShow = if (topItem is TrackDto) tracks.filter { it.id != topItem.id } else tracks
+                            if (songsToShow.isNotEmpty()) {
+                                item {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = "Songs",
+                                            fontSize = 20.sp,
                                             fontWeight = FontWeight.Bold,
                                             color = Color.White,
-                                            modifier = Modifier.padding(top = 4.dp, bottom = 6.dp)
+                                            modifier = Modifier.padding(top = 4.dp, bottom = 2.dp)
+                                        )
+                                        Text(
+                                            text = "${tracks.size} tracks",
+                                            fontSize = 12.sp,
+                                            color = SonexaPurpleLight
+                                        )
+                                    }
+                                }
+
+                                itemsIndexed(songsToShow) { index, track ->
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clip(RoundedCornerShape(8.dp))
+                                            .clickable {
+                                                searchViewModel.addRecentTrack(track)
+                                                playTrackList(songsToShow, index, "$query Results")
+                                            }
+                                            .padding(vertical = 6.dp, horizontal = 4.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(52.dp)
+                                                .clip(RoundedCornerShape(6.dp))
+                                                .background(Color(0xFF282828))
+                                        ) {
+                                            AsyncImage(
+                                                model = ImageRequest.Builder(context).data(track.effectiveCoverUrl).crossfade(true).build(),
+                                                contentDescription = track.title,
+                                                contentScale = ContentScale.Crop,
+                                                modifier = Modifier.fillMaxSize()
+                                            )
+                                        }
+
+                                        Spacer(modifier = Modifier.width(12.dp))
+
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(
+                                                text = track.title,
+                                                fontSize = 15.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = Color.White,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                            Spacer(modifier = Modifier.height(2.dp))
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                if (track.versionType != "Original") {
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .clip(RoundedCornerShape(4.dp))
+                                                            .background(SonexaPurplePrimary.copy(alpha = 0.45f))
+                                                            .padding(horizontal = 4.dp, vertical = 1.dp)
+                                                    ) {
+                                                        Text(text = track.versionType, fontSize = 9.sp, color = Color.White, fontWeight = FontWeight.Bold)
+                                                    }
+                                                    Spacer(modifier = Modifier.width(5.dp))
+                                                }
+                                                Text(
+                                                    text = "Song • ${track.artist}",
+                                                    fontSize = 13.sp,
+                                                    color = Color(0xFFA19BAE),
+                                                    maxLines = 1,
+                                                    overflow = TextOverflow.Ellipsis
+                                                )
+                                            }
+                                        }
+
+                                        if (track.availableProviders.isNotEmpty()) {
+                                            Text(
+                                                text = track.availableProviders.first(),
+                                                fontSize = 10.sp,
+                                                color = SonexaPurpleLight,
+                                                modifier = Modifier.padding(end = 6.dp)
+                                            )
+                                        }
+
+                                        IconButton(
+                                            onClick = {
+                                                playbackViewModel?.toggleLike()
+                                                Toast.makeText(context, "Added to Your Library", Toast.LENGTH_SHORT).show()
+                                            },
+                                            modifier = Modifier.size(36.dp)
+                                        ) {
+                                            Icon(
+                                                Icons.Default.AddCircleOutline,
+                                                contentDescription = "Add",
+                                                tint = Color(0xFFA19BAE),
+                                                modifier = Modifier.size(20.dp)
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+
+                            // 2. Artists Section (Below Songs)
+                            if (topArtist != null && topItem !is com.sonexa.app.data.model.ArtistDto) {
+                                item {
+                                    Column(modifier = Modifier.padding(top = 10.dp)) {
+                                        Text(
+                                            text = "Artists",
+                                            fontSize = 20.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color.White,
+                                            modifier = Modifier.padding(bottom = 6.dp)
+                                        )
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .clip(RoundedCornerShape(14.dp))
+                                                .background(SonexaInputBg)
+                                                .border(1.dp, SonexaCardBorder, RoundedCornerShape(14.dp))
+                                                .clickable { onOpenArtistProfile(topArtist.id) }
+                                                .padding(12.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(56.dp)
+                                                    .clip(CircleShape)
+                                                    .background(SonexaGradientBrush)
+                                            ) {
+                                                AsyncImage(
+                                                    model = ImageRequest.Builder(context).data(topArtist.imageUrl).crossfade(true).build(),
+                                                    contentDescription = topArtist.name,
+                                                    contentScale = ContentScale.Crop,
+                                                    modifier = Modifier.fillMaxSize()
+                                                )
+                                            }
+                                            Spacer(modifier = Modifier.width(14.dp))
+                                            Column(modifier = Modifier.weight(1f)) {
+                                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                                    Text(
+                                                        text = topArtist.name,
+                                                        fontSize = 16.sp,
+                                                        fontWeight = FontWeight.Bold,
+                                                        color = Color.White
+                                                    )
+                                                    if (topArtist.verified) {
+                                                        Spacer(modifier = Modifier.width(6.dp))
+                                                        Icon(
+                                                            Icons.Default.CheckCircle,
+                                                            contentDescription = "Verified",
+                                                            tint = Color(0xFF3B82F6),
+                                                            modifier = Modifier.size(15.dp)
+                                                        )
+                                                    }
+                                                }
+                                                Spacer(modifier = Modifier.height(2.dp))
+                                                Text(
+                                                    text = "Artist • ${topArtist.followersCount / 1000000}M Followers",
+                                                    fontSize = 12.sp,
+                                                    color = Color(0xFFA19BAE)
+                                                )
+                                            }
+                                            Box(
+                                                modifier = Modifier
+                                                    .clip(RoundedCornerShape(8.dp))
+                                                    .background(SpotifyGreen)
+                                                    .clickable {
+                                                        val artistTracks = artistCatalog?.popularTracks ?: tracks
+                                                        if (artistTracks.isNotEmpty()) {
+                                                            playTrackList(artistTracks, 0, "${topArtist.name} Radio")
+                                                        }
+                                                    }
+                                                    .padding(horizontal = 10.dp, vertical = 6.dp)
+                                            ) {
+                                                Text(text = "Play Radio", fontSize = 11.sp, color = Color.Black, fontWeight = FontWeight.Bold)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            // 3. Discography / Albums & Singles Shelf (Below Songs & Artists)
+                            val albumItems = (artistCatalog?.albums.orEmpty().map {
+                                com.sonexa.app.data.model.AlbumDto(
+                                    id = it.id,
+                                    title = it.title,
+                                    artist = topArtist?.name ?: "Artist",
+                                    year = it.year,
+                                    coverUrl = it.coverUrl,
+                                    trackCount = it.trackCount
+                                )
+                            } + state.matchingAlbums).distinctBy { it.id }
+
+                            if (albumItems.isNotEmpty() && topItem !is com.sonexa.app.data.provider.MovieSoundtrack) {
+                                item {
+                                    Column(modifier = Modifier.padding(top = 10.dp)) {
+                                        Text(
+                                            text = "Albums & Singles",
+                                            fontSize = 20.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color.White,
+                                            modifier = Modifier.padding(bottom = 6.dp)
                                         )
                                         LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                                            items(artistCatalog.albums) { alb ->
+                                            items(albumItems) { alb ->
                                                 Column(
                                                     modifier = Modifier
                                                         .width(110.dp)
                                                         .clip(RoundedCornerShape(10.dp))
                                                         .background(SonexaInputBg)
                                                         .clickable {
-                                                            if (alb.tracks.isNotEmpty()) {
-                                                                playTrackList(alb.tracks, 0, alb.title)
-                                                            }
+                                                            searchViewModel.onSearchQueryChanged(alb.title)
                                                         }
                                                         .padding(6.dp)
                                                 ) {
@@ -825,116 +1258,83 @@ fun SearchScreen(
                                 }
                             }
 
-                            // 3. Songs Header
-                            item {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Text(
-                                        text = "Top Songs & Hits",
-                                        fontSize = 17.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = Color.White,
-                                        modifier = Modifier.padding(top = 6.dp, bottom = 2.dp)
-                                    )
-                                    Text(
-                                        text = "${tracks.size} tracks found",
-                                        fontSize = 12.sp,
-                                        color = SonexaPurpleLight
-                                    )
+                            // 5. Playlists Section
+                            if (state.matchingPlaylists.isNotEmpty()) {
+                                item {
+                                    Column(modifier = Modifier.padding(top = 8.dp)) {
+                                        Text(
+                                            text = "Playlists",
+                                            fontSize = 17.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color.White,
+                                            modifier = Modifier.padding(bottom = 6.dp)
+                                        )
+                                        LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                            items(state.matchingPlaylists) { pl ->
+                                                Column(
+                                                    modifier = Modifier
+                                                        .width(130.dp)
+                                                        .clip(RoundedCornerShape(12.dp))
+                                                        .background(Color(0xFF1E1E2E))
+                                                        .clickable { onOpenPlaylistDetail(pl.id) }
+                                                        .padding(8.dp)
+                                                ) {
+                                                    AsyncImage(
+                                                        model = ImageRequest.Builder(context).data(pl.coverUrl).crossfade(true).build(),
+                                                        contentDescription = pl.title,
+                                                        modifier = Modifier
+                                                            .size(114.dp)
+                                                            .clip(RoundedCornerShape(8.dp)),
+                                                        contentScale = ContentScale.Crop
+                                                    )
+                                                    Spacer(modifier = Modifier.height(6.dp))
+                                                    Text(text = pl.title, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color.White, maxLines = 1)
+                                                    Text(text = pl.subtitle, fontSize = 11.sp, color = Color(0xFFA19BAE), maxLines = 1)
+                                                }
+                                            }
+                                        }
+                                    }
                                 }
                             }
 
-                            // 4. Track List with Version Tags & Provider Badges
-                            itemsIndexed(tracks) { index, track ->
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clip(RoundedCornerShape(8.dp))
-                                        .clickable {
-                                            searchViewModel.addRecentTrack(track)
-                                            playTrackList(tracks, index, "$query Results")
-                                        }
-                                        .padding(vertical = 6.dp, horizontal = 4.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(52.dp)
-                                            .clip(RoundedCornerShape(6.dp))
-                                            .background(Color(0xFF282828))
-                                    ) {
-                                        AsyncImage(
-                                            model = ImageRequest.Builder(context).data(track.effectiveCoverUrl).crossfade(true).build(),
-                                            contentDescription = track.title,
-                                            contentScale = ContentScale.Crop,
-                                            modifier = Modifier.fillMaxSize()
-                                        )
-                                    }
-
-                                    Spacer(modifier = Modifier.width(12.dp))
-
-                                    Column(modifier = Modifier.weight(1f)) {
+                            // 6. Related Searches Chips
+                            val relatedList = state.response.relatedSearches
+                            if (relatedList.isNotEmpty()) {
+                                item {
+                                    Column(modifier = Modifier.padding(top = 10.dp, bottom = 4.dp)) {
                                         Text(
-                                            text = track.title,
+                                            text = "Related searches",
                                             fontSize = 15.sp,
                                             fontWeight = FontWeight.Bold,
                                             color = Color.White,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis
+                                            modifier = Modifier.padding(bottom = 8.dp)
                                         )
-                                        Spacer(modifier = Modifier.height(2.dp))
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                            if (track.versionType != "Original") {
+                                        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                            items(relatedList) { rQuery ->
                                                 Box(
                                                     modifier = Modifier
-                                                        .clip(RoundedCornerShape(4.dp))
-                                                        .background(SonexaPurplePrimary.copy(alpha = 0.45f))
-                                                        .padding(horizontal = 4.dp, vertical = 1.dp)
+                                                        .clip(RoundedCornerShape(18.dp))
+                                                        .background(Color(0xFF242436))
+                                                        .border(1.dp, Color(0xFF3B3B52), RoundedCornerShape(18.dp))
+                                                        .clickable {
+                                                            query = rQuery
+                                                            searchViewModel.onSearchQueryChanged(rQuery)
+                                                        }
+                                                        .padding(horizontal = 14.dp, vertical = 8.dp)
                                                 ) {
-                                                    Text(text = track.versionType, fontSize = 9.sp, color = Color.White, fontWeight = FontWeight.Bold)
+                                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                                        Icon(Icons.Default.Search, contentDescription = null, tint = SpotifyGreen, modifier = Modifier.size(14.dp))
+                                                        Spacer(modifier = Modifier.width(6.dp))
+                                                        Text(text = rQuery, fontSize = 12.sp, color = Color.White, fontWeight = FontWeight.Medium)
+                                                    }
                                                 }
-                                                Spacer(modifier = Modifier.width(5.dp))
                                             }
-                                            Text(
-                                                text = "Song • ${track.artist}",
-                                                fontSize = 13.sp,
-                                                color = Color(0xFFA19BAE),
-                                                maxLines = 1,
-                                                overflow = TextOverflow.Ellipsis
-                                            )
                                         }
-                                    }
-
-                                    if (track.availableProviders.isNotEmpty()) {
-                                        Text(
-                                            text = track.availableProviders.first(),
-                                            fontSize = 10.sp,
-                                            color = SonexaPurpleLight,
-                                            modifier = Modifier.padding(end = 6.dp)
-                                        )
-                                    }
-
-                                    IconButton(
-                                        onClick = {
-                                            playbackViewModel?.toggleLike()
-                                            Toast.makeText(context, "Added to Your Library", Toast.LENGTH_SHORT).show()
-                                        },
-                                        modifier = Modifier.size(36.dp)
-                                    ) {
-                                        Icon(
-                                            Icons.Default.AddCircleOutline,
-                                            contentDescription = "Add",
-                                            tint = Color(0xFFA19BAE),
-                                            modifier = Modifier.size(20.dp)
-                                        )
                                     }
                                 }
                             }
 
-                            // 5. Infinite Pagination Load More Row
+                            // 7. Infinite Pagination Load More Row
                             if (state.hasMoreTracks || tracks.size >= 15) {
                                 item {
                                     Box(

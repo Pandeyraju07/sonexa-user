@@ -36,6 +36,7 @@ import coil.request.ImageRequest
 import com.sonexa.app.data.model.LyricsResponse
 import com.sonexa.app.data.model.TrackDto
 import com.sonexa.app.data.repository.AiRepository
+import com.sonexa.app.ui.components.YouTubePlayerView
 import com.sonexa.app.ui.theme.SonexaCardDark
 import com.sonexa.app.ui.theme.SonexaTextMuted
 import com.sonexa.app.ui.theme.SonexaTextWhite
@@ -108,7 +109,8 @@ internal fun FullPlayerTopBar(
 internal fun FullPlayerArtworkPager(
     queue: List<TrackDto>,
     pagerState: PagerState,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    youtubeProvider: com.sonexa.app.audio.playback.YouTubePlaybackProvider? = null
 ) {
     val context = LocalContext.current
     Box(
@@ -125,6 +127,7 @@ internal fun FullPlayerArtworkPager(
         ) { page ->
             val item = queue.getOrNull(page)
             val cover = item?.effectiveCoverUrl.orEmpty()
+            val isYouTube = item?.isYouTube == true || (item?.effectiveVideoId?.isNotBlank() == true && (item.audioUrl.isBlank()))
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Box(
                     modifier = Modifier
@@ -139,7 +142,12 @@ internal fun FullPlayerArtworkPager(
                         .clip(RoundedCornerShape(24.dp))
                         .background(Color(0xFF1F182E))
                 ) {
-                    if (cover.isNotBlank()) {
+                    if (isYouTube && page == pagerState.currentPage && youtubeProvider != null) {
+                        YouTubePlayerView(
+                            youtubeProvider = youtubeProvider,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    } else if (cover.isNotBlank()) {
                         AsyncImage(
                             model = ImageRequest.Builder(context).data(cover).crossfade(true).build(),
                             contentDescription = item?.title,

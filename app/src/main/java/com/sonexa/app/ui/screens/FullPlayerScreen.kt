@@ -137,7 +137,8 @@ fun FullPlayerScreen(
             FullPlayerArtworkPager(
                 queue = queue,
                 pagerState = pagerState,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
+                youtubeProvider = playbackViewModel.playbackManager.youtubeProvider
             )
             FullPlayerTrackMeta(
                 title = trackTitle,

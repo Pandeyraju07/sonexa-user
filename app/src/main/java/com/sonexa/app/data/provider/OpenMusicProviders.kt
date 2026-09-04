@@ -16,10 +16,10 @@ class JamendoProvider : MusicProvider {
     override val isEnabled: Boolean
         get() = isConfigured
     private val clientId: String
-        get() = com.sonexa.app.BuildConfig.JAMENDO_CLIENT_ID.trim()
+        get() = com.sonexa.app.BuildConfig.JAMENDO_CLIENT_ID.trim().ifBlank { "563f1052" }
 
     override val isConfigured: Boolean
-        get() = clientId.isNotBlank()
+        get() = true
 
     // Licensing and deployment compliance configuration
     var streamingAllowed: Boolean = true

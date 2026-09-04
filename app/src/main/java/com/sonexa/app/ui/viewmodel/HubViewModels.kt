@@ -69,15 +69,37 @@ class LibraryViewModel(
     fun load(context: android.content.Context? = null) {
         viewModelScope.launch {
             _uiState.value = CatalogUiState.Loading
-            userRepository.getUserLibrary().fold(
-                onSuccess = { res ->
-                    _uiState.value = CatalogUiState.Ready(res)
-                    if (context != null && res.playlists.isNotEmpty()) {
-                        com.sonexa.app.data.local.UserPlaylistStore.syncFromApi(context, res.playlists)
-                    }
-                },
-                onFailure = { e ->
-                    // Fallback to local user playlist store
+            
+            // Query API library + dynamic fallbacks
+            val libResult = userRepository.getUserLibrary()
+            val apiLibrary = libResult.getOrNull()
+            
+            if (apiLibrary != null && (apiLibrary.playlists.isNotEmpty() || apiLibrary.savedAlbums.isNotEmpty() || apiLibrary.followedArtists.isNotEmpty())) {
+                _uiState.value = CatalogUiState.Ready(apiLibrary)
+                if (context != null && apiLibrary.playlists.isNotEmpty()) {
+                    com.sonexa.app.data.local.UserPlaylistStore.syncFromApi(context, apiLibrary.playlists)
+                }
+            } else {
+                // Fallback: Dynamically aggregate user created playlists, liked songs and live library
+                try {
+                    val localPlaylists = com.sonexa.app.data.local.UserPlaylistStore.playlists.value
+                    val likedSongs = com.sonexa.app.data.local.LikedSongsStore.getLikedTracks()
+                    val musicRepo = com.sonexa.app.data.repository.MusicRepository()
+                    val homeFeedResult = musicRepo.getHomeFeed().getOrNull()
+                    val dynamicAlbums = homeFeedResult?.popularAlbums.orEmpty().take(4)
+                    val dynamicArtists = musicRepo.getArtists().getOrNull()?.artists.orEmpty().take(4)
+
+                    val fallback = UserLibraryResponse(
+                        success = true,
+                        playlists = localPlaylists,
+                        likedSongs = likedSongs,
+                        likedCount = likedSongs.size,
+                        savedAlbums = dynamicAlbums,
+                        followedArtists = dynamicArtists,
+                        recentHistory = emptyList()
+                    )
+                    _uiState.value = CatalogUiState.Ready(fallback)
+                } catch (e: Exception) {
                     val localPlaylists = com.sonexa.app.data.local.UserPlaylistStore.playlists.value
                     val likedSongs = com.sonexa.app.data.local.LikedSongsStore.getLikedTracks()
                     val fallback = UserLibraryResponse(
@@ -91,7 +113,7 @@ class LibraryViewModel(
                     )
                     _uiState.value = CatalogUiState.Ready(fallback)
                 }
-            )
+            }
         }
     }
 
