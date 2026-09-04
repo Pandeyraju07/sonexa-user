@@ -38,6 +38,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import com.sonexa.app.data.model.AudioQuality
 import com.sonexa.app.data.model.LyricsResponse
 import com.sonexa.app.data.model.TrackDto
 import com.sonexa.app.data.repository.AiRepository
@@ -222,9 +223,11 @@ internal fun FullPlayerTrackMeta(
 @Composable
 internal fun FullPlayerProgressSection(
     durationMs: Long,
-    playbackViewModel: PlaybackViewModel
+    playbackViewModel: PlaybackViewModel,
+    onShowQuality: () -> Unit = {}
 ) {
     val positionMs by playbackViewModel.elapsedMs.collectAsState()
+    val playbackState by playbackViewModel.uiState.collectAsState()
     val safeDuration = durationMs.coerceAtLeast(0)
     val safePosition = positionMs.coerceAtLeast(0)
     val progress = if (safeDuration > 0) (safePosition.toFloat() / safeDuration).coerceIn(0f, 1f) else 0f
@@ -268,15 +271,27 @@ internal fun FullPlayerProgressSection(
                 modifier = Modifier
                     .clip(RoundedCornerShape(6.dp))
                     .background(Color.White.copy(alpha = 0.08f))
-                    .padding(horizontal = 6.dp, vertical = 2.dp)
+                    .clickable { onShowQuality() }
+                    .padding(horizontal = 8.dp, vertical = 3.dp)
             ) {
-                Text(
-                    text = "LOSSLESS • 24-BIT",
-                    fontSize = 9.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = PlayerGreen,
-                    letterSpacing = 0.5.sp
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(5.dp)
+                            .clip(CircleShape)
+                            .background(PlayerGreen)
+                    )
+                    Text(
+                        text = playbackState.audioQuality.badgeLabel,
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = PlayerGreen,
+                        letterSpacing = 0.5.sp
+                    )
+                }
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
@@ -854,39 +869,68 @@ internal fun FullPlayerOverlays(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val queue = playbackState.queue.ifEmpty { listOfNotNull(track) }
-    var selectedQuality by remember { mutableStateOf("Hi-Fi Lossless (320kbps Master)") }
 
     if (showQualityDialog) {
         AlertDialog(
             onDismissRequest = onDismissQuality,
             containerColor = SonexaCardDark,
-            title = { Text("Audio Stream Quality", color = SonexaTextWhite, fontWeight = FontWeight.Bold) },
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.HighQuality,
+                        contentDescription = null,
+                        tint = PlayerGreen,
+                        modifier = Modifier.size(22.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Audio Stream Quality", color = SonexaTextWhite, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                }
+            },
             text = {
-                Column {
-                    listOf(
-                        "Normal" to "Normal (96 kbps)",
-                        "High" to "High (160 kbps)",
-                        "Very High" to "Very High (320 kbps)",
-                        "Lossless" to "Hi-Fi Lossless (320kbps Master)"
-                    ).forEach { (apiValue, label) ->
-                        Text(
-                            text = label,
-                            color = if (selectedQuality == label) PlayerGreen else SonexaTextWhite,
-                            fontWeight = if (selectedQuality == label) FontWeight.Bold else FontWeight.Normal,
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    AudioQuality.values().forEach { quality ->
+                        val isSelected = playbackState.audioQuality == quality
+                        Row(
                             modifier = Modifier
                                 .fillMaxWidth()
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(if (isSelected) PlayerGreen.copy(alpha = 0.14f) else Color.Transparent)
                                 .clickable {
-                                    selectedQuality = label
-                                    settingsViewModel.updateString("audioQuality", apiValue)
+                                    playbackViewModel.setAudioQuality(quality)
+                                    settingsViewModel.updateString("audioQuality", quality.key)
                                     onDismissQuality()
                                 }
-                                .padding(vertical = 10.dp)
-                        )
+                                .padding(horizontal = 12.dp, vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = quality.displayName,
+                                    color = if (isSelected) PlayerGreen else SonexaTextWhite,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                    fontSize = 14.sp
+                                )
+                                Text(
+                                    text = quality.description,
+                                    color = SonexaTextMuted,
+                                    fontSize = 11.sp
+                                )
+                            }
+                            if (isSelected) {
+                                Icon(
+                                    imageVector = Icons.Default.Check,
+                                    contentDescription = "Selected",
+                                    tint = PlayerGreen,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        }
                     }
                 }
             },
             confirmButton = {
-                TextButton(onClick = onDismissQuality) { Text("Close", color = PlayerGreen) }
+                TextButton(onClick = onDismissQuality) { Text("Done", color = PlayerGreen, fontWeight = FontWeight.Bold) }
             }
         )
     }
@@ -1109,7 +1153,10 @@ internal fun FullPlayerOverlays(
                     ) {
                         Icon(Icons.Default.GraphicEq, contentDescription = null, tint = PlayerGreen)
                         Spacer(Modifier.width(12.dp))
-                        Text("Audio Stream Quality (320kbps)", color = Color.White, fontSize = 15.sp)
+                        Column {
+                            Text("Audio Stream Quality", color = Color.White, fontSize = 15.sp)
+                            Text(playbackState.audioQuality.displayName, color = SonexaTextMuted, fontSize = 12.sp)
+                        }
                     }
                     Row(
                         modifier = Modifier

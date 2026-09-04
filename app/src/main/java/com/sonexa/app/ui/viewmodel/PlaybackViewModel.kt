@@ -8,6 +8,8 @@ import com.sonexa.app.audio.playback.PlaybackManager
 import com.sonexa.app.data.model.TrackDto
 import com.sonexa.app.data.repository.MusicRepository
 import com.sonexa.app.data.repository.UserRepository
+import com.sonexa.app.data.model.AudioQuality
+import com.sonexa.app.data.local.SessionManager
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -34,7 +36,8 @@ data class PlaybackUiState(
     val equalizer: SonexaEqualizerEngine.Snapshot = SonexaEqualizerEngine.Snapshot(),
     val errorMessage: String? = null,
     val activeProviderType: String = "native_audio",
-    val isYouTubeMode: Boolean = false
+    val isYouTubeMode: Boolean = false,
+    val audioQuality: AudioQuality = AudioQuality.LOSSLESS
 )
 
 enum class RepeatMode { OFF, ALL, ONE }
@@ -43,6 +46,7 @@ class PlaybackViewModel : AndroidViewModel {
 
     private val musicRepository = MusicRepository()
     private val userRepository = UserRepository()
+    private val sessionManager: SessionManager
     val playbackManager: PlaybackManager
     val equalizerEngine: SonexaEqualizerEngine
         get() = playbackManager.equalizerEngine
@@ -56,6 +60,9 @@ class PlaybackViewModel : AndroidViewModel {
     private var originalQueue: List<TrackDto> = emptyList()
 
     constructor(application: Application) : super(application) {
+        sessionManager = SessionManager.getInstance(application)
+        val initialQuality = AudioQuality.fromKey(sessionManager.audioQuality)
+        _uiState.update { it.copy(audioQuality = initialQuality) }
         playbackManager = (application as com.sonexa.app.SonexaApp).playbackManager
 
         playbackManager.onTrackEnded = {
@@ -271,6 +278,29 @@ class PlaybackViewModel : AndroidViewModel {
         playbackManager.setPlaybackSpeed(clamped)
     }
 
+    fun setAudioQuality(quality: AudioQuality) {
+        sessionManager.audioQuality = quality.key
+        _uiState.update { it.copy(audioQuality = quality) }
+        viewModelScope.launch {
+            userRepository.updateSettings(mapOf("audioQuality" to quality.key))
+        }
+        val currentTrack = _uiState.value.track
+        if (currentTrack != null && !_uiState.value.isYouTubeMode && currentTrack.audioUrl.isNotBlank()) {
+            val adaptedUrl = com.sonexa.app.data.provider.FullAudioStreamResolver.applyAudioQuality(currentTrack.audioUrl, quality)
+            if (adaptedUrl != currentTrack.audioUrl) {
+                val currentPos = playbackManager.engineState.value.positionMs.coerceAtLeast(0L)
+                val updatedTrack = currentTrack.copy(audioUrl = adaptedUrl)
+                _uiState.update { state ->
+                    state.copy(
+                        track = updatedTrack,
+                        queue = state.queue.map { if (it.id == updatedTrack.id) updatedTrack else it }
+                    )
+                }
+                playbackManager.play(updatedTrack, currentPos)
+            }
+        }
+    }
+
     fun seekToMs(positionMs: Long) {
         val dur = _uiState.value.durationMs
         val target = if (dur > 0) positionMs.coerceIn(0L, dur) else positionMs.coerceAtLeast(0L)
@@ -466,8 +496,11 @@ class PlaybackViewModel : AndroidViewModel {
         }
 
         viewModelScope.launch {
+            val currentQuality = _uiState.value.audioQuality
             val cachedStream = com.sonexa.app.data.provider.FullAudioStreamResolver.getCachedStream(track)
-            val isInitialPreview = com.sonexa.app.data.provider.FullAudioStreamResolver.isAudioPreview(track.audioUrl, track.provider)
+                ?.let { com.sonexa.app.data.provider.FullAudioStreamResolver.applyAudioQuality(it, currentQuality) }
+            val rawAudio = com.sonexa.app.data.provider.FullAudioStreamResolver.applyAudioQuality(track.audioUrl, currentQuality)
+            val isInitialPreview = com.sonexa.app.data.provider.FullAudioStreamResolver.isAudioPreview(rawAudio, track.provider)
 
             if (!cachedStream.isNullOrBlank()) {
                 val fullTrack = track.copy(audioUrl = cachedStream, isPlayable = true)
@@ -475,26 +508,28 @@ class PlaybackViewModel : AndroidViewModel {
                     if (current.track?.id == track.id) current.copy(track = fullTrack) else current
                 }
                 playbackManager.play(fullTrack, 0L)
-            } else if (!isInitialPreview && track.audioUrl.isNotBlank()) {
-                playbackManager.play(track, 0L)
+            } else if (!isInitialPreview && rawAudio.isNotBlank()) {
+                val fullTrack = track.copy(audioUrl = rawAudio, isPlayable = true)
+                playbackManager.play(fullTrack, 0L)
             } else if (track.isYouTube && track.effectiveVideoId.isNotBlank()) {
                 playbackManager.play(track, 0L)
             } else {
                 // If track has a preview URL, begin playing immediately so user hears sound instantly
-                if (track.audioUrl.isNotBlank()) {
-                    playbackManager.play(track, 0L)
+                if (rawAudio.isNotBlank()) {
+                    playbackManager.play(track.copy(audioUrl = rawAudio), 0L)
                 }
 
                 // Simultaneously resolve full-length stream
-                val fullStream = com.sonexa.app.data.provider.FullAudioStreamResolver.resolveFullStreamUrl(track)
-                if (fullStream.isNotBlank() && fullStream != track.audioUrl) {
+                val resolvedStream = com.sonexa.app.data.provider.FullAudioStreamResolver.resolveFullStreamUrl(track)
+                val fullStream = com.sonexa.app.data.provider.FullAudioStreamResolver.applyAudioQuality(resolvedStream, currentQuality)
+                if (fullStream.isNotBlank() && fullStream != rawAudio) {
                     val currentPos = playbackManager.engineState.value.positionMs.coerceAtLeast(0L)
                     val fullTrack = track.copy(audioUrl = fullStream, isPlayable = true)
                     _uiState.update { current ->
                         if (current.track?.id == track.id) current.copy(track = fullTrack) else current
                     }
                     playbackManager.play(fullTrack, currentPos)
-                } else if (track.audioUrl.isBlank() && fullStream.isNotBlank()) {
+                } else if (rawAudio.isBlank() && fullStream.isNotBlank()) {
                     val fullTrack = track.copy(audioUrl = fullStream, isPlayable = true)
                     _uiState.update { current ->
                         if (current.track?.id == track.id) current.copy(track = fullTrack) else current

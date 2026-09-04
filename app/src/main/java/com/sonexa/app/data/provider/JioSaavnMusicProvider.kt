@@ -151,7 +151,8 @@ class JioSaavnMusicProvider : MusicProvider {
         if (streamUrl.isBlank() && mediaPreviewUrl.isNotBlank()) {
             streamUrl = mediaPreviewUrl
                 .replace("preview.saavncdn.com", "aac.saavncdn.com")
-                .replace("_96_p.mp4", "_160.mp4")
+                .replace("_96_p.mp4", "_320.mp4")
+                .replace("_96.mp4", "_320.mp4")
                 .replace("http:", "https:")
         }
 
@@ -193,11 +194,12 @@ class JioSaavnMusicProvider : MusicProvider {
             if (raw.isBlank()) return ""
             var u = raw.replace("http:", "https:")
             when {
-                u.contains("_96.mp4") -> u.replace("_96.mp4", "_160.mp4")
-                u.contains("_96.m4a") -> u.replace("_96.m4a", "_160.m4a")
-                u.contains("_48.mp4") -> u.replace("_48.mp4", "_160.mp4")
-                u.contains("_128.mp4") -> u.replace("_128.mp4", "_160.mp4")
-                u.endsWith(".mp4") && !u.contains(Regex("_\\d+\\.mp4")) -> u.replace(".mp4", "_160.mp4")
+                u.contains("_96.mp4") -> u.replace("_96.mp4", "_320.mp4")
+                u.contains("_96.m4a") -> u.replace("_96.m4a", "_320.m4a")
+                u.contains("_48.mp4") -> u.replace("_48.mp4", "_320.mp4")
+                u.contains("_128.mp4") -> u.replace("_128.mp4", "_320.mp4")
+                u.contains("_160.mp4") -> u.replace("_160.mp4", "_320.mp4")
+                u.endsWith(".mp4") && !u.contains(Regex("_\\d+\\.mp4")) -> u.replace(".mp4", "_320.mp4")
                 else -> u
             }
         } catch (_: Exception) {

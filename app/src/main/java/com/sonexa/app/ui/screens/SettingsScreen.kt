@@ -74,6 +74,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.sonexa.app.data.local.AudioCacheManager
+import com.sonexa.app.data.local.SessionManager
+import com.sonexa.app.data.model.AudioQuality
 import com.sonexa.app.ui.components.SonexaGradientButton
 import com.sonexa.app.ui.theme.SonexaBgDark
 import com.sonexa.app.ui.theme.SonexaCardDark
@@ -749,21 +751,25 @@ private fun AudioDialog(
     viewModel: SettingsViewModel,
     onDismiss: () -> Unit
 ) {
-    val qualities = listOf("Normal", "High", "Very High", "Lossless")
-    val currentQuality = model.settings["audioQuality"]?.toString() ?: "High"
+    val context = LocalContext.current
+    val currentQuality = model.settings["audioQuality"]?.toString() ?: "Lossless"
     val crossfade = (model.settings["crossfade"] as? Boolean) ?: true
     val normalizeVolume = (model.settings["normalizeVolume"] as? Boolean) ?: true
     val gaplessPlayback = (model.settings["gaplessPlayback"] as? Boolean) ?: true
     val explicitContent = (model.settings["explicitContent"] as? Boolean) ?: true
 
     SettingsSheetScaffold(title = "Audio Quality & Playback", onDismiss = onDismiss) {
-        Text("Streaming quality", color = SonexaTextMuted, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+        Text("Streaming Quality (Real-Time Dynamic)", color = SonexaTextMuted, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
         Spacer(modifier = Modifier.height(4.dp))
-        qualities.forEach { option ->
+        AudioQuality.values().forEach { quality ->
             ChoiceRow(
-                label = option,
-                selected = currentQuality.equals(option, ignoreCase = true),
-                onClick = { viewModel.updateString("audioQuality", option) }
+                label = "${quality.displayName} (${quality.description})",
+                selected = currentQuality.equals(quality.key, ignoreCase = true) ||
+                        currentQuality.equals(quality.name, ignoreCase = true),
+                onClick = {
+                    viewModel.updateString("audioQuality", quality.key)
+                    SessionManager.getInstance(context).audioQuality = quality.key
+                }
             )
         }
         HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = SonexaInputBorder)
@@ -796,18 +802,29 @@ private fun DownloadsDialog(
     viewModel: SettingsViewModel,
     onDismiss: () -> Unit
 ) {
-    val qualities = listOf("Normal", "High", "Very High")
-    val currentQuality = model.settings["downloadQuality"]?.toString() ?: "High"
+    val qualities = listOf(
+        "Normal (96 kbps)",
+        "High (160 kbps)",
+        "Very High (320 kbps)",
+        "Lossless (320 kbps Master)"
+    )
+    val currentQuality = model.settings["downloadQuality"]?.toString() ?: "Very High"
     val wifiOnly = (model.settings["downloadOverWifiOnly"] as? Boolean) ?: true
 
     SettingsSheetScaffold(title = "Downloads & Storage", onDismiss = onDismiss) {
-        Text("Download quality", color = SonexaTextMuted, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+        Text("Download Quality", color = SonexaTextMuted, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
         Spacer(modifier = Modifier.height(4.dp))
         qualities.forEach { option ->
+            val key = when {
+                option.contains("Lossless", true) -> "Lossless"
+                option.contains("Very High", true) -> "Very High"
+                option.contains("High", true) -> "High"
+                else -> "Normal"
+            }
             ChoiceRow(
                 label = option,
-                selected = currentQuality.equals(option, ignoreCase = true),
-                onClick = { viewModel.updateString("downloadQuality", option) }
+                selected = currentQuality.equals(key, ignoreCase = true) || currentQuality.equals(option, ignoreCase = true),
+                onClick = { viewModel.updateString("downloadQuality", key) }
             )
         }
         HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = SonexaInputBorder)

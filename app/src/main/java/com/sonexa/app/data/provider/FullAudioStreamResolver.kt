@@ -16,6 +16,8 @@ import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 
+import com.sonexa.app.data.model.AudioQuality
+
 /**
  * Universal High-Speed Full-Length Audio Stream Resolver for the Zynera Platform.
  * Features:
@@ -24,6 +26,7 @@ import java.util.concurrent.TimeUnit
  * - Multi-provider racing (Audius, Jamendo, Sonexa Backend, Open Mirrors).
  * - Fast background queue prefetching.
  * - Guarantees full-length song playback without 30-second preview cutoffs.
+ * - Real-time bitrate adaptation (Lossless 320kbps, 160kbps, 96kbps, 48kbps).
  */
 object FullAudioStreamResolver {
 
@@ -51,6 +54,19 @@ object FullAudioStreamResolver {
         "https://pipedapi.adminforge.de",
         "https://api.piped.privacydev.net"
     )
+
+    fun applyAudioQuality(url: String, quality: AudioQuality): String {
+        if (url.isBlank()) return url
+        if (url.contains("saavncdn.com")) {
+            var u = url
+            val targetSuffix = quality.saavnSuffix
+            val targetM4aSuffix = targetSuffix.replace(".mp4", ".m4a")
+            u = u.replace(Regex("_(320|160|96|48|128)\\.mp4"), targetSuffix)
+            u = u.replace(Regex("_(320|160|96|48|128)\\.m4a"), targetM4aSuffix)
+            return u
+        }
+        return url
+    }
 
     fun getCacheKey(track: TrackDto): String {
         val cleanT = cleanTitle(track.title).lowercase(Locale.ROOT)

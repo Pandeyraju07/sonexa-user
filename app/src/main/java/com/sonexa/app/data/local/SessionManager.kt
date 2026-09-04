@@ -45,6 +45,10 @@ class SessionManager(context: Context) {
         get() = prefs.getString(KEY_PENDING_OTP_EMAIL, null)
         set(value) = prefs.edit().putString(KEY_PENDING_OTP_EMAIL, value).apply()
 
+    var audioQuality: String
+        get() = prefs.getString(KEY_AUDIO_QUALITY, "Lossless") ?: "Lossless"
+        set(value) = prefs.edit().putString(KEY_AUDIO_QUALITY, value).apply()
+
     var preferredLanguages: List<String>
         get() = prefs.getString(KEY_PREFERRED_LANGUAGES, null)
             ?.split(",")
@@ -157,6 +161,7 @@ class SessionManager(context: Context) {
         private const val KEY_USER_EMAIL = "user_email"
         private const val KEY_USER_NAME = "user_name"
         private const val KEY_PENDING_OTP_EMAIL = "pending_otp_email"
+        private const val KEY_AUDIO_QUALITY = "audio_quality"
         private const val KEY_PREFERRED_LANGUAGES = "preferred_languages"
         private const val KEY_SAVED_ACCOUNTS = "saved_accounts"
 

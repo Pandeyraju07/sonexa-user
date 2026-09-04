@@ -152,7 +152,8 @@ fun FullPlayerScreen(
             Spacer(modifier = Modifier.height(2.dp))
             FullPlayerProgressSection(
                 durationMs = playbackState.durationMs.coerceAtLeast(0),
-                playbackViewModel = playbackViewModel
+                playbackViewModel = playbackViewModel,
+                onShowQuality = { showQualityDialog = true }
             )
             Spacer(modifier = Modifier.height(2.dp))
             FullPlayerTransportControls(
