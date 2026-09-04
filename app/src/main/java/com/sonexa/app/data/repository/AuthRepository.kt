@@ -245,7 +245,7 @@ class AuthRepository(
     private fun friendlyNetworkError(e: Exception): String {
         return when (e) {
             is ConnectException, is UnknownHostException ->
-                "Cannot reach Sonexa server. Check that the backend is running and api.base.url is correct."
+                "Cannot reach Zynera server. Check that the backend is running and network connection is active."
             is SocketTimeoutException ->
                 "Server took too long to respond. Please try again."
             is IOException ->

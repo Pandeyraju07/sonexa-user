@@ -68,7 +68,7 @@ android {
             val candidate = (localProps.getProperty("api.base.url.release")
                 ?: localProps.getProperty("api.base.url")
                 ?: "https://api.zynera.app/api/v1/").trim()
-            val releaseUrl = if (candidate.startsWith("https://")) {
+            val releaseUrl = if (candidate.startsWith("https://") || candidate.startsWith("http://")) {
                 candidate
             } else {
                 "https://api.zynera.app/api/v1/"
