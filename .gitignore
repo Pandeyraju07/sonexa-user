@@ -20,3 +20,6 @@ Thumbs.db
 google-services.json
 *.keystore
 !debug.keystore
+node_modules/
+server/public/uploads/
+

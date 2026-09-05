@@ -1,0 +1,9 @@
+.git
+.gradle
+.idea
+.vscode
+app/build
+build
+node_modules
+*.log
+local.properties
