@@ -17,7 +17,7 @@ class PodcastProvider {
         .readTimeout(8, TimeUnit.SECONDS)
         .build()
 
-    private val gson = Gson()
+    private val gson = com.sonexa.app.data.api.RetrofitClient.gson
 
     fun getLanguages(): List<PodcastLanguageDto> = listOf(
         PodcastLanguageDto("all", "All", "All", "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=400", 9500),

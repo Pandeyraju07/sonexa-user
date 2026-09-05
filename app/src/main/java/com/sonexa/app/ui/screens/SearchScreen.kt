@@ -100,14 +100,13 @@ fun SearchScreen(
     }
 
     val sessionManager = remember { com.sonexa.app.data.local.SessionManager.getInstance(context) }
-    val userDisplayName = remember(sessionManager.userName, sessionManager.userEmail) {
-        sessionManager.userName?.takeIf { it.isNotBlank() }
-            ?: sessionManager.userEmail?.substringBefore("@")?.replaceFirstChar { it.uppercase() }
-            ?: "Listener"
-    }
-    val avatarInitial = remember(userDisplayName) {
-        userDisplayName.firstOrNull()?.uppercase() ?: "Y"
-    }
+    val currentUserName by sessionManager.userNameFlow.collectAsState()
+    val currentUserAvatar by sessionManager.userAvatarFlow.collectAsState()
+    val userDisplayName = currentUserName.takeIf { it.isNotBlank() }
+        ?: sessionManager.userName?.takeIf { it.isNotBlank() }
+        ?: sessionManager.userEmail?.substringBefore("@")?.replaceFirstChar { it.uppercase() }
+        ?: "Listener"
+    val avatarInitial = userDisplayName.firstOrNull()?.uppercase() ?: "Y"
 
     Box(
         modifier = modifier
@@ -138,12 +137,26 @@ fun SearchScreen(
                                 .clickable { onOpenProfile() },
                             contentAlignment = Alignment.Center
                         ) {
-                            Text(
-                                text = avatarInitial,
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color.White
-                            )
+                            if (currentUserAvatar.isNotBlank()) {
+                                AsyncImage(
+                                    model = ImageRequest.Builder(LocalContext.current)
+                                        .data(currentUserAvatar)
+                                        .crossfade(true)
+                                        .build(),
+                                    contentDescription = "Profile",
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .clip(CircleShape)
+                                )
+                            } else {
+                                Text(
+                                    text = avatarInitial,
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.White
+                                )
+                            }
                         }
                         Spacer(modifier = Modifier.width(14.dp))
                         Text(

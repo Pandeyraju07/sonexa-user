@@ -68,11 +68,14 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import com.sonexa.app.data.local.AudioCacheManager
 import com.sonexa.app.data.local.SessionManager
 import com.sonexa.app.data.model.AudioQuality
@@ -109,6 +112,9 @@ fun SettingsScreen(
 ) {
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsState()
+    val sessionManager = remember { SessionManager.getInstance(context) }
+    val currentUserName by sessionManager.userNameFlow.collectAsState()
+    val currentUserAvatar by sessionManager.userAvatarFlow.collectAsState()
     var activePanel by remember { mutableStateOf(SettingsPanel.NONE) }
     var showLogoutConfirm by remember { mutableStateOf(false) }
 
@@ -288,6 +294,9 @@ fun SettingsScreen(
                 ) {
                     // ── Premium Profile Card ─────────────────────────────────────
                     item {
+                        val displayName = currentUserName.ifBlank { model.profile?.name?.ifBlank { "Zynera Listener" } ?: "Zynera Listener" }
+                        val initial = displayName.firstOrNull()?.uppercase() ?: "S"
+                        val photoUrl = currentUserAvatar.takeIf { it.isNotBlank() } ?: model.profile?.profilePicUrl.orEmpty()
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -313,17 +322,31 @@ fun SettingsScreen(
                                         ),
                                     contentAlignment = Alignment.Center
                                 ) {
-                                    Text(
-                                        text = model.profile?.name?.take(1)?.uppercase() ?: "S",
-                                        fontSize = 24.sp,
-                                        fontWeight = FontWeight.ExtraBold,
-                                        color = Color.White
-                                    )
+                                    if (photoUrl.isNotBlank()) {
+                                        AsyncImage(
+                                            model = ImageRequest.Builder(LocalContext.current)
+                                                .data(photoUrl)
+                                                .crossfade(true)
+                                                .build(),
+                                            contentDescription = "Profile Photo",
+                                            contentScale = ContentScale.Crop,
+                                            modifier = Modifier
+                                                .fillMaxSize()
+                                                .clip(CircleShape)
+                                        )
+                                    } else {
+                                        Text(
+                                            text = initial,
+                                            fontSize = 24.sp,
+                                            fontWeight = FontWeight.ExtraBold,
+                                            color = Color.White
+                                        )
+                                    }
                                 }
                                 Spacer(modifier = Modifier.width(14.dp))
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(
-                                        text = model.profile?.name?.ifBlank { "Zynera Listener" } ?: "Zynera Listener",
+                                        text = displayName,
                                         fontSize = 17.sp,
                                         fontWeight = FontWeight.ExtraBold,
                                         color = Color.White
@@ -387,6 +410,7 @@ fun SettingsScreen(
                         panel = activePanel,
                         viewModel = viewModel,
                         model = model,
+                        onLogout = onLogout,
                         onDismiss = { activePanel = SettingsPanel.NONE }
                     )
                 }
@@ -533,6 +557,7 @@ private fun SettingsDetailDialog(
     panel: SettingsPanel,
     viewModel: SettingsViewModel,
     model: SettingsViewModel.UiModel,
+    onLogout: () -> Unit,
     onDismiss: () -> Unit
 ) {
     when (panel) {
@@ -544,7 +569,7 @@ private fun SettingsDetailDialog(
         SettingsPanel.NOTIFICATIONS -> NotificationsDialog(model, viewModel, onDismiss)
         SettingsPanel.THEME -> ThemeDialog(model, viewModel, onDismiss)
         SettingsPanel.LANGUAGE -> LanguageDialog(viewModel, model, onDismiss)
-        SettingsPanel.PRIVACY -> PrivacyDialog(model, viewModel, onDismiss)
+        SettingsPanel.PRIVACY -> PrivacyDialog(model, viewModel, onLogout, onDismiss)
         SettingsPanel.DEVICES -> DevicesDialog(model, viewModel, onDismiss)
         SettingsPanel.ABOUT -> AboutDialog(model, onDismiss)
         SettingsPanel.NONE -> Unit
@@ -655,7 +680,11 @@ private fun AccountDialog(
     model: SettingsViewModel.UiModel,
     onDismiss: () -> Unit
 ) {
-    var name by remember { mutableStateOf(model.profile?.name.orEmpty()) }
+    val context = LocalContext.current
+    val currentUserName by SessionManager.getInstance(context).userNameFlow.collectAsState()
+    var name by remember(currentUserName, model.profile?.name) {
+        mutableStateOf(currentUserName.ifBlank { model.profile?.name.orEmpty() })
+    }
     var showAccountSwitcher by remember { mutableStateOf(false) }
 
     if (showAccountSwitcher) {
@@ -671,7 +700,10 @@ private fun AccountDialog(
         title = "Account Settings",
         onDismiss = onDismiss,
         confirmLabel = "Save",
-        onConfirm = { viewModel.updateProfile(name.trim().ifBlank { model.profile?.name.orEmpty() }) }
+        onConfirm = {
+            val newName = name.trim().ifBlank { currentUserName.ifBlank { "Zynera Listener" } }
+            viewModel.updateProfile(newName)
+        }
     ) {
         Text("Email", color = SonexaTextMuted, fontSize = 12.sp)
         Text(model.profile?.email ?: "—", color = SonexaTextWhite, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
@@ -947,6 +979,7 @@ private fun LanguageDialog(
 private fun PrivacyDialog(
     model: SettingsViewModel.UiModel,
     viewModel: SettingsViewModel,
+    onLogout: () -> Unit,
     onDismiss: () -> Unit
 ) {
     val dataSharing = (model.settings["dataSharing"] as? Boolean) ?: true
@@ -972,7 +1005,10 @@ private fun PrivacyDialog(
             },
             confirmButton = {
                 Button(
-                    onClick = { showDeleteConfirm = false },
+                    onClick = {
+                        showDeleteConfirm = false
+                        viewModel.deleteAccount(onSuccess = onLogout)
+                    },
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF4444))
                 ) {
                     Text("Delete Account", color = Color.White)
@@ -988,7 +1024,7 @@ private fun PrivacyDialog(
 
     SettingsSheetScaffold(title = "Privacy & Security", onDismiss = onDismiss) {
         // Security section
-        Text("Security", color = SonexaPurpleLight, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+        Text("Security & Access", color = SonexaPurpleLight, fontSize = 12.sp, fontWeight = FontWeight.Bold)
         Spacer(modifier = Modifier.height(4.dp))
         ToggleRow(
             "Two-factor authentication (2FA)",
@@ -1055,12 +1091,74 @@ private fun DevicesDialog(
         is String -> rawDevices.split(",").map { it.trim() }.filter { it.isNotEmpty() }
         else -> listOf("This Android phone", "Bluetooth earbuds")
     }
-    SettingsSheetScaffold(title = "Connected Devices", onDismiss = onDismiss) {
+
+    SettingsSheetScaffold(title = "Connected Devices & Sessions", onDismiss = onDismiss) {
+        Text("Active Sessions (Live)", color = SonexaPurpleLight, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+        Spacer(modifier = Modifier.height(6.dp))
+
+        if (model.activeSessions.isNotEmpty()) {
+            model.activeSessions.forEach { session ->
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(SonexaInputBg)
+                        .border(1.dp, SonexaInputBorder, RoundedCornerShape(12.dp))
+                        .padding(10.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = session.device,
+                                    color = SonexaTextWhite,
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                                if (session.isCurrent) {
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(4.dp))
+                                            .background(Color(0xFF10B981).copy(alpha = 0.2f))
+                                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                                    ) {
+                                        Text("Current", color = Color(0xFF34D399), fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                                    }
+                                }
+                            }
+                            Text(
+                                text = listOfNotNull(session.location.takeIf { it.isNotBlank() }, session.lastActive.takeIf { it.isNotBlank() }).joinToString(" • "),
+                                color = SonexaTextMuted,
+                                fontSize = 11.sp
+                            )
+                        }
+                        if (!session.isCurrent) {
+                            TextButton(
+                                onClick = { viewModel.revokeSession(session.id) }
+                            ) {
+                                Text("Revoke", color = Color(0xFFEF4444), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(14.dp))
+        Text("Audio Cast & Bluetooth", color = SonexaPurpleLight, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+        Spacer(modifier = Modifier.height(6.dp))
+
         devices.forEach { device ->
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 8.dp),
+                    .padding(vertical = 6.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
@@ -1070,7 +1168,7 @@ private fun DevicesDialog(
                         val next = devices.filterNot { it == device }
                         viewModel.updateSettings(
                             mapOf("connectedDevices" to next),
-                            successMessage = "Device removed"
+                            successMessage = "Device unlinked"
                         )
                     }
                 ) {
@@ -1079,10 +1177,10 @@ private fun DevicesDialog(
             }
             HorizontalDivider(color = SonexaInputBorder)
         }
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(10.dp))
         OutlinedButton(
             onClick = {
-                val next = (devices + "Chromecast Living Room").distinct()
+                val next = (devices + "Chromecast (Living Room)").distinct()
                 viewModel.updateSettings(
                     mapOf("connectedDevices" to next),
                     successMessage = "Device linked"
@@ -1090,7 +1188,7 @@ private fun DevicesDialog(
             },
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text("Link Chromecast", color = SonexaPurpleLight)
+            Text("Link Chromecast / AirPlay", color = SonexaPurpleLight)
         }
     }
 }

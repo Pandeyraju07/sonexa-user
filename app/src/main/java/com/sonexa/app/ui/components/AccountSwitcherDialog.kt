@@ -25,6 +25,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -34,6 +35,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import com.sonexa.app.data.local.SessionManager
 import com.sonexa.app.data.repository.AuthRepository
 import com.sonexa.app.ui.theme.*
@@ -52,6 +55,8 @@ fun AccountSwitcherDialog(
 ) {
     val context = LocalContext.current
     val sessionManager = remember { SessionManager.getInstance(context) }
+    val currentUserName by sessionManager.userNameFlow.collectAsState()
+    val currentUserAvatar by sessionManager.userAvatarFlow.collectAsState()
     val authRepo = remember { AuthRepository.create(context) }
     val scope = rememberCoroutineScope()
 
@@ -216,8 +221,9 @@ fun AccountSwitcherDialog(
                         )
                         Spacer(modifier = Modifier.height(8.dp))
 
-                        val currentName = sessionManager.userName ?: "Zynera Listener"
+                        val currentName = currentUserName.ifBlank { sessionManager.userName ?: "Zynera Listener" }
                         val currentEmail = sessionManager.userEmail ?: "listener@zynera.app"
+                        val currentAvatar = currentUserAvatar.ifBlank { sessionManager.profilePicUrl ?: "" }
 
                         Box(
                             modifier = Modifier
@@ -231,23 +237,37 @@ fun AccountSwitcherDialog(
                                 modifier = Modifier.fillMaxWidth(),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(44.dp)
-                                        .clip(CircleShape)
-                                        .background(
-                                            Brush.linearGradient(
-                                                listOf(Color(0xFF8B5CF6), Color(0xFFEC4899))
-                                            )
-                                        ),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(
-                                        text = currentName.firstOrNull()?.uppercase() ?: "U",
-                                        color = Color.White,
-                                        fontSize = 18.sp,
-                                        fontWeight = FontWeight.Bold
+                                if (currentAvatar.isNotBlank()) {
+                                    AsyncImage(
+                                        model = ImageRequest.Builder(context)
+                                            .data(currentAvatar)
+                                            .crossfade(true)
+                                            .build(),
+                                        contentDescription = "Profile Photo",
+                                        contentScale = ContentScale.Crop,
+                                        modifier = Modifier
+                                            .size(44.dp)
+                                            .clip(CircleShape)
                                     )
+                                } else {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(44.dp)
+                                            .clip(CircleShape)
+                                            .background(
+                                                Brush.linearGradient(
+                                                    listOf(Color(0xFF8B5CF6), Color(0xFFEC4899))
+                                                )
+                                            ),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = currentName.firstOrNull()?.uppercase() ?: "U",
+                                            color = Color.White,
+                                            fontSize = 18.sp,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
                                 }
                                 Spacer(modifier = Modifier.width(12.dp))
                                 Column(modifier = Modifier.weight(1f)) {
@@ -322,19 +342,33 @@ fun AccountSwitcherDialog(
                                             .padding(12.dp),
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        Box(
-                                            modifier = Modifier
-                                                .size(38.dp)
-                                                .clip(CircleShape)
-                                                .background(Color(0xFF3B2D54)),
-                                            contentAlignment = Alignment.Center
-                                        ) {
-                                            Text(
-                                                text = acc.name.firstOrNull()?.uppercase() ?: "U",
-                                                color = SonexaPurpleLight,
-                                                fontSize = 15.sp,
-                                                fontWeight = FontWeight.Bold
+                                        if (!acc.profilePicUrl.isNullOrBlank()) {
+                                            AsyncImage(
+                                                model = ImageRequest.Builder(context)
+                                                    .data(acc.profilePicUrl)
+                                                    .crossfade(true)
+                                                    .build(),
+                                                contentDescription = "Profile Photo",
+                                                contentScale = ContentScale.Crop,
+                                                modifier = Modifier
+                                                    .size(38.dp)
+                                                    .clip(CircleShape)
                                             )
+                                        } else {
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(38.dp)
+                                                    .clip(CircleShape)
+                                                    .background(Color(0xFF3B2D54)),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Text(
+                                                    text = acc.name.firstOrNull()?.uppercase() ?: "U",
+                                                    color = SonexaPurpleLight,
+                                                    fontSize = 15.sp,
+                                                    fontWeight = FontWeight.Bold
+                                                )
+                                            }
                                         }
                                         Spacer(modifier = Modifier.width(12.dp))
                                         Column(modifier = Modifier.weight(1f)) {

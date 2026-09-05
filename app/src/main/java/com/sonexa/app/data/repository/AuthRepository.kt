@@ -19,7 +19,7 @@ class AuthRepository(
     private val sessionManager: SessionManager? = null
 ) {
 
-    private val gson = Gson()
+    private val gson = RetrofitClient.gson
 
     companion object {
         fun create(context: Context): AuthRepository {
@@ -216,7 +216,8 @@ class AuthRepository(
                     refreshToken = payload?.refreshToken,
                     userId = payload?.user?.id,
                     email = payload?.user?.email,
-                    name = payload?.user?.name
+                    name = payload?.user?.name,
+                    profilePicUrl = payload?.user?.profilePicUrl
                 )
                 sessionManager?.pendingOtpEmail = null
             }

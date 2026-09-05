@@ -25,7 +25,7 @@ sealed interface ChooseLanguageUiState {
     data class Error(val message: String) : ChooseLanguageUiState
 }
 
-class ChooseLanguageViewModel(
+class ChooseLanguageViewModel @JvmOverloads constructor(
     private val apiService: AppConfigApiService = RetrofitClient.appConfigApiService
 ) : ViewModel() {
 

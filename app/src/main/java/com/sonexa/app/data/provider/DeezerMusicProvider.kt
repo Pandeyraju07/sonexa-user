@@ -26,7 +26,7 @@ class DeezerMusicProvider : MusicProvider {
         .readTimeout(10, TimeUnit.SECONDS)
         .build()
 
-    private val gson = Gson()
+    private val gson = com.sonexa.app.data.api.RetrofitClient.gson
     private val apiBase = "https://api.deezer.com"
 
     private var lastLatencyMs: Long = 0

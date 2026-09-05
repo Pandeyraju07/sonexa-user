@@ -18,6 +18,8 @@ class SonexaApp : Application() {
         LikedSongsStore.init(this)
         PodcastDownloadManager.init(this)
         UserPlaylistStore.init(this)
+        com.sonexa.app.data.provider.MusicMemoryService.init(this)
+        com.sonexa.app.data.local.UserTastePreferencesStore.init(this)
         playbackManager = PlaybackManager(this)
     }
 }

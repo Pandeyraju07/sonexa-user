@@ -15,7 +15,7 @@ import java.util.concurrent.TimeUnit
 
 class YouTubeMusicProvider(
     private val client: OkHttpClient = RetrofitClient.okHttpClient,
-    private val gson: Gson = Gson()
+    private val gson: Gson = RetrofitClient.gson
 ) : MusicProvider {
 
     override val providerId: String = "youtube"

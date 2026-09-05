@@ -12,25 +12,26 @@ class SafeTrackDtoDeserializer : JsonDeserializer<TrackDto> {
         val obj = json.asJsonObject
 
         fun getString(key: String, default: String = ""): String {
-            return if (obj.has(key) && !obj.get(key).isJsonNull) obj.get(key).asString else default
+            if (!obj.has(key) || obj.get(key).isJsonNull) return default
+            val el = obj.get(key)
+            return runCatching {
+                if (el.isJsonPrimitive) el.asString else el.toString()
+            }.getOrDefault(default)
         }
 
         fun getLong(key: String, default: Long = 0L): Long {
-            return if (obj.has(key) && !obj.get(key).isJsonNull) {
-                runCatching { obj.get(key).asLong }.getOrDefault(default)
-            } else default
+            if (!obj.has(key) || obj.get(key).isJsonNull) return default
+            return runCatching { obj.get(key).asLong }.getOrDefault(default)
         }
 
         fun getDouble(key: String, default: Double = 0.0): Double {
-            return if (obj.has(key) && !obj.get(key).isJsonNull) {
-                runCatching { obj.get(key).asDouble }.getOrDefault(default)
-            } else default
+            if (!obj.has(key) || obj.get(key).isJsonNull) return default
+            return runCatching { obj.get(key).asDouble }.getOrDefault(default)
         }
 
         fun getBoolean(key: String, default: Boolean = false): Boolean {
-            return if (obj.has(key) && !obj.get(key).isJsonNull) {
-                runCatching { obj.get(key).asBoolean }.getOrDefault(default)
-            } else default
+            if (!obj.has(key) || obj.get(key).isJsonNull) return default
+            return runCatching { obj.get(key).asBoolean }.getOrDefault(default)
         }
 
         fun getStringList(key: String): List<String> {
@@ -40,7 +41,10 @@ class SafeTrackDtoDeserializer : JsonDeserializer<TrackDto> {
             val arr = obj.getAsJsonArray(key)
             val list = mutableListOf<String>()
             for (el in arr) {
-                if (!el.isJsonNull) list.add(el.asString)
+                if (!el.isJsonNull) {
+                    val str = runCatching { if (el.isJsonPrimitive) el.asString else el.toString() }.getOrNull()
+                    if (!str.isNullOrBlank()) list.add(str)
+                }
             }
             return list
         }
@@ -51,19 +55,19 @@ class SafeTrackDtoDeserializer : JsonDeserializer<TrackDto> {
             artist = getString("artist"),
             album = getString("album"),
             durationMs = getLong("durationMs"),
-            audioUrl = getString("audioUrl"),
-            coverUrl = getString("coverUrl"),
-            playsCount = getString("playsCount"),
+            audioUrl = getString("audioUrl").ifBlank { getString("audio_url") },
+            coverUrl = getString("coverUrl").ifBlank { getString("cover_url").ifBlank { getString("image") } },
+            playsCount = getString("playsCount").ifBlank { getString("plays_count") },
             isLiked = getBoolean("isLiked"),
             provider = getString("provider", "zynera"),
-            providerTrackId = getString("providerTrackId"),
-            videoId = getString("videoId"),
-            providerUrl = getString("providerUrl"),
+            providerTrackId = getString("providerTrackId").ifBlank { getString("provider_track_id") },
+            videoId = getString("videoId").ifBlank { getString("video_id") },
+            providerUrl = getString("providerUrl").ifBlank { getString("provider_url") },
             isPlayable = getBoolean("isPlayable", true),
-            providerType = getString("providerType", "audio"),
+            providerType = getString("providerType", "audio").ifBlank { getString("provider_type", "audio") },
             availability = getString("availability", "AVAILABLE"),
             availableProviders = getStringList("availableProviders"),
-            channelTitle = getString("channelTitle"),
+            channelTitle = getString("channelTitle").ifBlank { getString("channel_title") },
             isOfficial = getBoolean("isOfficial"),
             bpm = getDouble("bpm", 110.0),
             energy = getDouble("energy", 0.55),
@@ -82,3 +86,4 @@ class SafeTrackDtoDeserializer : JsonDeserializer<TrackDto> {
         )
     }
 }
+

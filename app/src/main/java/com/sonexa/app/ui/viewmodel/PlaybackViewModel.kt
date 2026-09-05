@@ -142,11 +142,11 @@ class PlaybackViewModel : AndroidViewModel {
                 _uiState.update { state ->
                     val currentTrack = state.track?.sanitized()
                     val updatedTrack = if (currentTrack != null) {
-                        currentTrack.copy(isLiked = likedSet.contains(currentTrack.id))
+                        currentTrack.copySafe(isLiked = likedSet.contains(currentTrack.id))
                     } else null
                     val updatedQueue = state.queue.map {
                         val safe = it.sanitized()
-                        safe.copy(isLiked = likedSet.contains(safe.id))
+                        safe.copySafe(isLiked = likedSet.contains(safe.id))
                     }
                     state.copy(track = updatedTrack, queue = updatedQueue)
                 }
@@ -161,6 +161,13 @@ class PlaybackViewModel : AndroidViewModel {
     fun play(track: TrackDto, sourceTitle: String = track.album) {
         val mappedTrack = com.sonexa.app.data.local.LikedSongsStore.withLikedStatus(track) ?: track
         playQueue(listOf(mappedTrack), 0, sourceTitle.ifBlank { mappedTrack.album })
+    }
+
+    fun playTrack(track: TrackDto?, queue: List<TrackDto> = emptyList(), sourceTitle: String = "") {
+        if (track == null) return
+        val effectiveQueue = if (queue.isNotEmpty()) queue else listOf(track)
+        val idx = effectiveQueue.indexOfFirst { it.id == track.id }.coerceAtLeast(0)
+        playQueue(effectiveQueue, idx, sourceTitle.ifBlank { track.album })
     }
 
     fun playQueue(tracks: List<TrackDto>, startIndex: Int = 0, sourceTitle: String = "") {
@@ -258,9 +265,9 @@ class PlaybackViewModel : AndroidViewModel {
         // Optimistic update for instant Spotify-like responsiveness
         _uiState.update { state ->
             state.copy(
-                track = if (state.track?.id == track.id) state.track?.copy(isLiked = isNowLiked) else state.track,
+                track = if (state.track?.id == track.id) state.track?.copySafe(isLiked = isNowLiked) else state.track,
                 queue = state.queue.map {
-                    if (it.id == track.id) it.copy(isLiked = isNowLiked) else it
+                    if (it.id == track.id) it.copySafe(isLiked = isNowLiked) else it
                 }
             )
         }
@@ -289,7 +296,7 @@ class PlaybackViewModel : AndroidViewModel {
             val adaptedUrl = com.sonexa.app.data.provider.FullAudioStreamResolver.applyAudioQuality(currentTrack.audioUrl, quality)
             if (adaptedUrl != currentTrack.audioUrl) {
                 val currentPos = playbackManager.engineState.value.positionMs.coerceAtLeast(0L)
-                val updatedTrack = currentTrack.copy(audioUrl = adaptedUrl)
+                val updatedTrack = currentTrack.copySafe(audioUrl = adaptedUrl)
                 _uiState.update { state ->
                     state.copy(
                         track = updatedTrack,
@@ -503,20 +510,20 @@ class PlaybackViewModel : AndroidViewModel {
             val isInitialPreview = com.sonexa.app.data.provider.FullAudioStreamResolver.isAudioPreview(rawAudio, track.provider)
 
             if (!cachedStream.isNullOrBlank()) {
-                val fullTrack = track.copy(audioUrl = cachedStream, isPlayable = true)
+                val fullTrack = track.copySafe(audioUrl = cachedStream, isPlayable = true)
                 _uiState.update { current ->
                     if (current.track?.id == track.id) current.copy(track = fullTrack) else current
                 }
                 playbackManager.play(fullTrack, 0L)
             } else if (!isInitialPreview && rawAudio.isNotBlank()) {
-                val fullTrack = track.copy(audioUrl = rawAudio, isPlayable = true)
+                val fullTrack = track.copySafe(audioUrl = rawAudio, isPlayable = true)
                 playbackManager.play(fullTrack, 0L)
             } else if (track.isYouTube && track.effectiveVideoId.isNotBlank()) {
                 playbackManager.play(track, 0L)
             } else {
                 // If track has a preview URL, begin playing immediately so user hears sound instantly
                 if (rawAudio.isNotBlank()) {
-                    playbackManager.play(track.copy(audioUrl = rawAudio), 0L)
+                    playbackManager.play(track.copySafe(audioUrl = rawAudio), 0L)
                 }
 
                 // Simultaneously resolve full-length stream
@@ -524,13 +531,13 @@ class PlaybackViewModel : AndroidViewModel {
                 val fullStream = com.sonexa.app.data.provider.FullAudioStreamResolver.applyAudioQuality(resolvedStream, currentQuality)
                 if (fullStream.isNotBlank() && fullStream != rawAudio) {
                     val currentPos = playbackManager.engineState.value.positionMs.coerceAtLeast(0L)
-                    val fullTrack = track.copy(audioUrl = fullStream, isPlayable = true)
+                    val fullTrack = track.copySafe(audioUrl = fullStream, isPlayable = true)
                     _uiState.update { current ->
                         if (current.track?.id == track.id) current.copy(track = fullTrack) else current
                     }
                     playbackManager.play(fullTrack, currentPos)
                 } else if (rawAudio.isBlank() && fullStream.isNotBlank()) {
-                    val fullTrack = track.copy(audioUrl = fullStream, isPlayable = true)
+                    val fullTrack = track.copySafe(audioUrl = fullStream, isPlayable = true)
                     _uiState.update { current ->
                         if (current.track?.id == track.id) current.copy(track = fullTrack) else current
                     }

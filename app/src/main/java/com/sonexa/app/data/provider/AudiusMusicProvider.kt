@@ -23,7 +23,7 @@ class AudiusMusicProvider : MusicProvider {
         .readTimeout(10, TimeUnit.SECONDS)
         .build()
 
-    private val gson = Gson()
+    private val gson = com.sonexa.app.data.api.RetrofitClient.gson
     private val host = "https://discoveryprovider.audius.co/v1"
     private val discoveryHosts = listOf(
         "https://api.audius.co/v1",

@@ -16,7 +16,9 @@ sealed interface AiSignatureUiState {
     data class Error(val message: String) : AiSignatureUiState
 }
 
-class AiSignatureViewModel(private val repository: AiRepository = AiRepository()) : ViewModel() {
+class AiSignatureViewModel @JvmOverloads constructor(
+    private val repository: AiRepository = AiRepository()
+) : ViewModel() {
 
     private val _uiState = MutableStateFlow<AiSignatureUiState>(AiSignatureUiState.Idle)
     val uiState: StateFlow<AiSignatureUiState> = _uiState.asStateFlow()

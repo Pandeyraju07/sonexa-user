@@ -16,7 +16,9 @@ sealed interface SplashUiState {
     data class Error(val message: String) : SplashUiState
 }
 
-class SplashViewModel(private val apiService: AppConfigApiService = RetrofitClient.appConfigApiService) : ViewModel() {
+class SplashViewModel @JvmOverloads constructor(
+    private val apiService: AppConfigApiService = RetrofitClient.appConfigApiService
+) : ViewModel() {
 
     private val _uiState = MutableStateFlow<SplashUiState>(SplashUiState.Loading)
     val uiState: StateFlow<SplashUiState> = _uiState.asStateFlow()

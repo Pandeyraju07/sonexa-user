@@ -24,7 +24,7 @@ data class AiIntelligenceUiState(
     val errorMessage: String? = null
 )
 
-class AiIntelligenceViewModel(
+class AiIntelligenceViewModel @JvmOverloads constructor(
     private val repository: AiRepository = AiRepository()
 ) : ViewModel() {
 

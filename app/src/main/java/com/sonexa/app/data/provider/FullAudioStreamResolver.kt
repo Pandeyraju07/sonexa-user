@@ -36,7 +36,7 @@ object FullAudioStreamResolver {
         .callTimeout(3000, TimeUnit.MILLISECONDS)
         .build()
 
-    private val gson = Gson()
+    private val gson = com.sonexa.app.data.api.RetrofitClient.gson
     private val audiusProvider = AudiusMusicProvider()
     private val jiosaavnProvider = JioSaavnMusicProvider()
     private val jamendoProvider = JamendoProvider()

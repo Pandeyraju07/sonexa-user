@@ -16,7 +16,7 @@ sealed interface CatalogUiState<out T> {
     data class Error(val message: String) : CatalogUiState<Nothing>
 }
 
-class OnboardingViewModel(
+class OnboardingViewModel @JvmOverloads constructor(
     private val repo: AppConfigRepository = AppConfigRepository()
 ) : ViewModel() {
     private val _uiState = MutableStateFlow<CatalogUiState<List<OnboardingSlideDto>>>(CatalogUiState.Loading)
@@ -43,7 +43,7 @@ class OnboardingViewModel(
     }
 }
 
-class GenreSelectionViewModel(
+class GenreSelectionViewModel @JvmOverloads constructor(
     private val repo: AppConfigRepository = AppConfigRepository()
 ) : ViewModel() {
     private val _uiState = MutableStateFlow<CatalogUiState<List<GenreDto>>>(CatalogUiState.Loading)
@@ -88,7 +88,7 @@ class GenreSelectionViewModel(
     }
 }
 
-class ArtistSelectionViewModel(
+class ArtistSelectionViewModel @JvmOverloads constructor(
     private val repo: AppConfigRepository = AppConfigRepository()
 ) : ViewModel() {
     private val _uiState = MutableStateFlow<CatalogUiState<List<ArtistDto>>>(CatalogUiState.Loading)
@@ -133,7 +133,7 @@ class ArtistSelectionViewModel(
     }
 }
 
-class MoodSelectionViewModel(
+class MoodSelectionViewModel @JvmOverloads constructor(
     private val repo: AppConfigRepository = AppConfigRepository()
 ) : ViewModel() {
     private val _uiState = MutableStateFlow<CatalogUiState<List<MoodDto>>>(CatalogUiState.Loading)
@@ -178,7 +178,7 @@ class MoodSelectionViewModel(
     }
 }
 
-class AppUpdateViewModel(
+class AppUpdateViewModel @JvmOverloads constructor(
     private val repo: AppConfigRepository = AppConfigRepository()
 ) : ViewModel() {
     private val _uiState = MutableStateFlow<CatalogUiState<AppUpdateResponse>>(CatalogUiState.Loading)
@@ -201,7 +201,7 @@ class AppUpdateViewModel(
     }
 }
 
-class PermissionsOnboardingViewModel(
+class PermissionsOnboardingViewModel @JvmOverloads constructor(
     private val repo: AppConfigRepository = AppConfigRepository()
 ) : ViewModel() {
     private val _saving = MutableStateFlow(false)

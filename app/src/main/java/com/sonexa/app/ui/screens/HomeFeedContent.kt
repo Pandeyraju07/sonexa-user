@@ -13,8 +13,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AutoAwesome
-import androidx.compose.material.icons.filled.Psychology
+import androidx.compose.material.icons.automirrored.filled.*
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -24,8 +24,13 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import com.sonexa.app.data.model.AlbumDto
 import com.sonexa.app.data.model.ArtistDto
 import com.sonexa.app.data.model.TrackDto
@@ -36,11 +41,13 @@ import com.sonexa.app.ui.viewmodel.PlaybackUiState
 @Composable
 fun HomeFeedContent(
     avatarInitial: String,
+    avatarUrl: String = "",
     selectedFeedCategory: String,
     onSelectFeedCategory: (String) -> Unit,
     onOpenProfileDrawer: () -> Unit,
     onOpenMusicDna: () -> Unit,
     onOpenMusicJourney: () -> Unit,
+    onOpenMusicIntelligence: () -> Unit = {},
     quickAccessItems: List<QuickCardItem>,
     continueListening: List<TrackDto>,
     allTrending: List<TrackDto>,
@@ -77,12 +84,26 @@ fun HomeFeedContent(
                     .clickable { onOpenProfileDrawer() },
                 contentAlignment = Alignment.Center
             ) {
-                Text(
-                    text = avatarInitial,
-                    color = Color.White,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.ExtraBold
-                )
+                if (avatarUrl.isNotBlank()) {
+                    AsyncImage(
+                        model = ImageRequest.Builder(LocalContext.current)
+                            .data(avatarUrl)
+                            .crossfade(true)
+                            .build(),
+                        contentDescription = "Profile",
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clip(CircleShape)
+                    )
+                } else {
+                    Text(
+                        text = avatarInitial,
+                        color = Color.White,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.ExtraBold
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.width(12.dp))
@@ -164,6 +185,79 @@ fun HomeFeedContent(
         }
 
         Spacer(modifier = Modifier.height(16.dp))
+
+        // Main Music Intelligence Platform Banner
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp)
+                .clip(RoundedCornerShape(18.dp))
+                .background(
+                    Brush.horizontalGradient(
+                        listOf(Color(0xFF1E1035), Color(0xFF140728), Color(0xFF0F172A))
+                    )
+                )
+                .border(1.dp, Color(0xFF8B5CF6).copy(alpha = 0.5f), RoundedCornerShape(18.dp))
+                .clickable { onOpenMusicIntelligence() }
+                .padding(14.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(
+                    modifier = Modifier.weight(1f, fill = false),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(42.dp)
+                            .clip(CircleShape)
+                            .background(Color(0xFF7C3AED).copy(alpha = 0.3f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(text = "🧠", fontSize = 22.sp)
+                    }
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column {
+                        Text(
+                            "Music Intelligence",
+                            color = Color.White,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.ExtraBold
+                        )
+                        Text(
+                            "Memories, Predictor, Rabbit Hole, EQ & Eras",
+                            color = Color(0xFFC4B5FD),
+                            fontSize = 11.5.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(SpotifyGreen)
+                            .padding(horizontal = 7.dp, vertical = 3.dp)
+                    ) {
+                        Text("15 FEATURES", color = Color.Black, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                    }
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Icon(
+                        androidx.compose.material.icons.Icons.Default.PlayArrow,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(10.dp))
 
         // AI Intelligence Cards (Music DNA & AI Journey)
         Row(

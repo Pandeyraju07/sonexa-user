@@ -31,7 +31,7 @@ class JioSaavnMusicProvider : MusicProvider {
         .readTimeout(10, TimeUnit.SECONDS)
         .build()
 
-    private val gson = Gson()
+    private val gson = com.sonexa.app.data.api.RetrofitClient.gson
     private val apiBase = "https://www.jiosaavn.com/api.php"
 
     private var lastLatencyMs: Long = 0

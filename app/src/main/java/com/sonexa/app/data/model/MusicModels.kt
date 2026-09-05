@@ -75,6 +75,79 @@ data class TrackDto(
         )
     }
 
+    fun copySafe(
+        id: String? = null,
+        title: String? = null,
+        artist: String? = null,
+        album: String? = null,
+        durationMs: Long? = null,
+        audioUrl: String? = null,
+        coverUrl: String? = null,
+        playsCount: String? = null,
+        isLiked: Boolean? = null,
+        provider: String? = null,
+        providerTrackId: String? = null,
+        videoId: String? = null,
+        providerUrl: String? = null,
+        isPlayable: Boolean? = null,
+        providerType: String? = null,
+        availability: String? = null,
+        availableProviders: List<String>? = null,
+        channelTitle: String? = null,
+        isOfficial: Boolean? = null,
+        bpm: Double? = null,
+        energy: Double? = null,
+        mood: String? = null,
+        moods: List<String>? = null,
+        genres: List<String>? = null,
+        language: String? = null,
+        eraDecade: String? = null,
+        acousticness: Double? = null,
+        danceability: Double? = null,
+        isInstrumental: Boolean? = null,
+        tags: List<String>? = null,
+        versionType: String? = null,
+        recommendationReason: String? = null,
+        qualityTier: String? = null
+    ): TrackDto {
+        val s = this.sanitized()
+        return TrackDto(
+            id = id ?: s.id,
+            title = title ?: s.title,
+            artist = artist ?: s.artist,
+            album = album ?: s.album,
+            durationMs = durationMs ?: s.durationMs,
+            audioUrl = audioUrl ?: s.audioUrl,
+            coverUrl = coverUrl ?: s.coverUrl,
+            playsCount = playsCount ?: s.playsCount,
+            isLiked = isLiked ?: s.isLiked,
+            provider = provider ?: s.provider,
+            providerTrackId = providerTrackId ?: s.providerTrackId,
+            videoId = videoId ?: s.videoId,
+            providerUrl = providerUrl ?: s.providerUrl,
+            isPlayable = isPlayable ?: s.isPlayable,
+            providerType = providerType ?: s.providerType,
+            availability = availability ?: s.availability,
+            availableProviders = availableProviders ?: s.availableProviders,
+            channelTitle = channelTitle ?: s.channelTitle,
+            isOfficial = isOfficial ?: s.isOfficial,
+            bpm = bpm ?: s.bpm,
+            energy = energy ?: s.energy,
+            mood = mood ?: s.mood,
+            moods = moods ?: s.moods,
+            genres = genres ?: s.genres,
+            language = language ?: s.language,
+            eraDecade = eraDecade ?: s.eraDecade,
+            acousticness = acousticness ?: s.acousticness,
+            danceability = danceability ?: s.danceability,
+            isInstrumental = isInstrumental ?: s.isInstrumental,
+            tags = tags ?: s.tags,
+            versionType = versionType ?: s.versionType,
+            recommendationReason = recommendationReason ?: s.recommendationReason,
+            qualityTier = qualityTier ?: s.qualityTier
+        )
+    }
+
     val isYouTube: Boolean
         get() = (provider as? CharSequence)?.toString().equals("youtube", ignoreCase = true) ||
                 (providerType as? CharSequence)?.toString().equals("youtube_video", ignoreCase = true) ||

@@ -27,7 +27,7 @@ sealed interface HomeUiState {
     data class Error(val message: String) : HomeUiState
 }
 
-class HomeViewModel(
+class HomeViewModel @JvmOverloads constructor(
     private val musicRepository: MusicRepository = MusicRepository(),
     private val userRepository: UserRepository = UserRepository(),
     private val aggregationEngine: MusicAggregationEngine = MusicAggregationEngine()

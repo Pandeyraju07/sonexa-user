@@ -170,7 +170,7 @@ object GenreQueryMapper {
     }
 }
 
-class SearchViewModel(
+class SearchViewModel @JvmOverloads constructor(
     val aggregationEngine: MusicAggregationEngine = MusicAggregationEngine(),
     private val musicRepository: MusicRepository = MusicRepository()
 ) : ViewModel() {

@@ -12,7 +12,8 @@ data class SavedAccount(
     val name: String,
     val email: String,
     val accessToken: String,
-    val refreshToken: String? = null
+    val refreshToken: String? = null,
+    val profilePicUrl: String? = null
 )
 
 class SessionManager(context: Context) {
@@ -37,9 +38,57 @@ class SessionManager(context: Context) {
         get() = prefs.getString(KEY_USER_EMAIL, null)
         set(value) = prefs.edit().putString(KEY_USER_EMAIL, value).apply()
 
+    private val _userNameFlow = kotlinx.coroutines.flow.MutableStateFlow(prefs.getString(KEY_USER_NAME, "")?.takeIf { it.isNotBlank() } ?: "")
+    val userNameFlow: kotlinx.coroutines.flow.StateFlow<String> = _userNameFlow
+
     var userName: String?
         get() = prefs.getString(KEY_USER_NAME, null)?.takeIf { it.isNotBlank() }
-        set(value) = prefs.edit().putString(KEY_USER_NAME, value).apply()
+        set(value) {
+            val trimmed = value?.trim()?.takeIf { it.isNotBlank() }
+            if (trimmed != null) {
+                prefs.edit().putString(KEY_USER_NAME, trimmed).apply()
+                _userNameFlow.value = trimmed
+            } else {
+                prefs.edit().remove(KEY_USER_NAME).apply()
+                _userNameFlow.value = ""
+            }
+            val uid = this.userId
+            if (!uid.isNullOrBlank()) {
+                val currentAccounts = getSavedAccounts().toMutableList()
+                val idx = currentAccounts.indexOfFirst { it.userId == uid }
+                if (idx != -1) {
+                    val updated = currentAccounts[idx].copy(name = trimmed ?: "User")
+                    currentAccounts[idx] = updated
+                    prefs.edit().putString(KEY_SAVED_ACCOUNTS, gson.toJson(currentAccounts)).apply()
+                }
+            }
+        }
+
+    private val _userAvatarFlow = kotlinx.coroutines.flow.MutableStateFlow(prefs.getString(KEY_PROFILE_PIC_URL, "") ?: "")
+    val userAvatarFlow: kotlinx.coroutines.flow.StateFlow<String> = _userAvatarFlow
+
+    var profilePicUrl: String?
+        get() = prefs.getString(KEY_PROFILE_PIC_URL, null)?.takeIf { it.isNotBlank() }
+        set(value) {
+            val trimmed = value?.trim()?.takeIf { it.isNotBlank() }
+            if (trimmed != null) {
+                prefs.edit().putString(KEY_PROFILE_PIC_URL, trimmed).apply()
+                _userAvatarFlow.value = trimmed
+            } else {
+                prefs.edit().remove(KEY_PROFILE_PIC_URL).apply()
+                _userAvatarFlow.value = ""
+            }
+            val uid = this.userId
+            if (!uid.isNullOrBlank()) {
+                val currentAccounts = getSavedAccounts().toMutableList()
+                val idx = currentAccounts.indexOfFirst { it.userId == uid }
+                if (idx != -1) {
+                    val updated = currentAccounts[idx].copy(profilePicUrl = trimmed)
+                    currentAccounts[idx] = updated
+                    prefs.edit().putString(KEY_SAVED_ACCOUNTS, gson.toJson(currentAccounts)).apply()
+                }
+            }
+        }
 
     var pendingOtpEmail: String?
         get() = prefs.getString(KEY_PENDING_OTP_EMAIL, null)
@@ -84,7 +133,8 @@ class SessionManager(context: Context) {
             refreshToken = match.refreshToken,
             userId = match.userId,
             email = match.email,
-            name = match.name
+            name = match.name,
+            profilePicUrl = match.profilePicUrl
         )
         return true
     }
@@ -100,7 +150,8 @@ class SessionManager(context: Context) {
         refreshToken: String?,
         userId: String?,
         email: String?,
-        name: String?
+        name: String?,
+        profilePicUrl: String? = null
     ) {
         prefs.edit()
             .putString(KEY_ACCESS_TOKEN, accessToken)
@@ -108,17 +159,23 @@ class SessionManager(context: Context) {
             .putString(KEY_USER_ID, userId)
             .putString(KEY_USER_EMAIL, email)
             .putString(KEY_USER_NAME, name)
+            .putString(KEY_PROFILE_PIC_URL, profilePicUrl)
             .remove(KEY_PENDING_OTP_EMAIL)
             .apply()
+
+        val resolvedName = name?.trim()?.takeIf { it.isNotBlank() } ?: email?.substringBefore("@") ?: ""
+        _userNameFlow.value = resolvedName
+        _userAvatarFlow.value = profilePicUrl?.trim() ?: ""
 
         if (!accessToken.isNullOrBlank() && !userId.isNullOrBlank()) {
             addOrUpdateAccount(
                 SavedAccount(
                     userId = userId,
-                    name = name?.takeIf { it.isNotBlank() } ?: email?.substringBefore("@") ?: "User",
+                    name = resolvedName.ifBlank { "User" },
                     email = email.orEmpty(),
                     accessToken = accessToken,
-                    refreshToken = refreshToken
+                    refreshToken = refreshToken,
+                    profilePicUrl = profilePicUrl
                 )
             )
         }
@@ -138,7 +195,8 @@ class SessionManager(context: Context) {
                     name = userName ?: userEmail?.substringBefore("@") ?: "User",
                     email = userEmail.orEmpty(),
                     accessToken = accessToken,
-                    refreshToken = refreshToken
+                    refreshToken = refreshToken,
+                    profilePicUrl = profilePicUrl
                 )
             )
         }
@@ -148,6 +206,8 @@ class SessionManager(context: Context) {
         val accounts = getSavedAccounts()
         prefs.edit().clear().apply()
         prefs.edit().putString(KEY_SAVED_ACCOUNTS, gson.toJson(accounts)).apply()
+        _userNameFlow.value = ""
+        _userAvatarFlow.value = ""
     }
 
     fun isLoggedIn(): Boolean = !accessToken.isNullOrBlank()
@@ -160,6 +220,7 @@ class SessionManager(context: Context) {
         private const val KEY_USER_ID = "user_id"
         private const val KEY_USER_EMAIL = "user_email"
         private const val KEY_USER_NAME = "user_name"
+        private const val KEY_PROFILE_PIC_URL = "profile_pic_url"
         private const val KEY_PENDING_OTP_EMAIL = "pending_otp_email"
         private const val KEY_AUDIO_QUALITY = "audio_quality"
         private const val KEY_PREFERRED_LANGUAGES = "preferred_languages"

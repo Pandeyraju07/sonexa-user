@@ -12,7 +12,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.sonexa.app.auth.social.SocialAuthEvents
 import com.sonexa.app.data.local.SessionManager
-import com.sonexa.app.ui.components.FloatingVolumeHud
 import com.sonexa.app.ui.screens.*
 import com.sonexa.app.ui.viewmodel.AuthViewModel
 import com.sonexa.app.ui.viewmodel.PlaybackViewModel
@@ -55,6 +54,7 @@ enum class AppStep {
     AUTH_UTILITIES,
     MUSIC_DNA,
     MUSIC_JOURNEY,
+    MUSIC_INTELLIGENCE_HUB,
     NO_INTERNET_ERROR,
     SERVER_ERROR
 }
@@ -258,6 +258,7 @@ fun SonexaAppFlow() {
                     onOpenSettings = { currentStep = AppStep.SETTINGS },
                     onOpenMusicDna = { currentStep = AppStep.MUSIC_DNA },
                     onOpenMusicJourney = { currentStep = AppStep.MUSIC_JOURNEY },
+                    onOpenMusicIntelligence = { currentStep = AppStep.MUSIC_INTELLIGENCE_HUB },
                     homeViewModel = homeVm,
                     playbackViewModel = playbackViewModel
                 )
@@ -392,6 +393,10 @@ fun SonexaAppFlow() {
                     onBack = ::goHome,
                     playbackViewModel = playbackViewModel
                 )
+                AppStep.MUSIC_INTELLIGENCE_HUB -> MusicIntelligenceHubScreen(
+                    onBack = ::goHome,
+                    playbackViewModel = playbackViewModel
+                )
                 AppStep.NO_INTERNET_ERROR -> NoInternetScreen(
                     onRetry = ::goHome
                 )
@@ -400,7 +405,5 @@ fun SonexaAppFlow() {
                 )
             }
         }
-
-        FloatingVolumeHud(modifier = Modifier.align(Alignment.TopCenter))
     }
 }

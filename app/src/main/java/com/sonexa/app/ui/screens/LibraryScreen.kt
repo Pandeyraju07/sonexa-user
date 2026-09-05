@@ -69,14 +69,13 @@ fun LibraryScreen(
 ) {
     val context = LocalContext.current
     val sessionManager = remember { com.sonexa.app.data.local.SessionManager.getInstance(context) }
-    val userDisplayName = remember(sessionManager.userName, sessionManager.userEmail) {
-        sessionManager.userName?.takeIf { it.isNotBlank() }
-            ?: sessionManager.userEmail?.substringBefore("@")?.replaceFirstChar { it.uppercase() }
-            ?: "Listener"
-    }
-    val avatarInitial = remember(userDisplayName) {
-        userDisplayName.firstOrNull()?.uppercase() ?: "U"
-    }
+    val currentUserName by sessionManager.userNameFlow.collectAsState()
+    val currentUserAvatar by sessionManager.userAvatarFlow.collectAsState()
+    val userDisplayName = currentUserName.takeIf { it.isNotBlank() }
+        ?: sessionManager.userName?.takeIf { it.isNotBlank() }
+        ?: sessionManager.userEmail?.substringBefore("@")?.replaceFirstChar { it.uppercase() }
+        ?: "Listener"
+    val avatarInitial = userDisplayName.firstOrNull()?.uppercase() ?: "U"
 
     LaunchedEffect(Unit) {
         viewModel.load(context)
@@ -238,12 +237,26 @@ fun LibraryScreen(
                             .clickable { onOpenProfile() },
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(
-                            text = avatarInitial,
-                            color = Color(0xFF1B1629),
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.ExtraBold
-                        )
+                        if (currentUserAvatar.isNotBlank()) {
+                            AsyncImage(
+                                model = ImageRequest.Builder(LocalContext.current)
+                                    .data(currentUserAvatar)
+                                    .crossfade(true)
+                                    .build(),
+                                contentDescription = "Profile",
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .clip(CircleShape)
+                            )
+                        } else {
+                            Text(
+                                text = avatarInitial,
+                                color = Color(0xFF1B1629),
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.ExtraBold
+                            )
+                        }
                     }
                     Spacer(modifier = Modifier.width(14.dp))
                     Text(

@@ -123,9 +123,13 @@ class PlaybackManager(
     private fun startPlaybackService() {
         val intent = Intent(appContext, SonexaPlaybackService::class.java)
         runCatching {
-            appContext.startService(intent)
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                ContextCompat.startForegroundService(appContext, intent)
+            } else {
+                appContext.startService(intent)
+            }
         }.onFailure {
-            runCatching { ContextCompat.startForegroundService(appContext, intent) }
+            runCatching { appContext.startService(intent) }
         }
     }
 }

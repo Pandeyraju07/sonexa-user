@@ -19,7 +19,7 @@ sealed interface ProfileSetupUiState {
     data class Error(val message: String) : ProfileSetupUiState
 }
 
-class ProfileSetupViewModel(
+class ProfileSetupViewModel @JvmOverloads constructor(
     application: Application,
     private val apiService: AppConfigApiService = RetrofitClient.appConfigApiService
 ) : AndroidViewModel(application) {

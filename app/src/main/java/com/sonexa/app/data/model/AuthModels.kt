@@ -55,6 +55,7 @@ data class RefreshTokenRequest(
 data class UserProfileDto(
     @SerializedName("id") val id: String = "",
     @SerializedName("name") val name: String = "",
+    @SerializedName("handle") val handle: String = "",
     @SerializedName("email") val email: String = "",
     @SerializedName("bio") val bio: String = "",
     @SerializedName("profilePicUrl") val profilePicUrl: String = "",

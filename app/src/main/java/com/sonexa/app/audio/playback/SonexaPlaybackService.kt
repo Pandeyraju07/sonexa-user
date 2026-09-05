@@ -23,6 +23,7 @@ class SonexaPlaybackService : MediaSessionService() {
     override fun onCreate() {
         super.onCreate()
         ensureNotificationChannel()
+        enterForeground("Zynera Playback")
         val player: Player = (application as SonexaApp).playbackManager.nativeProvider.player
         val sessionActivity = PendingIntent.getActivity(
             this,
@@ -41,7 +42,16 @@ class SonexaPlaybackService : MediaSessionService() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         ensureNotificationChannel()
         enterForeground("Zynera Playback")
-        return super.onStartCommand(intent, flags, startId)
+        val result = super.onStartCommand(intent, flags, startId)
+        enterForeground("Zynera Playback")
+        return result
+    }
+
+    override fun onUpdateNotification(session: MediaSession, startInForegroundRequired: Boolean) {
+        super.onUpdateNotification(session, startInForegroundRequired)
+        if (startInForegroundRequired) {
+            enterForeground("Zynera Playback")
+        }
     }
 
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? {
@@ -61,6 +71,9 @@ class SonexaPlaybackService : MediaSessionService() {
             release()
         }
         mediaSession = null
+        try {
+            stopForeground(STOP_FOREGROUND_REMOVE)
+        } catch (_: Throwable) {}
         super.onDestroy()
     }
 

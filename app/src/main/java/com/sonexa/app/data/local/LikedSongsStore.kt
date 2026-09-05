@@ -35,13 +35,13 @@ object LikedSongsStore {
     fun withLikedStatus(track: TrackDto?): TrackDto? {
         if (track == null) return null
         val safeTrack = track.sanitized()
-        return safeTrack.copy(isLiked = isLiked(safeTrack.id))
+        return safeTrack.copySafe(isLiked = isLiked(safeTrack.id))
     }
 
     fun withLikedStatus(tracks: List<TrackDto>): List<TrackDto> {
-        return tracks.map { 
-            val safe = it.sanitized()
-            safe.copy(isLiked = isLiked(safe.id)) 
+        return tracks.mapNotNull { track ->
+            val safe = track.sanitized()
+            safe.copySafe(isLiked = isLiked(safe.id)) 
         }
     }
 
@@ -53,7 +53,7 @@ object LikedSongsStore {
             current.removeAll { it.id == safe.id }
             false
         } else {
-            current.add(0, safe.copy(isLiked = true))
+            current.add(0, safe.copySafe(isLiked = true))
             true
         }
         _likedSongs.value = current

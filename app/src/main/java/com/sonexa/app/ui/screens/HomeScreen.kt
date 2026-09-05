@@ -19,7 +19,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
-import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.Campaign
 import androidx.compose.material.icons.outlined.History
@@ -80,6 +79,7 @@ fun HomeScreen(
     onOpenSettings: () -> Unit = {},
     onOpenMusicDna: () -> Unit = {},
     onOpenMusicJourney: () -> Unit = {},
+    onOpenMusicIntelligence: () -> Unit = {},
     homeViewModel: HomeViewModel = viewModel(),
     playbackViewModel: PlaybackViewModel,
     modifier: Modifier = Modifier
@@ -165,16 +165,15 @@ fun HomeScreen(
     }
 
     val sessionManager = remember { com.sonexa.app.data.local.SessionManager.getInstance(context) }
+    val currentUserName by sessionManager.userNameFlow.collectAsState()
+    val currentUserAvatar by sessionManager.userAvatarFlow.collectAsState()
     val apiDisplayName = feed?.userDisplayName?.takeIf { it.isNotBlank() && it != "Music Lover" }
-    val userDisplayName = remember(apiDisplayName, sessionManager.userName, sessionManager.userEmail) {
-        apiDisplayName
-            ?: sessionManager.userName?.takeIf { it.isNotBlank() }
-            ?: sessionManager.userEmail?.substringBefore("@")?.replaceFirstChar { it.uppercase() }
-            ?: "Listener"
-    }
-    val avatarInitial = remember(userDisplayName) {
-        userDisplayName.firstOrNull()?.uppercase() ?: "U"
-    }
+    val userDisplayName = currentUserName.takeIf { it.isNotBlank() }
+        ?: apiDisplayName
+        ?: sessionManager.userEmail?.substringBefore("@")?.replaceFirstChar { it.uppercase() }
+        ?: "Listener"
+    val avatarInitial = userDisplayName.firstOrNull()?.uppercase() ?: "U"
+    val avatarPhotoUrl = currentUserAvatar.takeIf { it.isNotBlank() } ?: sessionManager.profilePicUrl.orEmpty()
 
     Box(
         modifier = modifier
@@ -187,6 +186,7 @@ fun HomeScreen(
             "Home" -> {
                 HomeFeedContent(
                     avatarInitial = avatarInitial,
+                    avatarUrl = avatarPhotoUrl,
                     selectedFeedCategory = selectedFeedCategory,
                     onSelectFeedCategory = { cat ->
                         selectedFeedCategory = cat
@@ -199,6 +199,7 @@ fun HomeScreen(
                     onOpenProfileDrawer = { showProfileDrawer = true },
                     onOpenMusicDna = onOpenMusicDna,
                     onOpenMusicJourney = onOpenMusicJourney,
+                    onOpenMusicIntelligence = onOpenMusicIntelligence,
                     quickAccessItems = quickAccessItems,
                     continueListening = continueListening,
                     allTrending = allTrending,
@@ -318,12 +319,26 @@ fun HomeScreen(
                                 .background(Color(0xFFC4B5FD)),
                             contentAlignment = Alignment.Center
                         ) {
-                            Text(
-                                text = avatarInitial,
-                                color = Color(0xFF1B1629),
-                                fontSize = 20.sp,
-                                fontWeight = FontWeight.ExtraBold
-                            )
+                            if (avatarPhotoUrl.isNotBlank()) {
+                                AsyncImage(
+                                    model = ImageRequest.Builder(LocalContext.current)
+                                        .data(avatarPhotoUrl)
+                                        .crossfade(true)
+                                        .build(),
+                                    contentDescription = "Profile Photo",
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .clip(CircleShape)
+                                )
+                            } else {
+                                Text(
+                                    text = avatarInitial,
+                                    color = Color(0xFF1B1629),
+                                    fontSize = 20.sp,
+                                    fontWeight = FontWeight.ExtraBold
+                                )
+                            }
                         }
                         Spacer(modifier = Modifier.width(14.dp))
                         Column {
@@ -357,6 +372,10 @@ fun HomeScreen(
                     DrawerMenuItem(Icons.Outlined.Campaign, "Your Updates") {
                         showProfileDrawer = false
                         onOpenNotifications()
+                    }
+                    DrawerMenuItem(Icons.Default.Psychology, "Music Intelligence Hub") {
+                        showProfileDrawer = false
+                        onOpenMusicIntelligence()
                     }
                     DrawerMenuItem(Icons.Outlined.Settings, "Settings and privacy") {
                         showProfileDrawer = false
@@ -814,8 +833,8 @@ private fun HomeStickyMiniPlayer(
 
             IconButton(onClick = onCastClick, modifier = Modifier.size(34.dp)) {
                 Icon(
-                    Icons.AutoMirrored.Filled.VolumeUp,
-                    contentDescription = "Cast",
+                    Icons.Default.Devices,
+                    contentDescription = "Devices",
                     tint = Color(0xFF38BDF8),
                     modifier = Modifier.size(19.dp)
                 )

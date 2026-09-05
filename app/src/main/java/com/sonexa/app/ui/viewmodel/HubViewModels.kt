@@ -22,7 +22,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-class ExploreViewModel(
+class ExploreViewModel @JvmOverloads constructor(
     private val musicRepository: MusicRepository = MusicRepository()
 ) : ViewModel() {
     private val _uiState = MutableStateFlow<CatalogUiState<HomeFeedResponse>>(CatalogUiState.Loading)
@@ -44,7 +44,7 @@ class ExploreViewModel(
     }
 }
 
-class LibraryViewModel(
+class LibraryViewModel @JvmOverloads constructor(
     private val userRepository: UserRepository = UserRepository()
 ) : ViewModel() {
     private val _uiState = MutableStateFlow<CatalogUiState<UserLibraryResponse>>(CatalogUiState.Loading)
@@ -166,7 +166,7 @@ class LibraryViewModel(
     }
 }
 
-class AlbumDetailViewModel(
+class AlbumDetailViewModel @JvmOverloads constructor(
     private val musicRepository: MusicRepository = MusicRepository(),
     private val saavnProvider: com.sonexa.app.data.provider.JioSaavnMusicProvider = com.sonexa.app.data.provider.JioSaavnMusicProvider()
 ) : ViewModel() {
@@ -200,7 +200,7 @@ class AlbumDetailViewModel(
     }
 }
 
-class ArtistProfileViewModel(
+class ArtistProfileViewModel @JvmOverloads constructor(
     private val catalogService: com.sonexa.app.data.provider.ArtistCatalogService = com.sonexa.app.data.provider.ArtistCatalogService()
 ) : ViewModel() {
     private val _uiState = MutableStateFlow<CatalogUiState<ArtistDetailResponse>>(CatalogUiState.Loading)
@@ -279,7 +279,7 @@ class ArtistProfileViewModel(
     }
 }
 
-class PlaylistDetailViewModel(
+class PlaylistDetailViewModel @JvmOverloads constructor(
     private val musicRepository: MusicRepository = MusicRepository(),
     private val userRepository: UserRepository = UserRepository(),
     private val saavnProvider: com.sonexa.app.data.provider.JioSaavnMusicProvider = com.sonexa.app.data.provider.JioSaavnMusicProvider()
@@ -297,7 +297,7 @@ class PlaylistDetailViewModel(
                 val effectiveTracks = if (likedTracks.isNotEmpty()) {
                     likedTracks
                 } else {
-                    saavnProvider.search("Top Romantic Hits", limit = 20).getOrDefault(emptyList()).map { it.copy(isLiked = true) }
+                    saavnProvider.search("Top Romantic Hits", limit = 20).getOrDefault(emptyList()).map { it.copySafe(isLiked = true) }
                 }
 
                 val playlist = PlaylistDto(
@@ -429,7 +429,7 @@ class PlaylistDetailViewModel(
     }
 }
 
-class PodcastViewModel(
+class PodcastViewModel @JvmOverloads constructor(
     private val musicRepository: MusicRepository = MusicRepository(),
     private val podcastProvider: com.sonexa.app.data.provider.PodcastProvider = com.sonexa.app.data.provider.PodcastProvider()
 ) : ViewModel() {
@@ -544,7 +544,7 @@ class PodcastViewModel(
     }
 }
 
-class NotificationViewModel(
+class NotificationViewModel @JvmOverloads constructor(
     private val userRepository: UserRepository = UserRepository()
 ) : ViewModel() {
     private val _allNotifications = MutableStateFlow<List<NotificationDto>>(emptyList())
@@ -605,7 +605,7 @@ class NotificationViewModel(
     }
 }
 
-class PremiumViewModel(
+class PremiumViewModel @JvmOverloads constructor(
     private val userRepository: UserRepository = UserRepository()
 ) : ViewModel() {
     private val _uiState = MutableStateFlow<CatalogUiState<PremiumResponse>>(CatalogUiState.Loading)
@@ -680,15 +680,23 @@ class ProfileHubViewModel(
             _uiState.value = CatalogUiState.Loading
             userRepository.getUserProfile().fold(
                 onSuccess = {
-                    val defaultName = sessionManager.userName?.takeIf { it.isNotBlank() } ?: "Zynera Listener"
-                    val user = it.user ?: UserProfileDto(name = defaultName, email = sessionManager.userEmail.orEmpty())
-                    val merged = if (user.bio.isBlank() && !cachedBio.isNullOrBlank()) {
-                        user.copy(bio = cachedBio.orEmpty())
+                    val localName = sessionManager.userName?.takeIf { it.isNotBlank() }
+                    val remoteUser = it.user
+                    val resolvedName = localName ?: remoteUser?.name?.takeIf { n -> n.isNotBlank() } ?: "Zynera Listener"
+                    val localPic = sessionManager.profilePicUrl?.takeIf { it.isNotBlank() }
+                    val resolvedPic = localPic ?: remoteUser?.profilePicUrl?.takeIf { p -> p.isNotBlank() }.orEmpty()
+                    val mergedUser = (remoteUser ?: UserProfileDto(name = resolvedName, email = sessionManager.userEmail.orEmpty())).copy(
+                        name = resolvedName,
+                        profilePicUrl = resolvedPic
+                    )
+                    val merged = if (mergedUser.bio.isBlank() && !cachedBio.isNullOrBlank()) {
+                        mergedUser.copy(bio = cachedBio.orEmpty())
                     } else {
-                        user
+                        mergedUser
                     }
                     if (merged.bio.isNotBlank()) cachedBio = merged.bio
-                    if (merged.name.isNotBlank()) sessionManager.userName = merged.name
+                    sessionManager.userName = resolvedName
+                    if (resolvedPic.isNotBlank()) sessionManager.profilePicUrl = resolvedPic
                     _uiState.value = CatalogUiState.Ready(merged)
                 },
                 onFailure = { e -> _uiState.value = CatalogUiState.Error(e.message ?: "Failed") }
@@ -703,16 +711,30 @@ class ProfileHubViewModel(
         profilePicUrl: String? = null,
         onDone: () -> Unit = {}
     ) {
+        val trimmed = name.trim().ifBlank { "Zynera Listener" }
+        sessionManager.userName = trimmed
+        if (profilePicUrl != null) {
+            sessionManager.profilePicUrl = profilePicUrl
+        }
+        val currentReady = (_uiState.value as? CatalogUiState.Ready)?.data
+        val updatedUser = (currentReady ?: UserProfileDto(name = trimmed, email = sessionManager.userEmail.orEmpty())).copy(
+            name = trimmed,
+            bio = bio ?: currentReady?.bio.orEmpty(),
+            handle = handle ?: currentReady?.handle.orEmpty(),
+            profilePicUrl = profilePicUrl ?: currentReady?.profilePicUrl ?: sessionManager.profilePicUrl.orEmpty()
+        )
+        _uiState.value = CatalogUiState.Ready(updatedUser)
+        onDone()
+
         viewModelScope.launch {
             _busy.value = true
             if (!bio.isNullOrBlank()) cachedBio = bio
-            userRepository.updateProfile(name = name, bio = bio, handle = handle, profilePicUrl = profilePicUrl).fold(
+            userRepository.updateProfile(name = trimmed, bio = bio, handle = handle, profilePicUrl = profilePicUrl).fold(
                 onSuccess = {
-                    sessionManager.userName = name
-                    load()
-                    onDone()
+                    sessionManager.userName = trimmed
+                    if (!profilePicUrl.isNullOrBlank()) sessionManager.profilePicUrl = profilePicUrl
                 },
-                onFailure = { /* keep current; caller can toast */ }
+                onFailure = { /* keep optimistic local state */ }
             )
             _busy.value = false
         }
@@ -731,6 +753,7 @@ class SettingsViewModel(
         val profile: UserProfileDto? = null,
         val cacheBytes: Long = 0L,
         val availableLanguages: List<String> = emptyList(),
+        val activeSessions: List<ActiveSessionDto> = emptyList(),
         val appVersion: String = "",
         val latestVersion: String = "",
         val saving: Boolean = false,
@@ -809,6 +832,9 @@ class SettingsViewModel(
                 profile = UserProfileDto(name = sessionManager.userName ?: "Music Lover", email = sessionManager.userEmail.orEmpty()),
                 cacheBytes = AudioCacheManager.cacheSizeBytes(appCtx),
                 availableLanguages = defaultLangs,
+                activeSessions = listOf(
+                    ActiveSessionDto(id = "current_session", device = "This Android Phone", location = "India", lastActive = "Active now", isCurrent = true, platform = "android")
+                ),
                 appVersion = versionName,
                 latestVersion = "1.0"
             )
@@ -821,16 +847,30 @@ class SettingsViewModel(
             val profileResult = userRepository.getUserProfile()
             val languagesResult = appConfigRepository.getLanguages()
             val updateResult = appConfigRepository.getAppUpdate()
+            val sessionsResult = userRepository.getActiveSessions()
 
             val remoteSettings = settingsResult.getOrNull()?.settings.orEmpty()
             val mergedSettings = localSettings.apply { putAll(remoteSettings) }
             saveLocalSettings(mergedSettings)
 
-            val profile = profileResult.getOrNull()?.user
-                ?: UserProfileDto(name = sessionManager.userName ?: "Music Lover", email = sessionManager.userEmail.orEmpty())
+            val remoteProfile = profileResult.getOrNull()?.user
+            val localName = sessionManager.userName?.takeIf { it.isNotBlank() }
+            val resolvedName = localName ?: remoteProfile?.name?.takeIf { it.isNotBlank() } ?: "Music Lover"
+            val localPic = sessionManager.profilePicUrl?.takeIf { it.isNotBlank() }
+            val resolvedPic = localPic ?: remoteProfile?.profilePicUrl?.takeIf { p -> p.isNotBlank() }.orEmpty()
+            val profile = (remoteProfile ?: UserProfileDto(name = resolvedName, email = sessionManager.userEmail.orEmpty())).copy(
+                name = resolvedName,
+                profilePicUrl = resolvedPic
+            )
+            if (resolvedPic.isNotBlank()) sessionManager.profilePicUrl = resolvedPic
             val langs = languagesResult.getOrNull()?.languages?.map { it.name }?.ifEmpty { null }
                 ?: defaultLangs
             val latest = updateResult.getOrNull()?.latestVersion.orEmpty().ifBlank { versionName }
+            val sessions = sessionsResult.getOrNull()?.sessions?.ifEmpty { null }
+                ?: listOf(
+                    ActiveSessionDto(id = "sess_current", device = "This Android Phone", location = "India", lastActive = "Active now", isCurrent = true, platform = "android"),
+                    ActiveSessionDto(id = "sess_chromecast", device = "Chromecast (Living Room)", location = "Home Wi-Fi", lastActive = "2 hours ago", isCurrent = false, platform = "cast")
+                )
 
             _uiState.value = CatalogUiState.Ready(
                 UiModel(
@@ -838,6 +878,7 @@ class SettingsViewModel(
                     profile = profile,
                     cacheBytes = cacheBytes,
                     availableLanguages = langs,
+                    activeSessions = sessions,
                     appVersion = versionName,
                     latestVersion = latest
                 )
@@ -859,14 +900,25 @@ class SettingsViewModel(
             sessionManager.preferredLanguages = list
             merged["language"] = list.joinToString(" • ")
         }
+        if (patch.containsKey("audioQuality")) {
+            sessionManager.audioQuality = patch["audioQuality"].toString()
+        }
         _uiState.value = CatalogUiState.Ready(
             current.copy(settings = merged, saving = false, message = null)
         )
         // 2. Persist locally to SharedPreferences
         saveLocalSettings(merged)
 
-        // 3. Asynchronously push to backend
+        // 3. Asynchronously push to backend & system services
         viewModelScope.launch {
+            if (patch.containsKey("pushNotifications") || patch.containsKey("downloadOverWifiOnly")) {
+                val notifications = (merged["pushNotifications"] as? Boolean) ?: true
+                val wifiOnly = (merged["downloadOverWifiOnly"] as? Boolean) ?: true
+                appConfigRepository.savePermissionPrefs(
+                    notificationsEnabled = notifications,
+                    downloadsEnabled = !wifiOnly
+                )
+            }
             userRepository.updateSettings(patch).fold(
                 onSuccess = {
                     // Confirmed on server
@@ -882,22 +934,39 @@ class SettingsViewModel(
 
     fun updateString(key: String, value: String) = updateSettings(mapOf(key to value))
 
-    fun updateProfile(name: String, onDone: () -> Unit = {}) {
+    fun updateProfile(
+        name: String,
+        bio: String? = null,
+        handle: String? = null,
+        profilePicUrl: String? = null,
+        onDone: () -> Unit = {}
+    ) {
+        val trimmed = name.trim().ifBlank { "Zynera Listener" }
+        sessionManager.userName = trimmed
+        if (profilePicUrl != null) {
+            sessionManager.profilePicUrl = profilePicUrl
+        }
         val current = (_uiState.value as? CatalogUiState.Ready)?.data ?: return
-        sessionManager.userName = name
-        val updatedProfile = current.profile?.copy(name = name)
-            ?: UserProfileDto(name = name, email = sessionManager.userEmail.orEmpty())
+        val updatedProfile = current.profile?.copy(
+            name = trimmed,
+            profilePicUrl = profilePicUrl ?: current.profile.profilePicUrl ?: sessionManager.profilePicUrl.orEmpty()
+        ) ?: UserProfileDto(name = trimmed, email = sessionManager.userEmail.orEmpty(), profilePicUrl = profilePicUrl.orEmpty())
         _uiState.value = CatalogUiState.Ready(
             current.copy(
                 profile = updatedProfile,
                 saving = false,
-                message = "Account updated"
+                message = "Profile updated"
             )
         )
         onDone()
 
         viewModelScope.launch {
-            userRepository.updateProfile(name = name)
+            userRepository.updateProfile(name = trimmed, bio = bio, handle = handle, profilePicUrl = profilePicUrl).fold(
+                onSuccess = {
+                    if (!profilePicUrl.isNullOrBlank()) sessionManager.profilePicUrl = profilePicUrl
+                },
+                onFailure = { /* keep optimistic local state */ }
+            )
         }
     }
 
@@ -942,6 +1011,30 @@ class SettingsViewModel(
         }
     }
 
+    fun revokeSession(sessionId: String) {
+        val current = (_uiState.value as? CatalogUiState.Ready)?.data ?: return
+        val updatedSessions = current.activeSessions.filterNot { it.id == sessionId }
+        _uiState.value = CatalogUiState.Ready(
+            current.copy(
+                activeSessions = updatedSessions,
+                message = "Session revoked successfully"
+            )
+        )
+        viewModelScope.launch {
+            userRepository.revokeSession(sessionId)
+        }
+    }
+
+    fun deleteAccount(onSuccess: () -> Unit) {
+        viewModelScope.launch {
+            userRepository.deleteAccount()
+            sessionManager.clearSession()
+            withContext(Dispatchers.Main) {
+                onSuccess()
+            }
+        }
+    }
+
     fun settingString(key: String, default: String = ""): String {
         val map = (_uiState.value as? CatalogUiState.Ready)?.data?.settings ?: return default
         return map[key]?.toString()?.takeIf { it.isNotBlank() } ?: default
@@ -968,7 +1061,7 @@ class SettingsViewModel(
     }
 }
 
-class PlayerViewModel(
+class PlayerViewModel @JvmOverloads constructor(
     private val musicRepository: MusicRepository = MusicRepository()
 ) : ViewModel() {
     private val _uiState = MutableStateFlow<CatalogUiState<QueueResponse>>(CatalogUiState.Loading)
@@ -987,7 +1080,7 @@ class PlayerViewModel(
     }
 }
 
-class AiSignatureHubViewModel(
+class AiSignatureHubViewModel @JvmOverloads constructor(
     private val aiRepository: AiRepository = AiRepository()
 ) : ViewModel() {
     private val _uiState = MutableStateFlow<CatalogUiState<AiSignatureResponse>>(CatalogUiState.Loading)
@@ -1008,7 +1101,7 @@ class AiSignatureHubViewModel(
     }
 }
 
-class LiveEventsViewModel(
+class LiveEventsViewModel @JvmOverloads constructor(
     private val liveEventsProvider: com.sonexa.app.data.provider.LiveEventsProvider = com.sonexa.app.data.provider.LiveEventsProvider()
 ) : ViewModel() {
     private val _feedState = MutableStateFlow<CatalogUiState<LiveEventsFeedResponse>>(CatalogUiState.Loading)
@@ -1066,7 +1159,7 @@ class LiveEventsViewModel(
     }
 }
 
-class IPopViewModel(
+class IPopViewModel @JvmOverloads constructor(
     private val iPopProvider: com.sonexa.app.data.provider.IPopProvider = com.sonexa.app.data.provider.IPopProvider()
 ) : ViewModel() {
     private val _homeState = MutableStateFlow<CatalogUiState<IPopHomeResponse>>(CatalogUiState.Loading)

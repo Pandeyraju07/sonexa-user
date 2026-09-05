@@ -30,7 +30,7 @@ class JamendoProvider : MusicProvider {
         .readTimeout(10, TimeUnit.SECONDS)
         .build()
 
-    private val gson = Gson()
+    private val gson = com.sonexa.app.data.api.RetrofitClient.gson
     private val apiBase = "https://api.jamendo.com/v3.0"
 
     override suspend fun search(query: String, filter: String, limit: Int): Result<List<TrackDto>> =

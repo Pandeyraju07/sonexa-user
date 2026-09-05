@@ -86,11 +86,12 @@ fun PodcastHubScreen(
     var searchQuery by remember { mutableStateOf("") }
     var isSearching by remember { mutableStateOf(false) }
     val sessionManager = remember { com.sonexa.app.data.local.SessionManager.getInstance(context) }
-    val avatarInitial = remember(sessionManager.userName, sessionManager.userEmail) {
-        (sessionManager.userName?.firstOrNull()
-            ?: sessionManager.userEmail?.firstOrNull()
-            ?: 'U').uppercaseChar().toString()
-    }
+    val currentUserName by sessionManager.userNameFlow.collectAsState()
+    val currentUserAvatar by sessionManager.userAvatarFlow.collectAsState()
+    val avatarInitial = (currentUserName.firstOrNull()
+        ?: sessionManager.userName?.firstOrNull()
+        ?: sessionManager.userEmail?.firstOrNull()
+        ?: 'U').uppercaseChar().toString()
 
     val feedData = (homeFeedState as? CatalogUiState.Ready)?.data
     val languages = remember(feedData) { feedData?.languages ?: viewModel.getLanguagesSafe() }
@@ -188,12 +189,26 @@ fun PodcastHubScreen(
                             onClick = onOpenProfile,
                             background = BrandPurple
                         ) {
-                            Text(
-                                text = avatarInitial,
-                                fontWeight = FontWeight.ExtraBold,
-                                fontSize = 14.sp,
-                                color = Color.White
-                            )
+                            if (currentUserAvatar.isNotBlank()) {
+                                AsyncImage(
+                                    model = ImageRequest.Builder(LocalContext.current)
+                                        .data(currentUserAvatar)
+                                        .crossfade(true)
+                                        .build(),
+                                    contentDescription = "Profile",
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .clip(CircleShape)
+                                )
+                            } else {
+                                Text(
+                                    text = avatarInitial,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    fontSize = 14.sp,
+                                    color = Color.White
+                                )
+                            }
                         }
                     }
                 }
