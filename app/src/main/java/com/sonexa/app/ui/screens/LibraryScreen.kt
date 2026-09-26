@@ -214,9 +214,6 @@ fun LibraryScreen(
         modifier = modifier
             .fillMaxSize()
             .background(Color(0xFF121212))
-            .statusBarsPadding()
-            .navigationBarsPadding()
-            .padding(bottom = 125.dp)
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
 
@@ -467,7 +464,7 @@ fun LibraryScreen(
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(2),
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp),
+                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 6.dp, bottom = 120.dp),
                     horizontalArrangement = Arrangement.spacedBy(14.dp),
                     verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
@@ -482,7 +479,7 @@ fun LibraryScreen(
                 // List View
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp),
+                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 6.dp, bottom = 120.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     items(filteredItems, key = { it.id }) { item ->

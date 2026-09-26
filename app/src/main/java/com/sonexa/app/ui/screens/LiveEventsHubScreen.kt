@@ -94,7 +94,7 @@ fun LiveEventsHubScreen(
                 val feed = state.data
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(bottom = 120.dp)
+                    contentPadding = PaddingValues(bottom = 24.dp)
                 ) {
                     // 1. Top Bar: Back + Title + Search
                     item {

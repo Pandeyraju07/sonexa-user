@@ -83,12 +83,9 @@ fun CreateHubScreen(
         modifier = modifier
             .fillMaxSize()
             .background(Color(0xFF121212))
-            .statusBarsPadding()
-            .navigationBarsPadding()
-            .padding(bottom = 125.dp)
     ) {
         LazyColumn(
-            contentPadding = PaddingValues(horizontal = 20.dp, vertical = 14.dp),
+            contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 14.dp, bottom = 120.dp),
             verticalArrangement = Arrangement.spacedBy(18.dp)
         ) {
             // Header

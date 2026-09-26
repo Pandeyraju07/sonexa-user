@@ -1,4 +1,5 @@
 // Zynera Web Portal Client Logic
+// Redesigned with Apple Design & Publicis Sapient Design System Controls
 
 const playlist = [
   {
@@ -63,62 +64,124 @@ function togglePlay() {
   }
 }
 
-audio.addEventListener('play', () => {
-  isPlaying = true;
-  playIcon.style.display = 'none';
-  pauseIcon.style.display = 'block';
-  waveform.classList.add('playing');
-});
+if (audio) {
+  audio.addEventListener('play', () => {
+    isPlaying = true;
+    playIcon.style.display = 'none';
+    pauseIcon.style.display = 'block';
+    waveform.classList.add('playing');
+  });
 
-audio.addEventListener('pause', () => {
-  isPlaying = false;
-  playIcon.style.display = 'block';
-  pauseIcon.style.display = 'none';
-  waveform.classList.remove('playing');
-});
+  audio.addEventListener('pause', () => {
+    isPlaying = false;
+    playIcon.style.display = 'block';
+    pauseIcon.style.display = 'none';
+    waveform.classList.remove('playing');
+  });
 
-audio.addEventListener('ended', () => {
-  currentIndex = (currentIndex + 1) % playlist.length;
-  loadTrack(currentIndex);
-  audio.play();
-});
+  audio.addEventListener('ended', () => {
+    currentIndex = (currentIndex + 1) % playlist.length;
+    loadTrack(currentIndex);
+    audio.play();
+  });
+}
 
-playBtn.addEventListener('click', togglePlay);
+if (playBtn) playBtn.addEventListener('click', togglePlay);
 
-prevBtn.addEventListener('click', () => {
-  currentIndex = (currentIndex - 1 + playlist.length) % playlist.length;
-  loadTrack(currentIndex);
-  if (isPlaying) audio.play();
-});
+if (prevBtn) {
+  prevBtn.addEventListener('click', () => {
+    currentIndex = (currentIndex - 1 + playlist.length) % playlist.length;
+    loadTrack(currentIndex);
+    if (isPlaying) audio.play();
+  });
+}
 
-nextBtn.addEventListener('click', () => {
-  currentIndex = (currentIndex + 1) % playlist.length;
-  loadTrack(currentIndex);
-  if (isPlaying) audio.play();
-});
+if (nextBtn) {
+  nextBtn.addEventListener('click', () => {
+    currentIndex = (currentIndex + 1) % playlist.length;
+    loadTrack(currentIndex);
+    if (isPlaying) audio.play();
+  });
+}
 
-// Initial load
+// Initial track load
 loadTrack(0);
 
-// Live API Test Ping
+// --------------------------------------------------------------------------
+// DESIGN SYSTEM INTERACTIVE CONTROLLERS (COLOR SELECTION & BOX DESIGN)
+// --------------------------------------------------------------------------
+const paletteButtons = document.querySelectorAll('[data-palette]');
+const boxButtons = document.querySelectorAll('[data-box-style]');
+
+function setTheme(theme) {
+  document.documentElement.setAttribute('data-theme', theme);
+  localStorage.setItem('zynera_theme', theme);
+  paletteButtons.forEach(btn => {
+    if (btn.getAttribute('data-palette') === theme) {
+      btn.classList.add('active');
+    } else {
+      btn.classList.remove('active');
+    }
+  });
+}
+
+function setBoxStyle(boxStyle) {
+  document.documentElement.setAttribute('data-box', boxStyle);
+  localStorage.setItem('zynera_box_style', boxStyle);
+  boxButtons.forEach(btn => {
+    if (btn.getAttribute('data-box-style') === boxStyle) {
+      btn.classList.add('active');
+    } else {
+      btn.classList.remove('active');
+    }
+  });
+}
+
+// Attach event listeners for Color Palette selection
+paletteButtons.forEach(btn => {
+  btn.addEventListener('click', () => {
+    const chosenTheme = btn.getAttribute('data-palette');
+    setTheme(chosenTheme);
+  });
+});
+
+// Attach event listeners for Box Design selection
+boxButtons.forEach(btn => {
+  btn.addEventListener('click', () => {
+    const chosenBox = btn.getAttribute('data-box-style');
+    setBoxStyle(chosenBox);
+  });
+});
+
+// Initialize stored preferences or defaults
+const storedTheme = localStorage.getItem('zynera_theme') || 'sapient';
+const storedBox = localStorage.getItem('zynera_box_style') || 'squircle';
+setTheme(storedTheme);
+setBoxStyle(storedBox);
+
+// --------------------------------------------------------------------------
+// LIVE API HEALTH PING TEST
+// --------------------------------------------------------------------------
 const testApiBtn = document.getElementById('testApiBtn');
 const apiOutput = document.getElementById('apiOutput');
 const apiOutputCode = document.getElementById('apiOutputCode');
 
-testApiBtn.addEventListener('click', async () => {
-  testApiBtn.disabled = true;
-  testApiBtn.textContent = 'Pinging...';
-  apiOutput.style.display = 'block';
-  apiOutputCode.textContent = 'Sending GET request to /api/v1/health ...';
+if (testApiBtn) {
+  testApiBtn.addEventListener('click', async () => {
+    testApiBtn.disabled = true;
+    testApiBtn.textContent = 'Pinging...';
+    apiOutput.style.display = 'block';
+    apiOutputCode.textContent = 'Sending GET request to /api/v1/health ...';
 
-  try {
-    const res = await fetch('/api/v1/health');
-    const data = await res.json();
-    apiOutputCode.textContent = JSON.stringify(data, null, 2);
-  } catch (err) {
-    apiOutputCode.textContent = `Error connecting to API: ${err.message}`;
-  } finally {
-    testApiBtn.disabled = false;
-    testApiBtn.textContent = 'Test Live Ping';
-  }
-});
+    try {
+      const res = await fetch('/api/v1/health');
+      const data = await res.json();
+      apiOutputCode.textContent = JSON.stringify(data, null, 2);
+    } catch (err) {
+      apiOutputCode.textContent = `Error connecting to API: ${err.message}`;
+    } finally {
+      testApiBtn.disabled = false;
+      testApiBtn.textContent = 'Test Live Ping';
+    }
+  });
+}

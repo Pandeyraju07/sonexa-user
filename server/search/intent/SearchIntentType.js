@@ -1,0 +1,18 @@
+/**
+ * SearchIntentType Enum
+ */
+
+const SearchIntentType = Object.freeze({
+  MOVIE_SONGS: 'MOVIE_SONGS',
+  ARTIST: 'ARTIST',
+  ARTIST_MOOD: 'ARTIST_MOOD',
+  GENRE_MOOD: 'GENRE_MOOD',
+  MOOD: 'MOOD',
+  SIMILAR_SONG: 'SIMILAR_SONG',
+  ARTIST_RECENCY: 'ARTIST_RECENCY',
+  YEAR_RANGE: 'YEAR_RANGE',
+  NATURAL_LANGUAGE: 'NATURAL_LANGUAGE',
+  GENERAL: 'GENERAL'
+});
+
+module.exports = SearchIntentType;

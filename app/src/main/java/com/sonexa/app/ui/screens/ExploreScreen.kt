@@ -67,7 +67,6 @@ fun ExploreScreen(
             .background(SonexaBgDark)
             .statusBarsPadding()
             .navigationBarsPadding()
-            .padding(bottom = 135.dp)
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
             Column(
@@ -120,7 +119,7 @@ fun ExploreScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             LazyColumn(
-                contentPadding = PaddingValues(horizontal = 20.dp),
+                contentPadding = PaddingValues(start = 20.dp, end = 20.dp, bottom = 24.dp),
                 verticalArrangement = Arrangement.spacedBy(20.dp)
             ) {
                 item {

@@ -112,9 +112,6 @@ fun SearchScreen(
         modifier = modifier
             .fillMaxSize()
             .background(Color(0xFF121212))
-            .statusBarsPadding()
-            .navigationBarsPadding()
-            .padding(bottom = 125.dp)
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
 
@@ -357,7 +354,7 @@ fun SearchScreen(
                 // Browse Home (Quick Chips + 2x2 Hero categories + Discover + Browse All)
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 120.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     // 0. Quick Mood & Vibe Chips
@@ -626,7 +623,7 @@ fun SearchScreen(
                 // ── Premium Recents State ──────────────────────────────────────
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 24.dp)
+                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 120.dp)
                 ) {
                     item {
                         // Header row
@@ -733,7 +730,7 @@ fun SearchScreen(
 
                         LazyColumn(
                             modifier = Modifier.fillMaxSize(),
-                            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 120.dp),
                             verticalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
                             // -1. "Did You Mean?" Typo-Correction Banner

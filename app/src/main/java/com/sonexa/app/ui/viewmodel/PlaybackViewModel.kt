@@ -10,6 +10,9 @@ import com.sonexa.app.data.repository.MusicRepository
 import com.sonexa.app.data.repository.UserRepository
 import com.sonexa.app.data.model.AudioQuality
 import com.sonexa.app.data.local.SessionManager
+import com.sonexa.app.audio.playback.RecommendationTracker
+import com.sonexa.app.audio.playback.AutoplayManager
+import com.sonexa.app.data.repository.RecommendationRepository
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -46,6 +49,9 @@ class PlaybackViewModel : AndroidViewModel {
 
     private val musicRepository = MusicRepository()
     private val userRepository = UserRepository()
+    val recommendationRepository = RecommendationRepository()
+    val recommendationTracker = RecommendationTracker(recommendationRepository)
+    val autoplayManager = AutoplayManager(recommendationRepository)
     private val sessionManager: SessionManager
     val playbackManager: PlaybackManager
     val equalizerEngine: SonexaEqualizerEngine
@@ -91,6 +97,10 @@ class PlaybackViewModel : AndroidViewModel {
         viewModelScope.launch {
             playbackManager.engineState.collectLatest { engine ->
                 _elapsedMs.value = engine.positionMs
+                val active = _uiState.value.track
+                if (active != null && engine.isPlaying) {
+                    recommendationTracker.onProgressTick(active, engine.positionMs, _uiState.value.durationMs)
+                }
                 _uiState.update { current ->
                     val activeTrack = current.track
                     val trackMetadataDuration = activeTrack?.durationMs ?: 0L
@@ -206,10 +216,17 @@ class PlaybackViewModel : AndroidViewModel {
     fun skipNext() {
         val state = _uiState.value
         if (state.queue.isEmpty()) return
+        val currentTrack = state.track
+        if (currentTrack != null) {
+            recommendationTracker.onTrackSkipped(currentTrack, state.positionMs)
+        }
         val next = when {
             state.queueIndex < state.queue.lastIndex -> state.queueIndex + 1
             state.repeatMode == RepeatMode.ALL -> 0
-            else -> return
+            else -> {
+                triggerAutoplay()
+                return
+            }
         }
         startTrackAt(next)
     }
@@ -261,6 +278,7 @@ class PlaybackViewModel : AndroidViewModel {
     fun toggleLike(customTrack: TrackDto? = null) {
         val track = customTrack ?: _uiState.value.track ?: return
         val isNowLiked = com.sonexa.app.data.local.LikedSongsStore.toggleLike(getApplication(), track)
+        recommendationTracker.onTrackLiked(track, isNowLiked)
 
         // Optimistic update for instant Spotify-like responsiveness
         _uiState.update { state ->
@@ -472,14 +490,39 @@ class PlaybackViewModel : AndroidViewModel {
         }
     }
 
+    fun triggerAutoplay() {
+        val current = _uiState.value.track ?: return
+        viewModelScope.launch {
+            val nextAutoplay = autoplayManager.fetchNextAutoplayTracks(
+                currentTrack = current,
+                fallbackPool = originalQueue
+            )
+            if (nextAutoplay.isNotEmpty()) {
+                val updated = _uiState.value.queue + nextAutoplay
+                _uiState.update { it.copy(queue = updated) }
+                startTrackAt(_uiState.value.queueIndex + 1)
+            }
+        }
+    }
+
     private fun onTrackEnded() {
         when (_uiState.value.repeatMode) {
             RepeatMode.ONE -> {
+                val track = _uiState.value.track
+                if (track != null) recommendationTracker.onTrackReplayed(track)
                 playbackManager.seekTo(0)
                 _elapsedMs.value = 0L
                 playbackManager.resume()
             }
-            RepeatMode.ALL, RepeatMode.OFF -> skipNext()
+            RepeatMode.ALL -> skipNext()
+            RepeatMode.OFF -> {
+                val state = _uiState.value
+                if (state.queueIndex < state.queue.lastIndex) {
+                    skipNext()
+                } else {
+                    triggerAutoplay()
+                }
+            }
         }
     }
 
@@ -488,6 +531,8 @@ class PlaybackViewModel : AndroidViewModel {
         if (index !in queue.indices) return
         val rawTrack = queue[index]
         val track = com.sonexa.app.data.local.LikedSongsStore.withLikedStatus(rawTrack) ?: rawTrack
+
+        recommendationTracker.onTrackStarted(track)
 
         _elapsedMs.value = 0L
         _uiState.update {

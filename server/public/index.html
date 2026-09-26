@@ -1,13 +1,13 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="sapient" data-box="squircle">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Zynera — The Music Intelligence Platform</title>
+  <title>Zynera — Intelligent Music & Audio Platform</title>
   <meta name="description" content="Zynera understands why you want music, not just what music you want. 15 breakthrough music intelligence features, 24-bit Lossless Hi-Fi audio, and personalized AI DJ.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Lexend+Deca:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -16,10 +16,45 @@
   <div class="glow-orb orb-2"></div>
   <div class="glow-orb orb-3"></div>
 
+  <!-- Interactive Design Studio / Color & Box Selection Bar -->
+  <div class="design-control-bar">
+    <div class="design-control-container">
+      <div class="control-group">
+        <span class="control-label">Color Selection:</span>
+        <div class="palette-selector" id="paletteSelector">
+          <button class="palette-btn active" data-palette="sapient" id="btnSapient">
+            <span class="color-dot dot-sapient"></span>
+            <span>Sapient Ruby</span>
+          </button>
+          <button class="palette-btn" data-palette="apple" id="btnApple">
+            <span class="color-dot dot-apple"></span>
+            <span>Apple Human</span>
+          </button>
+          <button class="palette-btn" data-palette="cyber" id="btnCyber">
+            <span class="color-dot dot-cyber"></span>
+            <span>Cyber Vision</span>
+          </button>
+          <button class="palette-btn" data-palette="mono" id="btnMono">
+            <span class="color-dot dot-mono"></span>
+            <span>Titanium Mono</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="control-group">
+        <span class="control-label">Box Design:</span>
+        <div class="palette-selector" id="boxSelector">
+          <button class="palette-btn active" data-box-style="squircle" id="btnSquircle">Apple Squircle</button>
+          <button class="palette-btn" data-box-style="architectural" id="btnArch">Architectural Grid</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Navbar -->
   <nav class="navbar">
     <div class="nav-container">
-      <div class="logo">
+      <a href="#" class="logo">
         <div class="logo-icon">
           <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z" fill="currentColor"/>
@@ -27,13 +62,13 @@
         </div>
         <span class="logo-text">ZYNERA</span>
         <span class="badge-tag">v2.4.0</span>
-      </div>
+      </a>
 
       <div class="nav-links">
-        <a href="#features">Features</a>
-        <a href="#intelligence">15 AI Breakthroughs</a>
         <a href="#preview">Live Player</a>
-        <a href="#api">API Status</a>
+        <a href="#intelligence">15 Breakthroughs</a>
+        <a href="#api">API Engine</a>
+        <a href="#download">Download APK</a>
       </div>
 
       <a href="/download/apk" class="btn btn-primary nav-cta">
@@ -49,7 +84,7 @@
   <header class="hero">
     <div class="hero-content">
       <div class="pill-badge">
-        <span class="sparkle">✨</span>
+        <span class="sparkle">✦</span>
         <span>The Future of Intelligent Audio Streaming</span>
       </div>
 
@@ -58,7 +93,7 @@
       </h1>
 
       <p class="hero-subtitle">
-        Experience 15 unprecedented music intelligence breakthroughs, studio master 24-bit 96kHz lossless audio, and real-time acoustic DNA mapping engineered for true music lovers.
+        Architected with 15 unprecedented music intelligence breakthroughs, studio master 24-bit 96kHz lossless audio, and real-time acoustic DNA mapping engineered for true music connoisseurs.
       </p>
 
       <div class="hero-actions">
@@ -78,7 +113,7 @@
           <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
             <path d="M8 5v14l11-7z"/>
           </svg>
-          <span>Try Web Preview</span>
+          <span>Experience Live Audio</span>
         </a>
       </div>
 
@@ -106,7 +141,7 @@
     </div>
   </header>
 
-  <!-- Live Audio Player Showcase -->
+  <!-- Live Audio Player Showcase (Apple Music Design) -->
   <section id="preview" class="section preview-section">
     <div class="section-container">
       <div class="player-card glassmorphism">
@@ -121,7 +156,6 @@
         <div class="player-body">
           <div class="album-art-wrap">
             <img id="currentCover" src="https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=600&auto=format&fit=crop&q=80" alt="Cover Art" class="album-art">
-            <div class="vinyl-overlay"></div>
           </div>
 
           <div class="track-info">
@@ -131,6 +165,7 @@
 
             <!-- Waveform visualizer -->
             <div class="waveform-container" id="waveform">
+              <span class="bar"></span><span class="bar"></span><span class="bar"></span>
               <span class="bar"></span><span class="bar"></span><span class="bar"></span>
               <span class="bar"></span><span class="bar"></span><span class="bar"></span>
               <span class="bar"></span><span class="bar"></span><span class="bar"></span>
@@ -159,92 +194,170 @@
     </div>
   </section>
 
-  <!-- 15 Music Intelligence Breakthroughs Grid -->
+  <!-- 15 Music Intelligence Breakthroughs (Publicis Sapient Architectural Grid) -->
   <section id="intelligence" class="section intelligence-section">
     <div class="section-container">
       <div class="section-header text-center">
         <span class="section-kicker">REVOLUTIONARY MUSIC UNDERSTANDING</span>
         <h2 class="section-title">15 Unusual Features Spotify Never Built</h2>
-        <p class="section-desc">We engineered features that understand human emotion, personal memories, and cultural roots.</p>
+        <p class="section-desc">We engineered features that understand human emotion, autobiographical memories, and ancestral cultural roots.</p>
       </div>
 
       <div class="features-grid">
         <div class="feature-card glassmorphism">
-          <div class="feature-icon">🧠</div>
+          <div class="feature-top-meta">
+            <span class="feature-index">#01</span>
+            <span class="feature-category">Cognitive Memory</span>
+          </div>
+          <div class="feature-icon-box">🧠</div>
           <h3>Music Memory</h3>
-          <p>Attach private memories, photos, and location tags to moments ("Remember this song as my Goa trip"). Replay them anytime.</p>
+          <p>Attach private autobiographical memories, photos, and location tags to moments ("Remember this song as my Goa trip"). Replay emotional time capsules anytime.</p>
         </div>
 
         <div class="feature-card glassmorphism">
-          <div class="feature-icon">🎬</div>
+          <div class="feature-top-meta">
+            <span class="feature-index">#02</span>
+            <span class="feature-category">Life Chronicle</span>
+          </div>
+          <div class="feature-icon-box">🎬</div>
           <h3>Soundtrack My Life</h3>
-          <p>Auto-generates milestones for life chapters (Road Trips, Monsoon Phases, Milestones) with acoustic energy curves.</p>
+          <p>Auto-generates cinematic milestones for life chapters (Road Trips, Monsoon Phases, Career Leaps) with dynamic acoustic energy curves.</p>
         </div>
 
         <div class="feature-card glassmorphism">
-          <div class="feature-icon">🔮</div>
+          <div class="feature-top-meta">
+            <span class="feature-index">#03</span>
+            <span class="feature-category">Stochastic AI</span>
+          </div>
+          <div class="feature-icon-box">🔮</div>
           <h3>Predict My Next Song</h3>
           <p>Markov probabilistic model forecasting what track will resonate next with confidence scores and acoustic transition rationales.</p>
         </div>
 
         <div class="feature-card glassmorphism">
-          <div class="feature-icon">🕳️</div>
+          <div class="feature-top-meta">
+            <span class="feature-index">#04</span>
+            <span class="feature-category">Ontology Graph</span>
+          </div>
+          <div class="feature-icon-box">🕳️</div>
           <h3>Music Rabbit Hole</h3>
-          <p>Multi-hop interactive graph exploration connecting songs to composers, producers, and ancestral folk traditions.</p>
+          <p>Multi-hop interactive graph exploration connecting songs to composers, session musicians, studio mixers, and ancestral folk traditions.</p>
         </div>
 
         <div class="feature-card glassmorphism">
-          <div class="feature-icon">🎭</div>
+          <div class="feature-top-meta">
+            <span class="feature-index">#05</span>
+            <span class="feature-category">Neuro Persona</span>
+          </div>
+          <div class="feature-icon-box">🎭</div>
           <h3>Personality Evolution</h3>
-          <p>Tracks your dynamic persona (e.g. <i>Emotional Explorer</i>) across 30-day, 90-day, and 1-year taste shifts.</p>
+          <p>Tracks your dynamic persona (e.g. <i>Emotional Explorer</i>) across 30-day, 90-day, and 1-year taste shifts with psychological insight.</p>
         </div>
 
         <div class="feature-card glassmorphism">
-          <div class="feature-icon">🧬</div>
+          <div class="feature-top-meta">
+            <span class="feature-index">#06</span>
+            <span class="feature-category">Sonic DNA</span>
+          </div>
+          <div class="feature-icon-box">🧬</div>
           <h3>Music DNA 2.0</h3>
-          <p>Synthesizes the core pattern behind musical preferences ("Why you like Anuv Jain even when the genre changes").</p>
+          <p>Synthesizes the core harmonic pattern behind musical preferences ("Why you love Anuv Jain even when the genre changes").</p>
         </div>
 
         <div class="feature-card glassmorphism">
-          <div class="feature-icon">🎚️</div>
+          <div class="feature-top-meta">
+            <span class="feature-index">#07</span>
+            <span class="feature-category">Affective EQ</span>
+          </div>
+          <div class="feature-icon-box">🎚️</div>
           <h3>Emotional Equalizer</h3>
-          <p>Live 5-axis sliders (Energy, Happiness, Nostalgia, Romance, Discovery) continuously reshaping your active queue.</p>
+          <p>Live 5-axis sliders (Energy, Happiness, Nostalgia, Romance, Discovery) continuously reshaping your active listening queue.</p>
         </div>
 
         <div class="feature-card glassmorphism">
-          <div class="feature-icon">🎢</div>
+          <div class="feature-top-meta">
+            <span class="feature-index">#08</span>
+            <span class="feature-category">Energy Curve</span>
+          </div>
+          <div class="feature-icon-box">🎢</div>
           <h3>Music Journey Engine</h3>
-          <p>Guides your mood through defined phases: <i>Calm &rarr; Warm &rarr; Nostalgic &rarr; Peak Energy &rarr; Cooldown</i>.</p>
+          <p>Guides your emotional state through defined phases: <i>Calm &rarr; Warm &rarr; Nostalgic &rarr; Peak Energy &rarr; Cooldown</i>.</p>
         </div>
 
         <div class="feature-card glassmorphism">
-          <div class="feature-icon">🪄</div>
+          <div class="feature-top-meta">
+            <span class="feature-index">#09</span>
+            <span class="feature-category">Melodic Harmony</span>
+          </div>
+          <div class="feature-icon-box">🪄</div>
           <h3>Finish My Song</h3>
-          <p>Finds songs that seamlessly match the second half or emotional climax of your favorite tracks.</p>
+          <p>Finds songs that seamlessly match the second half or emotional climax of your favorite tracks without jarring genre breaks.</p>
         </div>
 
         <div class="feature-card glassmorphism">
-          <div class="feature-icon">🧩</div>
+          <div class="feature-top-meta">
+            <span class="feature-index">#10</span>
+            <span class="feature-category">Gamified AI</span>
+          </div>
+          <div class="feature-icon-box">🧩</div>
           <h3>Music Puzzle</h3>
-          <p>Daily gamified connection challenges (e.g. <i>Link Arijit Singh &rarr; A.R. Rahman in 3 steps</i>) with reward mixes.</p>
+          <p>Daily gamified connection challenges (e.g. <i>Link Arijit Singh &rarr; A.R. Rahman in 3 steps</i>) with curated reward mixes.</p>
         </div>
 
         <div class="feature-card glassmorphism">
-          <div class="feature-icon">🌎</div>
+          <div class="feature-top-meta">
+            <span class="feature-index">#11</span>
+            <span class="feature-category">Heritage AI</span>
+          </div>
+          <div class="feature-icon-box">🌎</div>
           <h3>Translate the Culture</h3>
-          <p>Cultural lyrics explainer breaking down regional slang, folk instruments (Tumbi, Rabab), and historical context.</p>
+          <p>Cultural lyrics explainer breaking down regional slang, folk instruments (Tumbi, Rabab), and historical musical context in real time.</p>
         </div>
 
         <div class="feature-card glassmorphism">
-          <div class="feature-icon">🤯</div>
+          <div class="feature-top-meta">
+            <span class="feature-index">#12</span>
+            <span class="feature-category">Temporal Recon</span>
+          </div>
+          <div class="feature-icon-box">⏳</div>
           <h3>Music Time Machine</h3>
-          <p>Reconstructs authentic eras (2016 Golden Wave, 2013 Melodic Revolution, 1998 Mumbai) with chartbusters & hidden gems.</p>
+          <p>Reconstructs authentic eras (2016 Golden Wave, 2013 Melodic Revolution, 1998 Mumbai) with chartbusters & forgotten gems.</p>
+        </div>
+
+        <div class="feature-card glassmorphism">
+          <div class="feature-top-meta">
+            <span class="feature-index">#13</span>
+            <span class="feature-category">Spectral Audio</span>
+          </div>
+          <div class="feature-icon-box">⚡</div>
+          <h3>Studio Master DSP</h3>
+          <p>Lossless 320kbps and 24-bit 96kHz playback with dynamic DAC headroom and parametric 10-band hardware equalizer calibration.</p>
+        </div>
+
+        <div class="feature-card glassmorphism">
+          <div class="feature-top-meta">
+            <span class="feature-index">#14</span>
+            <span class="feature-category">Voice AI Companion</span>
+          </div>
+          <div class="feature-icon-box">🎙️</div>
+          <h3>Neural Voice DJ</h3>
+          <p>Context-aware AI voice companion introducing songs with anecdotes, weather resonance, and artist trivia between transitions.</p>
+        </div>
+
+        <div class="feature-card glassmorphism">
+          <div class="feature-top-meta">
+            <span class="feature-index">#15</span>
+            <span class="feature-category">Spatial DSP</span>
+          </div>
+          <div class="feature-icon-box">🎧</div>
+          <h3>Acoustic Resonance Visualizer</h3>
+          <p>Real-time FFT audio spectrum mapping with harmonic distortion isolation and binaural spatial room emulation.</p>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- API Health & Status Section -->
+  <!-- API Health & Status Section (Publicis Sapient High-Tech Spec) -->
   <section id="api" class="section api-section">
     <div class="section-container">
       <div class="api-card glassmorphism">
@@ -289,19 +402,21 @@
     </div>
   </section>
 
-  <!-- Call to Action Banner -->
-  <section class="cta-section">
+  <!-- Call to Action Banner (Apple Keynote Card) -->
+  <section id="download" class="cta-section">
     <div class="section-container">
-      <div class="cta-card glassmorphism text-center">
-        <h2>Ready for the next evolution in music streaming?</h2>
-        <p>Install Zynera on your Android device today for free lossless audio and deep music intelligence.</p>
-        <div class="cta-btn-wrap">
-          <a href="/download/apk" class="btn btn-hero-download">
-            <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
-              <path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM17 13l-5 5-5-5h3V9h4v4h3z"/>
-            </svg>
-            <span>Download Zynera APK (v2.4.0)</span>
-          </a>
+      <div class="cta-card glassmorphism">
+        <div class="cta-content-wrap">
+          <h2>Ready for the next evolution in music streaming?</h2>
+          <p>Install Zynera on your Android device today for studio-grade lossless audio and deep music intelligence.</p>
+          <div class="cta-btn-wrap">
+            <a href="/download/apk" class="btn btn-hero-download">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+                <path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM17 13l-5 5-5-5h3V9h4v4h3z"/>
+              </svg>
+              <span>Download Zynera APK (v2.4.0)</span>
+            </a>
+          </div>
         </div>
       </div>
     </div>
@@ -312,7 +427,7 @@
     <div class="section-container footer-container">
       <div class="footer-left">
         <span class="footer-logo">ZYNERA</span>
-        <p>© 2026 Zynera Music Inc. All rights reserved.</p>
+        <p>© 2026 Zynera Music Inc. Crafted with Apple Human Interface & Publicis Sapient design philosophies.</p>
       </div>
       <div class="footer-links">
         <a href="/api/v1/health">API Health</a>

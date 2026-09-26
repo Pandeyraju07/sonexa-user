@@ -128,9 +128,7 @@ fun PodcastDetailScreen(
             .navigationBarsPadding()
     ) {
         LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(bottom = 80.dp),
+            modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(bottom = 24.dp)
         ) {
             // 1. Top Navigation Bar

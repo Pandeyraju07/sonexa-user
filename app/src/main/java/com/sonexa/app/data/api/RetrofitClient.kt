@@ -124,6 +124,10 @@ object RetrofitClient {
         retrofit.create(UserApiService::class.java)
     }
 
+    val recommendationApiService: RecommendationApiService by lazy {
+        retrofit.create(RecommendationApiService::class.java)
+    }
+
     private fun isAuthPath(request: Request): Boolean {
         val path = request.url.encodedPath
         return path.contains("/auth/login")

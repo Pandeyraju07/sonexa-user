@@ -78,7 +78,6 @@ fun ArtistProfileScreen(
             .background(SonexaBgDark)
             .statusBarsPadding()
             .navigationBarsPadding()
-            .padding(bottom = 135.dp)
     ) {
         when (val state = uiState) {
             is CatalogUiState.Loading -> {
@@ -102,7 +101,7 @@ fun ArtistProfileScreen(
             }
             is CatalogUiState.Ready -> {
                 LazyColumn(
-                    contentPadding = PaddingValues(horizontal = 20.dp, vertical = 14.dp),
+                    contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 14.dp, bottom = 24.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     item {

@@ -74,7 +74,6 @@ fun AISignatureScreen(
             .background(SonexaBgDark)
             .statusBarsPadding()
             .navigationBarsPadding()
-            .padding(bottom = 135.dp)
     ) {
         Column(
             modifier = Modifier

@@ -121,9 +121,7 @@ fun PodcastHubScreen(
             .navigationBarsPadding()
     ) {
         LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(bottom = 80.dp),
+            modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(bottom = 24.dp)
         ) {
             // 1. Header with Greeting, Profile, Notifications & Search Toggle

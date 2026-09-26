@@ -93,7 +93,7 @@ fun IPopHubScreen(
                 val feed = state.data
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(bottom = 125.dp)
+                    contentPadding = PaddingValues(bottom = 24.dp)
                 ) {
                     // 1. Top Bar: Back + Glowing Title + Search
                     item {

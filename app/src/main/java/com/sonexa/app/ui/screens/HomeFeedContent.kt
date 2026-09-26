@@ -63,7 +63,6 @@ fun HomeFeedContent(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(bottom = 125.dp)
             .verticalScroll(rememberScrollState())
     ) {
         // Top App Bar with User Avatar & Filter Chips
@@ -467,7 +466,7 @@ fun HomeFeedContent(
                 }
             }
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(115.dp))
         }
     }
 }

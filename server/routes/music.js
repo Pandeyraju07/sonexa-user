@@ -1,29 +1,37 @@
 const express = require('express');
 const router = express.Router();
-const { tracks, artists, playlists, podcasts, liveEvents } = require('../data/catalog');
+const { catalogStore } = require('../catalog/catalogStore');
+const { unifiedSearchService } = require('../search/service/UnifiedSearchService');
+const { hybridRecommendationEngine } = require('../recommendation/engine/HybridRecommendationEngine');
+const PlaybackContext = require('../recommendation/model/PlaybackContext');
+const { tracks: fallbackTracks, artists: fallbackArtists, playlists: fallbackPlaylists, podcasts, liveEvents } = require('../data/catalog');
 
 // Helper to build Home Feed payload
 function buildHomeFeed() {
+  const allTracks = catalogStore.getAllTracks();
+  const context = new PlaybackContext({ limit: 10 });
+  const recs = hybridRecommendationEngine.recommend(context);
+
   return {
     userDisplayName: 'Raju Pandey',
     userPhotoUrl: 'https://api.dicebear.com/7.x/initials/svg?seed=RP&backgroundColor=8b5cf6,ec4899&textColor=ffffff',
-    continueListening: [tracks[0], tracks[1]],
-    trendingNow: tracks,
-    madeForYou: [tracks[2], tracks[4], tracks[0]],
-    featuredPlaylists: playlists,
-    topArtists: artists,
-    recommendedForYou: [tracks[3], tracks[5]],
+    continueListening: allTracks.slice(0, 4),
+    trendingNow: allTracks,
+    madeForYou: recs.slice(0, 6).map(r => r.track),
+    featuredPlaylists: catalogStore.playlists,
+    topArtists: catalogStore.artists,
+    recommendedForYou: recs.slice(0, 4).map(r => r.track),
     popularRadio: [
-      { id: 'rad_1', title: 'Arijit Singh Radio', subtitle: 'With Pritam, Atif Aslam, Mohit Chauhan', coverUrl: tracks[1].coverUrl },
-      { id: 'rad_2', title: 'Indie Vibes Radio', subtitle: 'With Anuv Jain, Prateek Kuhad, Jasleen Royal', coverUrl: tracks[2].coverUrl }
+      { id: 'rad_1', title: 'Arijit Singh Radio', subtitle: 'With Pritam, Atif Aslam, Mohit Chauhan', coverUrl: allTracks[1].coverUrl },
+      { id: 'rad_2', title: 'Indie Vibes Radio', subtitle: 'With Anuv Jain, Prateek Kuhad, Jasleen Royal', coverUrl: allTracks[2].coverUrl }
     ],
     categories: ['All', 'Music', 'Podcasts', 'Live Events', 'I-Pop'],
     heroBanners: [
       {
         id: 'banner_1',
         title: 'Zynera Music Intelligence 2.0',
-        subtitle: 'Understand why you love music with 15 breakthrough AI features',
-        badge: 'NEW ERA',
+        subtitle: 'Enterprise Hybrid Recommendation & Semantic Search Engine Active',
+        badge: 'SPOTIFY-GRADE AI',
         actionUrl: 'zynera://music-intelligence'
       }
     ]
@@ -42,55 +50,34 @@ router.get('/home', (req, res) => {
 router.get('/trending', (req, res) => {
   res.json({
     success: true,
-    data: tracks
+    data: catalogStore.getAllTracks()
   });
 });
 
-// GET /api/v1/music/search
+// GET /api/v1/music/search (Upgraded with semantic intent and ranking)
 router.get('/search', (req, res) => {
-  const query = (req.query.q || '').toLowerCase().trim();
-  if (!query) {
-    return res.json({
-      success: true,
-      data: {
-        tracks: tracks.slice(0, 5),
-        artists: artists.slice(0, 3),
-        playlists: playlists.slice(0, 2),
-        albums: []
-      }
-    });
-  }
+  const query = (req.query.q || '').trim();
+  const userId = req.query.userId || req.headers['x-user-id'] || 'usr_default_1';
 
-  const matchedTracks = tracks.filter(t =>
-    t.title.toLowerCase().includes(query) ||
-    t.artist.toLowerCase().includes(query) ||
-    t.genre.toLowerCase().includes(query)
-  );
-
-  const matchedArtists = artists.filter(a =>
-    a.name.toLowerCase().includes(query) ||
-    a.genre.toLowerCase().includes(query)
-  );
-
-  const matchedPlaylists = playlists.filter(p =>
-    p.title.toLowerCase().includes(query) ||
-    p.description.toLowerCase().includes(query)
-  );
+  const searchResult = unifiedSearchService.search(query, userId);
 
   res.json({
     success: true,
     data: {
-      tracks: matchedTracks.length ? matchedTracks : tracks.slice(0, 3),
-      artists: matchedArtists,
-      playlists: matchedPlaylists,
-      albums: []
+      tracks: searchResult.songs,
+      artists: searchResult.artists,
+      playlists: searchResult.playlists,
+      albums: searchResult.albums,
+      movies: searchResult.movies,
+      intent: searchResult.intent,
+      topResult: searchResult.topResult
     }
   });
 });
 
 // GET /api/v1/music/tracks/:id
 router.get('/tracks/:id', (req, res) => {
-  const track = tracks.find(t => t.id === req.params.id) || tracks[0];
+  const track = catalogStore.getTrackById(req.params.id) || catalogStore.getAllTracks()[0];
   res.json({
     success: true,
     data: track

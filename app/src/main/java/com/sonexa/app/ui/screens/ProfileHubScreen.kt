@@ -200,9 +200,8 @@ fun ProfileHubScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .statusBarsPadding()
-                .navigationBarsPadding()
-                .padding(bottom = 135.dp),
-            contentPadding = PaddingValues(horizontal = 18.dp, vertical = 12.dp),
+                .navigationBarsPadding(),
+            contentPadding = PaddingValues(start = 18.dp, end = 18.dp, top = 12.dp, bottom = 24.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             // ── TOP BAR ──

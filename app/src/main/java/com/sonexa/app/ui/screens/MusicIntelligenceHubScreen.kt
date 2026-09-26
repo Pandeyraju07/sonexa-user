@@ -151,7 +151,7 @@ fun MusicIntelligenceHubScreen(
                     .fillMaxSize()
                     .padding(horizontal = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(20.dp),
-                contentPadding = PaddingValues(bottom = 90.dp)
+                contentPadding = PaddingValues(bottom = 24.dp)
             ) {
                 // -------------------------------------------------------------
                 // 1. PREDICT MY NEXT SONG (Live Predictor Pill)

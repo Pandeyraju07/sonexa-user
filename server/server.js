@@ -55,7 +55,17 @@ function handleApkDownload(req, res) {
 
 app.get(['/download/apk', '/download/latest', '/apk', '/Zynera-v2.4.0.apk'], handleApkDownload);
 
-// Mount API v1 Routers
+const recommendationsRouter = require('./routes/recommendations');
+const searchRouter = require('./routes/search');
+const eventsRouter = require('./routes/events');
+const adminRouter = require('./routes/admin');
+
+// Mount API Routers (both /api/v1/ and /api/ for universal standard compliance)
+app.use(['/api/v1/recommendations', '/api/recommendations'], recommendationsRouter);
+app.use(['/api/v1/search', '/api/search'], searchRouter);
+app.use(['/api/v1/events', '/api/events'], eventsRouter);
+app.use(['/api/v1/admin', '/api/admin'], adminRouter);
+
 app.use('/api/v1/auth', authRouter);
 app.use('/api/v1/user', userRouter);
 app.use('/api/v1/music', musicRouter);
@@ -65,8 +75,6 @@ app.use('/api/v1/config', configRouter);
 // Flat fallback routes for compatibility
 app.use('/api/v1/home', (req, res) => res.json({ success: true, data: buildHomeFeed() }));
 app.use('/home', (req, res) => res.json({ success: true, data: buildHomeFeed() }));
-app.use('/api/v1/events', (req, res) => res.json({ success: true, data: 'Event recorded' }));
-app.use('/events', (req, res) => res.json({ success: true, data: 'Event recorded' }));
 
 // Live Events
 app.get('/api/v1/live-events/feed', (req, res) => {

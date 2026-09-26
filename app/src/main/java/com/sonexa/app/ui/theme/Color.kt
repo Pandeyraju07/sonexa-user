@@ -3,34 +3,38 @@ package com.sonexa.app.ui.theme
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 
-val SonexaBgDark = Color(0xFF0A0714)
-val SonexaCardDark = Color(0xFF130E26)
-val SonexaCardBorder = Color(0xFF2B214A)
-val SonexaInputBg = Color(0xFF120C24)
-val SonexaInputBorder = Color(0xFF292048)
+// Apple Design (OLED Obsidian & Hairline Glass) & Publicis Sapient Palettes
+val SonexaBgDark = Color(0xFF07070A)
+val SonexaCardDark = Color(0xFF121218)
+val SonexaCardBorder = Color(0xFF24242F)
+val SonexaInputBg = Color(0xFF0F0F14)
+val SonexaInputBorder = Color(0xFF22222C)
 
-val SonexaPurplePrimary = Color(0xFF6B3CE9)
-val SonexaPurpleLight = Color(0xFFB062FF)
-val SonexaMagenta = Color(0xFFE534B2)
+// Brand Accents: Publicis Sapient Energetic Ruby & Apple System Indigo
+val SonexaPurplePrimary = Color(0xFFFE2C55)
+val SonexaPurpleLight = Color(0xFFFF6584)
+val SonexaMagenta = Color(0xFFFF2D55)
 val SonexaPinkAccent = Color(0xFFFF52C4)
 
+// High Contrast Typography: Apple Pure Whites & Slate Muted
 val SonexaTextWhite = Color(0xFFFFFFFF)
-val SonexaTextMuted = Color(0xFF9EA4B0)
-val SonexaTextSubtle = Color(0xFF6C7280)
-val SpotifyGreen = Color(0xFF1ED760)
+val SonexaTextMuted = Color(0xFF8E8E98)
+val SonexaTextSubtle = Color(0xFF575762)
+val SpotifyGreen = Color(0xFF30D158) // Apple Emerald Green
 
+// Luxury Specular Gradients
 val SonexaGradientBrush = Brush.horizontalGradient(
     colors = listOf(
-        Color(0xFF5935E5),
-        Color(0xFF9825DD),
-        Color(0xFFE534B2)
+        Color(0xFFFE2C55),
+        Color(0xFF8B5CF6),
+        Color(0xFF6366F1)
     )
 )
 
 val SonexaGlowGradient = Brush.radialGradient(
     colors = listOf(
-        Color(0x409825DD),
-        Color(0x106B3CE9),
+        Color(0x35FE2C55),
+        Color(0x156366F1),
         Color.Transparent
     )
 )

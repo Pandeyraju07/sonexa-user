@@ -92,10 +92,9 @@ fun PremiumScreen(
             .background(SonexaBgDark)
             .statusBarsPadding()
             .navigationBarsPadding()
-            .padding(bottom = 135.dp)
     ) {
         LazyColumn(
-            contentPadding = PaddingValues(horizontal = 20.dp, vertical = 14.dp),
+            contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 14.dp, bottom = 24.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             // Header Bar
