@@ -7,6 +7,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.selection.LocalTextSelectionColors
+import androidx.compose.foundation.text.selection.TextSelectionColors
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -25,8 +27,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import com.sonexa.app.ui.components.*
+import com.sonexa.app.ui.components.OtpResendRow
+import com.sonexa.app.ui.components.SonexaGradientButton
+import com.sonexa.app.ui.components.SonexaHeaderLogo
+import com.sonexa.app.ui.components.SonexaInputField
 import com.sonexa.app.ui.theme.*
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.sonexa.app.ui.viewmodel.AuthUiState
@@ -50,6 +54,11 @@ fun ForgotPasswordScreen(
     var resendSecondsLeft by remember { mutableIntStateOf(0) }
     val scrollState = rememberScrollState()
     val isLoading = authState is AuthUiState.Loading
+    val fieldStyle = AppleType.body.copy(color = SonexaTextWhite)
+    val selectionColors = TextSelectionColors(
+        handleColor = SonexaPurpleLight,
+        backgroundColor = SonexaPurpleLight.copy(alpha = 0.35f)
+    )
 
     LaunchedEffect(Unit) {
         authViewModel.resetState()
@@ -96,43 +105,39 @@ fun ForgotPasswordScreen(
         }
     }
 
-    // Keep password / OTP fields above the keyboard while typing
     LaunchedEffect(newPassword, otpCode, isCodeSent) {
         if (isCodeSent) {
             scrollState.animateScrollTo(scrollState.maxValue)
         }
     }
 
-    Box(
-        modifier = modifier
-            .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(
-                        Color(0xFF0F0726),
-                        Color(0xFF080512),
-                        Color(0xFF05030A)
+    CompositionLocalProvider(LocalTextSelectionColors provides selectionColors) {
+        Box(
+            modifier = modifier
+                .fillMaxSize()
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            Color(0xFF0F0726),
+                            Color(0xFF080512),
+                            Color(0xFF05030A)
+                        )
                     )
                 )
-            )
-            .statusBarsPadding()
-            .navigationBarsPadding()
-            .imePadding()
-            .padding(horizontal = 24.dp, vertical = 16.dp)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(scrollState),
-            horizontalAlignment = Alignment.CenterHorizontally
+                .statusBarsPadding()
+                .navigationBarsPadding()
+                .imePadding()
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(scrollState)
+                    .padding(horizontal = 20.dp)
+                    .padding(top = 8.dp, bottom = 24.dp)
             ) {
                 Box(
                     modifier = Modifier
-                        .size(40.dp)
+                        .size(44.dp)
                         .clip(CircleShape)
                         .background(SonexaInputBg)
                         .border(1.dp, SonexaInputBorder, CircleShape)
@@ -143,131 +148,154 @@ fun ForgotPasswordScreen(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = "Back",
                         tint = SonexaTextWhite,
-                        modifier = Modifier.size(18.dp)
+                        modifier = Modifier.size(20.dp)
                     )
                 }
-            }
 
-            Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(16.dp))
 
-            SonexaHeaderLogo()
+                SonexaHeaderLogo()
 
-            Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(28.dp))
 
-            Text(
-                text = "Reset Password",
-                fontSize = 24.sp,
-                fontWeight = FontWeight.ExtraBold,
-                color = SonexaTextWhite
-            )
-
-            Spacer(modifier = Modifier.height(4.dp))
-
-            Text(
-                text = if (!isCodeSent)
-                    "Enter your Gmail to receive a reset OTP"
-                else
-                    "Enter the OTP sent to $emailOrPhone (expires in 1 min)",
-                fontSize = 13.sp,
-                color = SonexaTextMuted
-            )
-
-            Spacer(modifier = Modifier.height(28.dp))
-
-            if (!isCodeSent) {
-                SonexaInputField(
-                    value = emailOrPhone,
-                    onValueChange = { emailOrPhone = it },
-                    placeholderText = "Email address",
-                    leadingIcon = Icons.Default.Email,
-                    keyboardType = KeyboardType.Email
-                )
-
-                Spacer(modifier = Modifier.height(20.dp))
-
-                SonexaGradientButton(
-                    text = if (isLoading) "Sending..." else "Send Reset Code",
-                    onClick = {
-                        when {
-                            isLoading -> Unit
-                            emailOrPhone.isBlank() ->
-                                Toast.makeText(context, "Please enter your email", Toast.LENGTH_SHORT).show()
-                            !emailOrPhone.contains("@") ->
-                                Toast.makeText(context, "Please enter a valid email", Toast.LENGTH_SHORT).show()
-                            else -> authViewModel.forgotPassword(emailOrPhone.trim())
-                        }
-                    }
-                )
-            } else {
-                SonexaInputField(
-                    value = otpCode,
-                    onValueChange = { if (it.length <= 6 && it.all { c -> c.isDigit() }) otpCode = it },
-                    placeholderText = "4–6 digit reset OTP",
-                    leadingIcon = Icons.Default.Pin,
-                    keyboardType = KeyboardType.Number
-                )
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                SonexaInputField(
-                    value = newPassword,
-                    onValueChange = { newPassword = it },
-                    placeholderText = "New password (min 6 chars)",
-                    leadingIcon = Icons.Default.Lock,
-                    isPassword = true
-                )
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                OtpResendRow(
-                    secondsRemaining = resendSecondsLeft,
-                    onResend = {
-                        if (!isLoading && emailOrPhone.isNotBlank()) {
-                            authViewModel.forgotPassword(emailOrPhone.trim())
-                        }
-                    }
-                )
-
-                Spacer(modifier = Modifier.height(20.dp))
-
-                SonexaGradientButton(
-                    text = if (isLoading) "Updating..." else "Update Password",
-                    onClick = {
-                        when {
-                            isLoading -> Unit
-                            otpCode.isBlank() || newPassword.isBlank() ->
-                                Toast.makeText(context, "Please fill all fields", Toast.LENGTH_SHORT).show()
-                            newPassword.length < 6 ->
-                                Toast.makeText(context, "Password must be at least 6 characters", Toast.LENGTH_SHORT).show()
-                            else -> authViewModel.resetPassword(emailOrPhone.trim(), otpCode.trim(), newPassword)
-                        }
-                    }
-                )
-            }
-
-            Spacer(modifier = Modifier.height(28.dp))
-
-            Row(
-                modifier = Modifier.padding(bottom = 12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center
-            ) {
                 Text(
-                    text = "Remember your password? ",
-                    fontSize = 13.sp,
-                    color = SonexaTextMuted
+                    text = "Reset Password",
+                    style = AppleType.largeTitle,
+                    color = SonexaTextWhite,
+                    modifier = Modifier.fillMaxWidth()
                 )
-                Text(
-                    text = "Log in",
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = SonexaPurpleLight,
-                    modifier = Modifier.clickable { onNavigateToLogin() }
-                )
-            }
 
-            // Extra space so last field stays above IME
-            Spacer(modifier = Modifier.height(120.dp))
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Text(
+                    text = if (!isCodeSent) {
+                        "Enter your email address and we’ll send you a reset code."
+                    } else {
+                        "Enter the code sent to $emailOrPhone. It expires in 1 minute."
+                    },
+                    style = AppleType.subheadline,
+                    color = SonexaTextMuted,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Spacer(modifier = Modifier.height(32.dp))
+
+                if (!isCodeSent) {
+                    FieldLabel("Email address")
+                    SonexaInputField(
+                        value = emailOrPhone,
+                        onValueChange = { emailOrPhone = it },
+                        placeholderText = "name@email.com",
+                        leadingIcon = Icons.Default.Email,
+                        keyboardType = KeyboardType.Email,
+                        textStyle = fieldStyle
+                    )
+
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    SonexaGradientButton(
+                        text = if (isLoading) "Sending…" else "Send Reset Code",
+                        labelStyle = AppleType.headline.copy(color = Color.White),
+                        onClick = {
+                            when {
+                                isLoading -> Unit
+                                emailOrPhone.isBlank() ->
+                                    Toast.makeText(context, "Please enter your email", Toast.LENGTH_SHORT).show()
+                                !emailOrPhone.contains("@") ->
+                                    Toast.makeText(context, "Please enter a valid email", Toast.LENGTH_SHORT).show()
+                                else -> authViewModel.forgotPassword(emailOrPhone.trim())
+                            }
+                        }
+                    )
+                } else {
+                    FieldLabel("Reset code")
+                    SonexaInputField(
+                        value = otpCode,
+                        onValueChange = { if (it.length <= 6 && it.all { c -> c.isDigit() }) otpCode = it },
+                        placeholderText = "6-digit code",
+                        leadingIcon = Icons.Default.Pin,
+                        keyboardType = KeyboardType.Number,
+                        textStyle = fieldStyle
+                    )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    FieldLabel("New password")
+                    SonexaInputField(
+                        value = newPassword,
+                        onValueChange = { newPassword = it },
+                        placeholderText = "At least 6 characters",
+                        leadingIcon = Icons.Default.Lock,
+                        isPassword = true,
+                        textStyle = fieldStyle
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    OtpResendRow(
+                        secondsRemaining = resendSecondsLeft,
+                        onResend = {
+                            if (!isLoading && emailOrPhone.isNotBlank()) {
+                                authViewModel.forgotPassword(emailOrPhone.trim())
+                            }
+                        }
+                    )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    SonexaGradientButton(
+                        text = if (isLoading) "Updating…" else "Update Password",
+                        labelStyle = AppleType.headline.copy(color = Color.White),
+                        onClick = {
+                            when {
+                                isLoading -> Unit
+                                otpCode.isBlank() || newPassword.isBlank() ->
+                                    Toast.makeText(context, "Please fill all fields", Toast.LENGTH_SHORT).show()
+                                newPassword.length < 6 ->
+                                    Toast.makeText(context, "Password must be at least 6 characters", Toast.LENGTH_SHORT).show()
+                                else -> authViewModel.resetPassword(emailOrPhone.trim(), otpCode.trim(), newPassword)
+                            }
+                        }
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Remember your password? ",
+                        style = AppleType.footnote,
+                        color = SonexaTextMuted
+                    )
+                    Text(
+                        text = "Log in",
+                        style = AppleType.footnote.copy(fontWeight = FontWeight.SemiBold),
+                        color = SonexaPurpleLight,
+                        modifier = Modifier
+                            .defaultMinSize(minHeight = 44.dp)
+                            .clickable { onNavigateToLogin() }
+                            .wrapContentHeight(Alignment.CenterVertically)
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(80.dp))
+            }
         }
     }
+}
+
+@Composable
+private fun FieldLabel(text: String) {
+    Text(
+        text = text,
+        style = AppleType.footnote.copy(fontWeight = FontWeight.SemiBold),
+        color = SonexaTextWhite,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(start = 4.dp, bottom = 8.dp)
+    )
 }

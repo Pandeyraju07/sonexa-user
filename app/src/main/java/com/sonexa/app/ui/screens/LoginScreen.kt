@@ -3,7 +3,12 @@ package com.sonexa.app.ui.screens
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.selection.LocalTextSelectionColors
+import androidx.compose.foundation.text.selection.TextSelectionColors
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Lock
@@ -17,12 +22,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import com.sonexa.app.ui.components.*
-import com.sonexa.app.ui.theme.*
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.sonexa.app.ui.components.SonexaGradientButton
+import com.sonexa.app.ui.components.SonexaHeaderLogo
+import com.sonexa.app.ui.components.SonexaInputField
+import com.sonexa.app.ui.theme.*
 import com.sonexa.app.ui.viewmodel.AuthUiState
 import com.sonexa.app.ui.viewmodel.AuthViewModel
 
@@ -39,6 +43,10 @@ fun LoginScreen(
     val authState by authViewModel.uiState.collectAsState()
     var emailOrPhone by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    val selectionColors = TextSelectionColors(
+        handleColor = SonexaPurpleLight,
+        backgroundColor = SonexaPurpleLight.copy(alpha = 0.35f)
+    )
 
     LaunchedEffect(Unit) {
         authViewModel.resetState()
@@ -62,91 +70,93 @@ fun LoginScreen(
         }
     }
 
-    Box(
-        modifier = modifier
-            .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(
-                        Color(0xFF0F0726),
-                        Color(0xFF080512),
-                        Color(0xFF05030A)
+    CompositionLocalProvider(LocalTextSelectionColors provides selectionColors) {
+        Box(
+            modifier = modifier
+                .fillMaxSize()
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            Color(0xFF0F0726),
+                            Color(0xFF080512),
+                            Color(0xFF05030A)
+                        )
                     )
                 )
-            )
-            .statusBarsPadding()
-            .navigationBarsPadding()
-            .imePadding()
-            .padding(horizontal = 24.dp, vertical = 16.dp)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState()),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.SpaceBetween
+                .statusBarsPadding()
+                .navigationBarsPadding()
+                .imePadding()
         ) {
             Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.padding(top = 16.dp)
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 20.dp)
+                    .padding(top = 12.dp, bottom = 24.dp)
             ) {
                 SonexaHeaderLogo()
-                Spacer(modifier = Modifier.height(16.dp))
+
+                Spacer(modifier = Modifier.height(28.dp))
+
                 Text(
                     text = "Log in to Zynera",
-                    fontSize = 26.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = SonexaTextWhite
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = "Welcome back to your music world",
-                    fontSize = 13.sp,
-                    color = SonexaTextMuted
-                )
-            }
-
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                SonexaInputField(
-                    value = emailOrPhone,
-                    onValueChange = { emailOrPhone = it },
-                    placeholderText = "Email address",
-                    leadingIcon = Icons.Default.Email,
-                    keyboardType = KeyboardType.Email
-                )
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                SonexaInputField(
-                    value = password,
-                    onValueChange = { password = it },
-                    placeholderText = "Password",
-                    leadingIcon = Icons.Default.Lock,
-                    isPassword = true
+                    style = AppleType.largeTitle,
+                    color = SonexaTextWhite,
+                    modifier = Modifier.fillMaxWidth()
                 )
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                Box(
-                    modifier = Modifier.fillMaxWidth(),
-                    contentAlignment = Alignment.CenterEnd
-                ) {
-                    Text(
-                        text = "Forgot password?",
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = SonexaPurpleLight,
-                        modifier = Modifier.clickable { onNavigateToForgotPassword() }
-                    )
-                }
+                Text(
+                    text = "Welcome back to your music world.",
+                    style = AppleType.subheadline,
+                    color = SonexaTextMuted,
+                    modifier = Modifier.fillMaxWidth()
+                )
 
-                Spacer(modifier = Modifier.height(20.dp))
+                Spacer(modifier = Modifier.height(32.dp))
+
+                AppleFieldLabel("Email address")
+                SonexaInputField(
+                    value = emailOrPhone,
+                    onValueChange = { emailOrPhone = it },
+                    placeholderText = "name@email.com",
+                    leadingIcon = Icons.Default.Email,
+                    keyboardType = KeyboardType.Email,
+                    textStyle = AppleType.body.copy(color = SonexaTextWhite)
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                AppleFieldLabel("Password")
+                SonexaInputField(
+                    value = password,
+                    onValueChange = { password = it },
+                    placeholderText = "Required",
+                    leadingIcon = Icons.Default.Lock,
+                    isPassword = true,
+                    textStyle = AppleType.body.copy(color = SonexaTextWhite)
+                )
+
+                Text(
+                    text = "Forgot password?",
+                    style = AppleType.subheadline.copy(fontWeight = FontWeight.SemiBold),
+                    color = SonexaPurpleLight,
+                    modifier = Modifier
+                        .align(Alignment.End)
+                        .defaultMinSize(minHeight = 44.dp)
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null
+                        ) { onNavigateToForgotPassword() }
+                        .wrapContentHeight(Alignment.CenterVertically)
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
 
                 SonexaGradientButton(
-                    text = if (authState is AuthUiState.Loading) "Logging in..." else "Log In",
+                    text = if (authState is AuthUiState.Loading) "Logging in…" else "Log In",
+                    labelStyle = AppleType.headline.copy(color = Color.White),
                     onClick = {
                         when {
                             emailOrPhone.isBlank() || password.isBlank() ->
@@ -158,44 +168,41 @@ fun LoginScreen(
                     }
                 )
 
-                Spacer(modifier = Modifier.height(18.dp))
-                SonexaOrDivider()
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(24.dp))
 
-                SocialContinueButtons(
-                    enabled = authState !is AuthUiState.Loading,
-                    onGoogleSuccess = { profile ->
-                        authViewModel.googleSignIn(
-                            idToken = profile.idToken,
-                            email = profile.email,
-                            name = profile.name,
-                            profilePicUrl = profile.photoUrl
-                        )
-                    },
-                    onAppleSuccess = { profile ->
-                        authViewModel.appleSignIn(
-                            identityToken = profile.idToken,
-                            email = profile.email,
-                            name = profile.name
-                        )
-                    }
-                )
-            }
-
-            Row(
-                modifier = Modifier.padding(bottom = 12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center
-            ) {
-                Text(text = "Don't have an account? ", fontSize = 13.sp, color = SonexaTextMuted)
-                Text(
-                    text = "Sign up for free",
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = SonexaPurpleLight,
-                    modifier = Modifier.clickable { onNavigateToCreateAccount() }
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Don't have an account? ",
+                        style = AppleType.footnote,
+                        color = SonexaTextMuted
+                    )
+                    Text(
+                        text = "Sign up for free",
+                        style = AppleType.footnote.copy(fontWeight = FontWeight.SemiBold),
+                        color = SonexaPurpleLight,
+                        modifier = Modifier
+                            .defaultMinSize(minHeight = 44.dp)
+                            .clickable { onNavigateToCreateAccount() }
+                            .wrapContentHeight(Alignment.CenterVertically)
+                    )
+                }
             }
         }
     }
+}
+
+@Composable
+private fun AppleFieldLabel(text: String) {
+    Text(
+        text = text,
+        style = AppleType.footnote.copy(fontWeight = FontWeight.SemiBold),
+        color = SonexaTextWhite,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(start = 4.dp, bottom = 8.dp)
+    )
 }

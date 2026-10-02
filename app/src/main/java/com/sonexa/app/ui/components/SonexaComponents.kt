@@ -29,6 +29,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -314,6 +315,26 @@ fun CreateAccountHeroArtwork(
 }
 
 @Composable
+private fun AppleFieldPlaceholder(
+    placeholderText: String,
+    textStyle: TextStyle?
+) {
+    if (textStyle == null) {
+        Text(text = placeholderText, color = SonexaTextSubtle, fontSize = 14.sp)
+    } else {
+        Text(
+            text = placeholderText,
+            color = SonexaTextSubtle,
+            fontFamily = textStyle.fontFamily,
+            fontSize = textStyle.fontSize,
+            fontWeight = textStyle.fontWeight,
+            letterSpacing = textStyle.letterSpacing,
+            lineHeight = textStyle.lineHeight
+        )
+    }
+}
+
+@Composable
 fun SonexaInputField(
     value: String,
     onValueChange: (String) -> Unit,
@@ -321,7 +342,8 @@ fun SonexaInputField(
     leadingIcon: ImageVector,
     modifier: Modifier = Modifier,
     isPassword: Boolean = false,
-    keyboardType: KeyboardType = KeyboardType.Text
+    keyboardType: KeyboardType = KeyboardType.Text,
+    textStyle: TextStyle? = null
 ) {
     var passwordVisible = false
     if (isPassword) {
@@ -332,8 +354,9 @@ fun SonexaInputField(
             value = value,
             onValueChange = onValueChange,
             placeholder = {
-                Text(text = placeholderText, color = SonexaTextSubtle, fontSize = 14.sp)
+                AppleFieldPlaceholder(placeholderText, textStyle)
             },
+            textStyle = textStyle ?: TextStyle.Default,
             leadingIcon = {
                 Icon(
                     imageVector = leadingIcon,
@@ -374,8 +397,9 @@ fun SonexaInputField(
             value = value,
             onValueChange = onValueChange,
             placeholder = {
-                Text(text = placeholderText, color = SonexaTextSubtle, fontSize = 14.sp)
+                AppleFieldPlaceholder(placeholderText, textStyle)
             },
+            textStyle = textStyle ?: TextStyle.Default,
             leadingIcon = {
                 Icon(
                     imageVector = leadingIcon,
@@ -407,7 +431,12 @@ fun SonexaInputField(
 fun SonexaGradientButton(
     text: String,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    labelStyle: TextStyle = TextStyle(
+        color = Color.White,
+        fontSize = 16.sp,
+        fontWeight = FontWeight.Bold
+    )
 ) {
     Box(
         modifier = modifier
@@ -425,8 +454,8 @@ fun SonexaGradientButton(
             Text(
                 text = text,
                 color = Color.White,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Bold
+                style = labelStyle,
+                maxLines = 1
             )
             Spacer(modifier = Modifier.width(10.dp))
             Icon(
@@ -584,7 +613,7 @@ fun OtpResendRow(
     ) {
         Text(
             text = prompt,
-            fontSize = 12.sp,
+            style = AppleType.footnote,
             color = SonexaTextMuted
         )
         Text(
@@ -595,8 +624,7 @@ fun OtpResendRow(
                 val secs = secondsRemaining % 60
                 "Resend in %d:%02d".format(mins, secs)
             },
-            fontSize = 12.sp,
-            fontWeight = FontWeight.Bold,
+            style = AppleType.footnote.copy(fontWeight = FontWeight.SemiBold),
             color = if (canResend) SonexaPurpleLight else SonexaTextSubtle,
             modifier = Modifier
                 .alpha(if (canResend) 1f else 0.45f)

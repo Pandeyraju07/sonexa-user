@@ -37,7 +37,7 @@ import com.sonexa.app.ui.viewmodel.AuthViewModel
 fun CreateAccountScreen(
     onNavigateToLogin: () -> Unit,
     onSignUpSuccess: (String) -> Unit,
-    onSocialSuccess: () -> Unit = {},
+    @Suppress("UNUSED_PARAMETER") onSocialSuccess: () -> Unit = {},
     authViewModel: AuthViewModel = viewModel(),
     modifier: Modifier = Modifier
 ) {
@@ -48,7 +48,6 @@ fun CreateAccountScreen(
     var phone by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var agreedToTerms by remember { mutableStateOf(false) }
-    var pendingAction by remember { mutableStateOf("register") }
 
     LaunchedEffect(Unit) {
         authViewModel.resetState()
@@ -64,11 +63,7 @@ fun CreateAccountScreen(
                 }
                 Toast.makeText(context, toast, Toast.LENGTH_LONG).show()
                 authViewModel.resetState()
-                if (pendingAction == "social") {
-                    onSocialSuccess()
-                } else {
-                    onSignUpSuccess(email.trim().lowercase())
-                }
+                onSignUpSuccess(email.trim().lowercase())
             }
             is AuthUiState.Error -> {
                 Toast.makeText(context, state.errorMessage, Toast.LENGTH_LONG).show()
@@ -201,7 +196,6 @@ fun CreateAccountScreen(
                             !agreedToTerms ->
                                 Toast.makeText(context, "Please accept Terms of Service", Toast.LENGTH_SHORT).show()
                             else -> {
-                                pendingAction = "register"
                                 authViewModel.register(
                                     email = email.trim(),
                                     name = fullName.trim(),
@@ -213,30 +207,6 @@ fun CreateAccountScreen(
                     }
                 )
 
-                Spacer(modifier = Modifier.height(14.dp))
-                SonexaOrDivider()
-                Spacer(modifier = Modifier.height(12.dp))
-
-                SocialContinueButtons(
-                    enabled = authState !is AuthUiState.Loading,
-                    onGoogleSuccess = { profile ->
-                        pendingAction = "social"
-                        authViewModel.googleSignIn(
-                            idToken = profile.idToken,
-                            email = profile.email,
-                            name = profile.name ?: fullName.ifBlank { null },
-                            profilePicUrl = profile.photoUrl
-                        )
-                    },
-                    onAppleSuccess = { profile ->
-                        pendingAction = "social"
-                        authViewModel.appleSignIn(
-                            identityToken = profile.idToken,
-                            email = profile.email,
-                            name = profile.name ?: fullName.ifBlank { null }
-                        )
-                    }
-                )
             }
 
             Row(
