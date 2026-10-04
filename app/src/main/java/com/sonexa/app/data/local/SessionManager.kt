@@ -161,7 +161,19 @@ class SessionManager(context: Context) {
             .putString(KEY_USER_NAME, name)
             .putString(KEY_PROFILE_PIC_URL, profilePicUrl)
             .remove(KEY_PENDING_OTP_EMAIL)
-            .apply()
+            .commit()
+
+        runCatching {
+            appContext.getSharedPreferences(FALLBACK_PREFS_NAME, Context.MODE_PRIVATE).edit()
+                .putString(KEY_ACCESS_TOKEN, accessToken)
+                .putString(KEY_REFRESH_TOKEN, refreshToken)
+                .putString(KEY_USER_ID, userId)
+                .putString(KEY_USER_EMAIL, email)
+                .putString(KEY_USER_NAME, name)
+                .putString(KEY_PROFILE_PIC_URL, profilePicUrl)
+                .remove(KEY_PENDING_OTP_EMAIL)
+                .commit()
+        }
 
         val resolvedName = name?.trim()?.takeIf { it.isNotBlank() } ?: email?.substringBefore("@") ?: ""
         _userNameFlow.value = resolvedName
@@ -186,7 +198,15 @@ class SessionManager(context: Context) {
         prefs.edit()
             .putString(KEY_ACCESS_TOKEN, accessToken)
             .putString(KEY_REFRESH_TOKEN, refreshToken)
-            .apply()
+            .commit()
+
+        runCatching {
+            appContext.getSharedPreferences(FALLBACK_PREFS_NAME, Context.MODE_PRIVATE).edit()
+                .putString(KEY_ACCESS_TOKEN, accessToken)
+                .putString(KEY_REFRESH_TOKEN, refreshToken)
+                .commit()
+        }
+
         val userId = this.userId
         if (!accessToken.isNullOrBlank() && !userId.isNullOrBlank()) {
             addOrUpdateAccount(
@@ -204,16 +224,32 @@ class SessionManager(context: Context) {
 
     fun clearSession() {
         val accounts = getSavedAccounts()
-        prefs.edit().clear().apply()
-        prefs.edit().putString(KEY_SAVED_ACCOUNTS, gson.toJson(accounts)).apply()
+        prefs.edit().clear().commit()
+        prefs.edit().putString(KEY_SAVED_ACCOUNTS, gson.toJson(accounts)).commit()
+        runCatching {
+            appContext.getSharedPreferences(FALLBACK_PREFS_NAME, Context.MODE_PRIVATE).edit().clear().commit()
+        }
         _userNameFlow.value = ""
         _userAvatarFlow.value = ""
     }
 
-    fun isLoggedIn(): Boolean = !accessToken.isNullOrBlank()
+    fun isLoggedIn(): Boolean {
+        val currentToken = accessToken
+        if (!currentToken.isNullOrBlank()) return true
+        val fallbackToken = runCatching {
+            appContext.getSharedPreferences(FALLBACK_PREFS_NAME, Context.MODE_PRIVATE)
+                .getString(KEY_ACCESS_TOKEN, null)
+        }.getOrNull()
+        if (!fallbackToken.isNullOrBlank()) {
+            accessToken = fallbackToken
+            return true
+        }
+        return false
+    }
 
     companion object {
         private const val PREFS_NAME = "sonexa_session_encrypted"
+        private const val FALLBACK_PREFS_NAME = "sonexa_session_fallback"
         private const val LEGACY_PREFS_NAME = "sonexa_session"
         private const val KEY_ACCESS_TOKEN = "access_token"
         private const val KEY_REFRESH_TOKEN = "refresh_token"
@@ -248,7 +284,7 @@ class SessionManager(context: Context) {
                     EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
                 )
             }.getOrElse {
-                context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                context.getSharedPreferences(FALLBACK_PREFS_NAME, Context.MODE_PRIVATE)
             }
             migrateLegacyPrefs(context, encrypted)
             return encrypted
@@ -256,19 +292,22 @@ class SessionManager(context: Context) {
 
         private fun migrateLegacyPrefs(context: Context, target: SharedPreferences) {
             val legacy = context.getSharedPreferences(LEGACY_PREFS_NAME, Context.MODE_PRIVATE)
-            if (legacy.all.isEmpty()) return
+            val fallback = context.getSharedPreferences(FALLBACK_PREFS_NAME, Context.MODE_PRIVATE)
+            val source = if (!legacy.getString(KEY_ACCESS_TOKEN, null).isNullOrBlank()) legacy else fallback
+
             if (target.getString(KEY_ACCESS_TOKEN, null).isNullOrBlank()
-                && !legacy.getString(KEY_ACCESS_TOKEN, null).isNullOrBlank()
+                && !source.getString(KEY_ACCESS_TOKEN, null).isNullOrBlank()
             ) {
                 target.edit()
-                    .putString(KEY_ACCESS_TOKEN, legacy.getString(KEY_ACCESS_TOKEN, null))
-                    .putString(KEY_REFRESH_TOKEN, legacy.getString(KEY_REFRESH_TOKEN, null))
-                    .putString(KEY_USER_ID, legacy.getString(KEY_USER_ID, null))
-                    .putString(KEY_USER_EMAIL, legacy.getString(KEY_USER_EMAIL, null))
-                    .putString(KEY_USER_NAME, legacy.getString(KEY_USER_NAME, null))
-                    .putString(KEY_PREFERRED_LANGUAGES, legacy.getString(KEY_PREFERRED_LANGUAGES, null))
-                    .putString(KEY_SAVED_ACCOUNTS, legacy.getString(KEY_SAVED_ACCOUNTS, null))
-                    .apply()
+                    .putString(KEY_ACCESS_TOKEN, source.getString(KEY_ACCESS_TOKEN, null))
+                    .putString(KEY_REFRESH_TOKEN, source.getString(KEY_REFRESH_TOKEN, null))
+                    .putString(KEY_USER_ID, source.getString(KEY_USER_ID, null))
+                    .putString(KEY_USER_EMAIL, source.getString(KEY_USER_EMAIL, null))
+                    .putString(KEY_USER_NAME, source.getString(KEY_USER_NAME, null))
+                    .putString(KEY_PROFILE_PIC_URL, source.getString(KEY_PROFILE_PIC_URL, null))
+                    .putString(KEY_PREFERRED_LANGUAGES, source.getString(KEY_PREFERRED_LANGUAGES, null))
+                    .putString(KEY_SAVED_ACCOUNTS, source.getString(KEY_SAVED_ACCOUNTS, null))
+                    .commit()
             }
             legacy.edit().clear().apply()
         }

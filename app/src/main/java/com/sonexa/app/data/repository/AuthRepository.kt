@@ -202,22 +202,29 @@ class AuthRepository(
         val body = response.body()
         if (response.isSuccessful && body != null && body.success) {
             val payload = body.data
+            val token = payload?.resolvedToken
+            val refreshToken = payload?.resolvedRefreshToken
+            val user = payload?.user
             val loginResponse = LoginResponse(
                 success = true,
                 message = body.message,
-                token = payload?.token,
-                refreshToken = payload?.refreshToken,
-                user = payload?.user,
+                token = token,
+                refreshToken = refreshToken,
+                user = user,
                 dataPayload = payload
             )
-            if (persistSession && !payload?.token.isNullOrBlank()) {
+            if (persistSession && !token.isNullOrBlank()) {
+                val resolvedUserId = user?.resolvedId?.ifBlank { null }
+                    ?: user?.email?.substringBefore("@")
+                    ?: "user_${System.currentTimeMillis()}"
+
                 sessionManager?.saveSession(
-                    accessToken = payload?.token,
-                    refreshToken = payload?.refreshToken,
-                    userId = payload?.user?.id,
-                    email = payload?.user?.email,
-                    name = payload?.user?.name,
-                    profilePicUrl = payload?.user?.profilePicUrl
+                    accessToken = token,
+                    refreshToken = refreshToken,
+                    userId = resolvedUserId,
+                    email = user?.email,
+                    name = user?.name,
+                    profilePicUrl = user?.profilePicUrl
                 )
                 sessionManager?.pendingOtpEmail = null
             }

@@ -141,9 +141,17 @@ router.post('/login', (req, res) => {
   res.json({
     success: true,
     message: 'Login successful',
+    token: tokens.accessToken,
+    accessToken: tokens.accessToken,
+    refreshToken: tokens.refreshToken,
     data: {
+      token: tokens.accessToken,
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
       user: {
         userId: user.userId,
+        id: user.userId,
+        _id: user.userId,
         name: user.name,
         email: user.email,
         handle: user.handle,
@@ -190,9 +198,17 @@ router.post('/google', (req, res) => {
   res.json({
     success: true,
     message: 'Google sign-in successful',
+    token: tokens.accessToken,
+    accessToken: tokens.accessToken,
+    refreshToken: tokens.refreshToken,
     data: {
+      token: tokens.accessToken,
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
       user: {
         userId: user.userId,
+        id: user.userId,
+        _id: user.userId,
         name: user.name,
         email: user.email,
         handle: user.handle,
@@ -239,9 +255,17 @@ router.post('/apple', (req, res) => {
   res.json({
     success: true,
     message: 'Apple sign-in successful',
+    token: tokens.accessToken,
+    accessToken: tokens.accessToken,
+    refreshToken: tokens.refreshToken,
     data: {
+      token: tokens.accessToken,
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
       user: {
         userId: user.userId,
+        id: user.userId,
+        _id: user.userId,
         name: user.name,
         email: user.email,
         handle: user.handle,
@@ -298,8 +322,18 @@ router.post('/verify-otp', (req, res) => {
   res.json({
     success: true,
     message: 'OTP verified successfully',
+    token: tokens.accessToken,
+    accessToken: tokens.accessToken,
+    refreshToken: tokens.refreshToken,
     data: {
-      user,
+      token: tokens.accessToken,
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
+      user: {
+        ...user,
+        id: user.userId,
+        _id: user.userId
+      },
       tokens: {
         accessToken: tokens.accessToken,
         refreshToken: tokens.refreshToken,

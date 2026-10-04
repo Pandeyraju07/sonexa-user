@@ -52,8 +52,17 @@ data class RefreshTokenRequest(
     @SerializedName("refreshToken") val refreshToken: String
 )
 
+data class TokenPayload(
+    @SerializedName("accessToken") val accessToken: String? = null,
+    @SerializedName("refreshToken") val refreshToken: String? = null,
+    @SerializedName("token") val token: String? = null,
+    @SerializedName("expiresIn") val expiresIn: Long? = null
+)
+
 data class UserProfileDto(
     @SerializedName("id") val id: String = "",
+    @SerializedName("userId") val userId: String? = null,
+    @SerializedName("_id") val mongoId: String? = null,
     @SerializedName("name") val name: String = "",
     @SerializedName("handle") val handle: String = "",
     @SerializedName("email") val email: String = "",
@@ -63,16 +72,31 @@ data class UserProfileDto(
     @SerializedName("isEmailVerified") val isEmailVerified: Boolean = false,
     @SerializedName("followersCount") val followersCount: Int = 0,
     @SerializedName("followingCount") val followingCount: Int = 0
-)
+) {
+    val resolvedId: String
+        get() = id.ifBlank { userId ?: mongoId ?: "" }
+}
 
 data class AuthDataPayload(
     @SerializedName("token") val token: String? = null,
+    @SerializedName("accessToken") val accessToken: String? = null,
     @SerializedName("refreshToken") val refreshToken: String? = null,
+    @SerializedName("tokens") val tokens: TokenPayload? = null,
     @SerializedName("user") val user: UserProfileDto? = null,
     @SerializedName("otpSent") val otpSent: Boolean = false,
     @SerializedName("otp") val otp: String? = null,
     @SerializedName("emailDelivered") val emailDelivered: Boolean? = null
-)
+) {
+    val resolvedToken: String?
+        get() = token
+            ?: accessToken
+            ?: tokens?.accessToken
+            ?: tokens?.token
+
+    val resolvedRefreshToken: String?
+        get() = refreshToken
+            ?: tokens?.refreshToken
+}
 
 data class ErrorEnvelope(
     @SerializedName("errCode") val errCode: String? = null,
@@ -92,12 +116,23 @@ data class LoginResponse(
     @SerializedName("success") val success: Boolean = false,
     @SerializedName("message") val message: String? = null,
     @SerializedName("token") val token: String? = null,
+    @SerializedName("accessToken") val accessToken: String? = null,
     @SerializedName("refreshToken") val refreshToken: String? = null,
+    @SerializedName("tokens") val tokens: TokenPayload? = null,
     @SerializedName("user") val user: UserProfileDto? = null,
     @SerializedName("data") val dataPayload: AuthDataPayload? = null
 ) {
     val resolvedToken: String?
-        get() = token ?: dataPayload?.token
+        get() = token
+            ?: accessToken
+            ?: tokens?.accessToken
+            ?: tokens?.token
+            ?: dataPayload?.resolvedToken
+
+    val resolvedRefreshToken: String?
+        get() = refreshToken
+            ?: tokens?.refreshToken
+            ?: dataPayload?.resolvedRefreshToken
 
     val resolvedUser: UserProfileDto?
         get() = user ?: dataPayload?.user

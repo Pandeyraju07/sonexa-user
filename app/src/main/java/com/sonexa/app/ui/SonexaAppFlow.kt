@@ -146,13 +146,29 @@ fun SonexaAppFlow() {
         ) { step ->
             when (step) {
                 AppStep.SPLASH -> SplashScreen(
-                    onSplashComplete = { currentStep = AppStep.UPDATE_CHECK },
+                    onSplashComplete = {
+                        currentStep = if (sessionManager.isLoggedIn()) {
+                            AppStep.HOME
+                        } else {
+                            AppStep.UPDATE_CHECK
+                        }
+                    },
                     onFatalError = { message ->
-                        currentStep = AppErrorRouter.stepForMessage(message)
+                        currentStep = if (sessionManager.isLoggedIn()) {
+                            AppStep.HOME
+                        } else {
+                            AppErrorRouter.stepForMessage(message)
+                        }
                     }
                 )
                 AppStep.UPDATE_CHECK -> AppUpdateCheckScreen(
-                    onContinue = { currentStep = AppStep.ONBOARDING }
+                    onContinue = {
+                        currentStep = if (sessionManager.isLoggedIn()) {
+                            AppStep.HOME
+                        } else {
+                            AppStep.ONBOARDING
+                        }
+                    }
                 )
                 AppStep.ONBOARDING -> OnboardingScreen(
                     onOnboardingComplete = { currentStep = AppStep.CHOOSE_LANGUAGE }
@@ -160,20 +176,30 @@ fun SonexaAppFlow() {
                 AppStep.CHOOSE_LANGUAGE -> ChooseLanguageScreen(
                     onContinue = { currentStep = AppStep.WELCOME }
                 )
-                AppStep.WELCOME -> WelcomeScreen(
-                    onNavigateToSignUp = { currentStep = AppStep.REGISTER },
-                    onNavigateToLogin = { currentStep = AppStep.LOGIN }
-                )
-                AppStep.LOGIN -> LoginScreen(
-                    onNavigateToCreateAccount = { currentStep = AppStep.REGISTER },
-                    onNavigateToForgotPassword = { currentStep = AppStep.FORGOT_PASSWORD },
-                    onNavigateToOtp = { email ->
-                        otpEmail = email
-                        currentStep = AppStep.OTP_VERIFICATION
-                    },
-                    onLoginSuccess = { currentStep = AppStep.HOME },
-                    authViewModel = authViewModel
-                )
+                AppStep.WELCOME -> {
+                    LaunchedEffect(sessionManager.isLoggedIn()) {
+                        if (sessionManager.isLoggedIn()) currentStep = AppStep.HOME
+                    }
+                    WelcomeScreen(
+                        onNavigateToSignUp = { currentStep = AppStep.REGISTER },
+                        onNavigateToLogin = { currentStep = AppStep.LOGIN }
+                    )
+                }
+                AppStep.LOGIN -> {
+                    LaunchedEffect(sessionManager.isLoggedIn()) {
+                        if (sessionManager.isLoggedIn()) currentStep = AppStep.HOME
+                    }
+                    LoginScreen(
+                        onNavigateToCreateAccount = { currentStep = AppStep.REGISTER },
+                        onNavigateToForgotPassword = { currentStep = AppStep.FORGOT_PASSWORD },
+                        onNavigateToOtp = { email ->
+                            otpEmail = email
+                            currentStep = AppStep.OTP_VERIFICATION
+                        },
+                        onLoginSuccess = { currentStep = AppStep.HOME },
+                        authViewModel = authViewModel
+                    )
+                }
                 AppStep.REGISTER -> CreateAccountScreen(
                     onNavigateToLogin = { currentStep = AppStep.LOGIN },
                     onSignUpSuccess = { email ->
