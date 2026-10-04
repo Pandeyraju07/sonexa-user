@@ -39,6 +39,29 @@ function generateTokens(user) {
   return { accessToken, refreshToken };
 }
 
+// POST /api/v1/auth/check-email
+router.post('/check-email', (req, res) => {
+  const { email } = req.body;
+  if (!email) {
+    return res.status(400).json({
+      success: false,
+      message: 'Email is required'
+    });
+  }
+
+  const normalizedEmail = email.toLowerCase().trim();
+  const exists = users.has(normalizedEmail);
+  res.json({
+    success: true,
+    exists,
+    message: exists ? 'An account with this email already exists' : 'Email is available',
+    data: {
+      email: normalizedEmail,
+      exists
+    }
+  });
+});
+
 // POST /api/v1/auth/register
 router.post('/register', (req, res) => {
   const { email, name, password, handle } = req.body;
@@ -82,9 +105,17 @@ router.post('/register', (req, res) => {
   res.json({
     success: true,
     message: 'Registration successful',
+    token: tokens.accessToken,
+    accessToken: tokens.accessToken,
+    refreshToken: tokens.refreshToken,
     data: {
+      token: tokens.accessToken,
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
       user: {
         userId: newUser.userId,
+        id: newUser.userId,
+        _id: newUser.userId,
         name: newUser.name,
         email: newUser.email,
         handle: newUser.handle,

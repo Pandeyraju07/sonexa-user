@@ -132,6 +132,7 @@ object RetrofitClient {
         val path = request.url.encodedPath
         return path.contains("/auth/login")
                 || path.contains("/auth/register")
+                || path.contains("/auth/check-email")
                 || path.contains("/auth/refresh-token")
                 || path.contains("/auth/send-otp")
                 || path.contains("/auth/verify-otp")

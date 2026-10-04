@@ -25,6 +25,25 @@ data class OtpVerifyRequest(
     @SerializedName("purpose") val purpose: String? = "REGISTER"
 )
 
+data class CheckEmailRequest(
+    @SerializedName("email") val email: String
+)
+
+data class CheckEmailResponse(
+    @SerializedName("success") val success: Boolean = false,
+    @SerializedName("exists") val exists: Boolean = false,
+    @SerializedName("message") val message: String? = null,
+    @SerializedName("data") val data: CheckEmailData? = null
+) {
+    val isRegistered: Boolean
+        get() = exists || (data?.exists == true)
+}
+
+data class CheckEmailData(
+    @SerializedName("email") val email: String? = null,
+    @SerializedName("exists") val exists: Boolean = false
+)
+
 data class ForgotPasswordRequest(
     @SerializedName("email") val email: String
 )

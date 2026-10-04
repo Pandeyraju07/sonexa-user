@@ -9,6 +9,9 @@ import retrofit2.http.POST
 import retrofit2.http.Query
 
 interface AuthApiService {
+    @POST("auth/check-email")
+    suspend fun checkEmail(@Body request: CheckEmailRequest): Response<CheckEmailResponse>
+
     @POST("auth/register")
     suspend fun register(@Body request: RegisterRequest): Response<ApiResponseEnvelope<AuthDataPayload>>
 

@@ -29,6 +29,19 @@ class AuthRepository(
         }
     }
 
+    suspend fun checkEmail(email: String): Result<Boolean> = withContext(Dispatchers.IO) {
+        try {
+            val response = apiService.checkEmail(CheckEmailRequest(email.trim().lowercase()))
+            if (response.isSuccessful && response.body() != null) {
+                Result.success(response.body()!!.isRegistered)
+            } else {
+                Result.failure(Exception(parseErrorMessage(response)))
+            }
+        } catch (e: Exception) {
+            Result.failure(Exception(friendlyNetworkError(e), e))
+        }
+    }
+
     suspend fun login(email: String, pass: String): Result<LoginResponse> = withContext(Dispatchers.IO) {
         try {
             val response = apiService.login(LoginRequest(email.trim(), pass))

@@ -35,6 +35,28 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
     private val _pendingOtpEmail = MutableStateFlow(repository.getPendingOtpEmail().orEmpty())
     val pendingOtpEmail: StateFlow<String> = _pendingOtpEmail.asStateFlow()
 
+    fun checkEmail(
+        email: String,
+        onResult: (isRegistered: Boolean) -> Unit,
+        onError: (String) -> Unit = {}
+    ) {
+        viewModelScope.launch {
+            _uiState.value = AuthUiState.Loading
+            val result = repository.checkEmail(email)
+            result.fold(
+                onSuccess = { isRegistered ->
+                    _uiState.value = AuthUiState.Idle
+                    onResult(isRegistered)
+                },
+                onFailure = { error ->
+                    val msg = error.localizedMessage ?: "Failed to check email"
+                    _uiState.value = AuthUiState.Error(msg)
+                    onError(msg)
+                }
+            )
+        }
+    }
+
     fun login(email: String, pass: String, onSuccess: () -> Unit = {}) {
         viewModelScope.launch {
             _uiState.value = AuthUiState.Loading

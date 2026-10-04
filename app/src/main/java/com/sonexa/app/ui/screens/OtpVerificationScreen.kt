@@ -68,7 +68,7 @@ import com.sonexa.app.ui.viewmodel.AuthViewModel
 import kotlinx.coroutines.delay
 
 private const val OTP_COOLDOWN_SECONDS = 60
-private const val OTP_LENGTH = 6
+internal const val OTP_LENGTH = 6
 
 @Composable
 fun OtpVerificationScreen(
@@ -330,7 +330,7 @@ fun OtpVerificationScreen(
 }
 
 @Composable
-private fun OtpDigitBoxes(
+internal fun OtpDigitBoxes(
     otpCode: String,
     onOtpChange: (String) -> Unit,
     focusRequester: FocusRequester,
