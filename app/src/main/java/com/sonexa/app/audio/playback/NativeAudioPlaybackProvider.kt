@@ -1,9 +1,11 @@
 package com.sonexa.app.audio.playback
 
 import android.content.Context
+import android.net.Uri
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
+import androidx.media3.common.MediaMetadata
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
@@ -160,7 +162,21 @@ class NativeAudioPlaybackProvider(
             )
         }
         player.stop()
-        player.setMediaItem(MediaItem.fromUri(url))
+        val metaBuilder = MediaMetadata.Builder()
+            .setTitle(track.title.ifBlank { "Unknown Title" })
+            .setArtist(track.artist.ifBlank { "Unknown Artist" })
+            .setAlbumTitle(track.album.ifBlank { "Sonexa" })
+            .setDisplayTitle(track.title)
+        val cover = track.effectiveCoverUrl
+        if (cover.isNotBlank()) {
+            metaBuilder.setArtworkUri(Uri.parse(cover))
+        }
+        val mediaItem = MediaItem.Builder()
+            .setUri(url)
+            .setMediaId(track.id)
+            .setMediaMetadata(metaBuilder.build())
+            .build()
+        player.setMediaItem(mediaItem)
         player.prepare()
         try {
             val sid = player.audioSessionId

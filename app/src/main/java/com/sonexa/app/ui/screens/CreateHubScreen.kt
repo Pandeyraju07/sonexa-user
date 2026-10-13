@@ -14,6 +14,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.QueueMusic
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.Lightbulb
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -21,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -35,11 +37,15 @@ import com.sonexa.app.data.model.PlaylistDto
 import com.sonexa.app.data.model.TrackDto
 import com.sonexa.app.data.repository.MusicRepository
 import com.sonexa.app.ui.components.AddToPlaylistBottomSheet
+import com.sonexa.app.ui.theme.AppleMaterials
+import com.sonexa.app.ui.theme.AppleType
+import com.sonexa.app.ui.theme.appleBounce
 import com.sonexa.app.ui.viewmodel.LibraryViewModel
 import com.sonexa.app.ui.viewmodel.PlaybackViewModel
 import kotlinx.coroutines.launch
 
-private val SpotifyGreen = Color(0xFF1ED760)
+private val PurplePrimary = Color(0xFFA855F7)
+private val PurpleDeep = Color(0xFF7C3AED)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -55,105 +61,171 @@ fun CreateHubScreen(
     val musicRepository = remember { MusicRepository() }
     val userPlaylists by UserPlaylistStore.playlists.collectAsState()
 
+    val sessionManager = remember { com.sonexa.app.data.local.SessionManager.getInstance(context) }
+    val currentUserName by sessionManager.userNameFlow.collectAsState()
+    val currentUserAvatar by sessionManager.userAvatarFlow.collectAsState()
+    val userDisplayName = currentUserName.takeIf { it.isNotBlank() }
+        ?: sessionManager.userName?.takeIf { it.isNotBlank() }
+        ?: "Creator"
+    val avatarInitial = userDisplayName.firstOrNull()?.uppercase() ?: "C"
+
     var showCreatePlaylistDialog by remember { mutableStateOf(false) }
     var showAiStudioDialog by remember { mutableStateOf(false) }
     var showBlendDialog by remember { mutableStateOf(false) }
     var showImportDialog by remember { mutableStateOf(false) }
+    var showSortMenu by remember { mutableStateOf(false) }
 
     // AI Studio State
     var selectedAiMood by remember { mutableStateOf("Lo-Fi Chill") }
-    var selectedAiGenre by remember { mutableStateOf("Lo-Fi Piano") }
+    var selectedAiDuration by remember { mutableStateOf("1 min") }
     var aiPrompt by remember { mutableStateOf("") }
     var isGeneratingAi by remember { mutableStateOf(false) }
     var generatedAiTrack by remember { mutableStateOf<TrackDto?>(null) }
     var trackForAddToPlaylist by remember { mutableStateOf<TrackDto?>(null) }
 
-    val aiMoods = listOf(
-        "Lo-Fi Chill" to Color(0xFF6B3CE9),
-        "Cyberpunk Synth" to Color(0xFF06B6D4),
-        "Bollywood Euphoria" to Color(0xFFEC4899),
-        "Monsoon Acoustic" to Color(0xFF3B82F6),
-        "High Energy Gym" to Color(0xFFEF4444),
-        "Soulful Peace" to Color(0xFF10B981)
+    val moodChips = listOf(
+        "Lo-Fi Chill" to "🎧",
+        "Cyberpunk" to "🎮",
+        "Bollywood" to "🎬",
+        "Hip Hop" to "📶"
     )
 
-    val aiStyles = listOf("Lo-Fi Piano", "808 Bass & Trap", "Acoustic Guitar", "Synthwave 80s", "Tabla & Classical", "EDM Drop")
+    val durationChips = listOf("30s", "1 min", "3 min", "Custom")
 
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(Color(0xFF121212))
+            .background(Color(0xFF0F0B18))
     ) {
         LazyColumn(
-            contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 14.dp, bottom = 120.dp),
-            verticalArrangement = Arrangement.spacedBy(18.dp)
+            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 10.dp, bottom = 120.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Header
+            // ── 1. Top Header: User Profile + Title + Tips Button ─────
             item {
-                Column {
-                    Text(
-                        text = "Creator Studio",
-                        fontSize = 26.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = "Create custom playlists, generate AI beats, and import sounds",
-                        fontSize = 13.sp,
-                        color = Color(0xFFA19BAE)
-                    )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier
+                                .size(42.dp)
+                                .clip(CircleShape)
+                                .border(1.2.dp, Color.White.copy(alpha = 0.25f), CircleShape)
+                                .background(Color(0xFF2E1C4D)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (currentUserAvatar.isNotBlank()) {
+                                AsyncImage(
+                                    model = ImageRequest.Builder(context)
+                                        .data(currentUserAvatar)
+                                        .crossfade(true)
+                                        .build(),
+                                    contentDescription = "Profile",
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                            } else {
+                                Text(
+                                    text = avatarInitial,
+                                    style = AppleType.headlineBold,
+                                    color = Color.White
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.width(12.dp))
+
+                        Column {
+                            Text(
+                                text = "Creator Studio",
+                                style = AppleType.title1Bold,
+                                color = Color.White
+                            )
+                            Text(
+                                text = "Turn your ideas into music",
+                                style = AppleType.caption1,
+                                color = Color(0xFFA19BAE)
+                            )
+                        }
+                    }
+
+                    // "Tips" Pill Button
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(20.dp))
+                            .background(Color.White.copy(alpha = 0.08f))
+                            .border(1.dp, Color.White.copy(alpha = 0.12f), RoundedCornerShape(20.dp))
+                            .clickable {
+                                Toast.makeText(context, "💡 Tip: Use descriptive prompts to generate custom beats!", Toast.LENGTH_LONG).show()
+                            }
+                            .padding(horizontal = 12.dp, vertical = 6.dp)
+                    ) {
+                        Icon(
+                            Icons.Outlined.Lightbulb,
+                            contentDescription = "Tips",
+                            tint = Color(0xFF38BDF8),
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = "Tips",
+                            style = AppleType.subheadlineBold,
+                            color = Color.White
+                        )
+                    }
                 }
             }
 
-            // Top Creation Action Cards Grid (2x2)
+            // ── 2. 2x2 Feature Action Cards Grid (Screenshot 2) ─────
             item {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    // Row 1: New Playlist & AI Beat Studio
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        // 1. Create Playlist Card
-                        CreationActionCard(
+                        CreatorFeatureCard(
+                            icon = Icons.Default.MusicNote,
                             title = "New Playlist",
-                            subtitle = "Curate your mix",
-                            icon = Icons.AutoMirrored.Filled.QueueMusic,
-                            gradientColors = listOf(Color(0xFF8B5CF6), Color(0xFF3B82F6)),
+                            subtitle = "Create your\nperfect mix",
+                            gradientColors = listOf(Color(0xFFE11D48), Color(0xFF8B5CF6)),
                             modifier = Modifier.weight(1f),
                             onClick = { showCreatePlaylistDialog = true }
                         )
 
-                        // 2. AI Mix Studio Card
-                        CreationActionCard(
-                            title = "AI Beat Studio",
-                            subtitle = "Generate smart music",
+                        CreatorFeatureCard(
                             icon = Icons.Default.AutoAwesome,
-                            gradientColors = listOf(Color(0xFFEC4899), Color(0xFF8B5CF6)),
+                            title = "AI Beat Studio",
+                            subtitle = "Generate unique\nbeats with AI",
+                            gradientColors = listOf(Color(0xFF6366F1), Color(0xFF312E81)),
                             modifier = Modifier.weight(1f),
                             onClick = { showAiStudioDialog = true }
                         )
                     }
 
+                    // Row 2: Friend Blend & Import Track
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        // 3. Collaborative Blend Card
-                        CreationActionCard(
+                        CreatorFeatureCard(
+                            icon = Icons.Default.PersonAdd,
                             title = "Friend Blend",
-                            subtitle = "Shared playlist session",
-                            icon = Icons.Default.GroupAdd,
-                            gradientColors = listOf(Color(0xFF10B981), Color(0xFF059669)),
+                            subtitle = "Create and share\nplaylists with friends",
+                            gradientColors = listOf(Color(0xFF059669), Color(0xFF044E3B)),
                             modifier = Modifier.weight(1f),
                             onClick = { showBlendDialog = true }
                         )
 
-                        // 4. Import Audio URL Card
-                        CreationActionCard(
-                            title = "Import Track",
-                            subtitle = "Add link or stream",
+                        CreatorFeatureCard(
                             icon = Icons.Default.Link,
-                            gradientColors = listOf(Color(0xFFF59E0B), Color(0xFFD97706)),
+                            title = "Import Track",
+                            subtitle = "Add link or stream\nfrom any source",
+                            gradientColors = listOf(Color(0xFFD97706), Color(0xFF78350F)),
                             modifier = Modifier.weight(1f),
                             onClick = { showImportDialog = true }
                         )
@@ -161,129 +233,303 @@ fun CreateHubScreen(
                 }
             }
 
-            // AI Studio Live Generator Banner
+            // ── 3. AI Signature Music Generator (BETA Card matching Screenshot 2) ─────
             item {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(16.dp))
+                        .clip(RoundedCornerShape(20.dp))
                         .background(
-                            Brush.linearGradient(
-                                listOf(Color(0xFF1F1235), Color(0xFF2A1B4E))
+                            Brush.verticalGradient(
+                                listOf(Color(0xFF1E1430), Color(0xFF150D24))
                             )
                         )
-                        .border(1.dp, Color(0xFF8B5CF6).copy(alpha = 0.4f), RoundedCornerShape(16.dp))
+                        .border(1.dp, PurplePrimary.copy(alpha = 0.35f), RoundedCornerShape(20.dp))
                         .padding(16.dp)
                 ) {
-                    Column {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(36.dp)
-                                        .clip(CircleShape)
-                                        .background(
-                                            Brush.linearGradient(
-                                                listOf(Color(0xFF8B5CF6), Color(0xFFEC4899))
-                                            )
-                                        ),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(Icons.Default.GraphicEq, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
-                                }
-                                Spacer(modifier = Modifier.width(10.dp))
-                                Column {
-                                    Text("AI Signature Music Generator", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Color.White)
-                                    Text("Powered by Zynera Neural Audio Engine", fontSize = 11.5.sp, color = Color(0xFFC4B5FD))
-                                }
+                    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                        // Title Header
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .size(42.dp)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(
+                                        Brush.linearGradient(
+                                            listOf(Color(0xFF8B5CF6), Color(0xFFEC4899))
+                                        )
+                                    ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    Icons.Default.GraphicEq,
+                                    contentDescription = null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(24.dp)
+                                )
                             }
-                        }
 
-                        Spacer(modifier = Modifier.height(14.dp))
+                            Spacer(modifier = Modifier.width(12.dp))
 
-                        Text("Select Mood:", fontSize = 12.5.sp, fontWeight = FontWeight.SemiBold, color = Color.White)
-                        Spacer(modifier = Modifier.height(6.dp))
-                        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            items(aiMoods) { (mood, color) ->
-                                val isSelected = selectedAiMood == mood
-                                Box(
-                                    modifier = Modifier
-                                        .clip(RoundedCornerShape(14.dp))
-                                        .background(if (isSelected) color else Color(0xFF2A2A2A))
-                                        .clickable { selectedAiMood = mood }
-                                        .padding(horizontal = 12.dp, vertical = 6.dp)
-                                ) {
+                            Column {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
                                     Text(
-                                        text = mood,
-                                        fontSize = 12.sp,
-                                        fontWeight = FontWeight.SemiBold,
+                                        text = "AI Signature Music Generator",
+                                        style = AppleType.headlineBold,
                                         color = Color.White
                                     )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(4.dp))
+                                            .background(PurpleDeep)
+                                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                                    ) {
+                                        Text(
+                                            text = "BETA",
+                                            fontSize = 9.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color.White
+                                        )
+                                    }
+                                }
+                                Text(
+                                    text = "Powered by Zynera Neural Audio Engine",
+                                    style = AppleType.caption1,
+                                    color = Color(0xFFC4B5FD)
+                                )
+                            }
+                        }
+
+                        Text(
+                            text = "Describe your idea and let AI create original music for you",
+                            style = AppleType.subheadline,
+                            color = Color(0xFFA19BAE)
+                        )
+
+                        // Prompt Input Field (matches screenshot)
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(48.dp)
+                                .clip(RoundedCornerShape(24.dp))
+                                .background(Color(0xFF140C22))
+                                .border(1.dp, Color.White.copy(alpha = 0.12f), RoundedCornerShape(24.dp))
+                                .padding(horizontal = 14.dp),
+                            contentAlignment = Alignment.CenterStart
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    Icons.Default.Edit,
+                                    contentDescription = null,
+                                    tint = Color(0xFFA19BAE),
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(10.dp))
+                                androidx.compose.foundation.text.BasicTextField(
+                                    value = aiPrompt,
+                                    onValueChange = { aiPrompt = it },
+                                    singleLine = true,
+                                    textStyle = androidx.compose.ui.text.TextStyle(
+                                        color = Color.White,
+                                        fontSize = 13.5.sp
+                                    ),
+                                    modifier = Modifier.weight(1f),
+                                    decorationBox = { innerTextField ->
+                                        if (aiPrompt.isEmpty()) {
+                                            Text(
+                                                text = "E.g. \"Chill lo-fi for late night coding\"",
+                                                color = Color(0xFFA19BAE),
+                                                style = AppleType.subheadline
+                                            )
+                                        }
+                                        innerTextField()
+                                    }
+                                )
+                                Icon(
+                                    Icons.Default.AutoAwesome,
+                                    contentDescription = null,
+                                    tint = PurplePrimary,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        }
+
+                        // Select Mood Section
+                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Text(
+                                text = "Select Mood",
+                                style = AppleType.caption1Bold,
+                                color = Color.White
+                            )
+                            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                items(moodChips) { (mood, emoji) ->
+                                    val isSelected = selectedAiMood == mood
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(16.dp))
+                                            .background(
+                                                if (isSelected) {
+                                                    Brush.horizontalGradient(listOf(Color(0xFFA855F7), Color(0xFF7C3AED)))
+                                                } else {
+                                                    Brush.horizontalGradient(listOf(Color(0xFF221835), Color(0xFF1B132B)))
+                                                }
+                                            )
+                                            .border(
+                                                1.dp,
+                                                if (isSelected) Color.White.copy(alpha = 0.3f) else Color.White.copy(alpha = 0.08f),
+                                                RoundedCornerShape(16.dp)
+                                            )
+                                            .clickable { selectedAiMood = mood }
+                                            .padding(horizontal = 14.dp, vertical = 8.dp)
+                                    ) {
+                                        Text(
+                                            text = "$emoji  $mood",
+                                            style = AppleType.caption1Bold,
+                                            color = Color.White
+                                        )
+                                    }
                                 }
                             }
                         }
 
-                        Spacer(modifier = Modifier.height(12.dp))
-
-                        Button(
-                            onClick = {
-                                coroutineScope.launch {
-                                    isGeneratingAi = true
-                                    val result = musicRepository.generateAiSignature(
-                                        mood = selectedAiMood,
-                                        genre = selectedAiGenre,
-                                        prompt = aiPrompt.ifBlank { "Smart personalized AI beat for $selectedAiMood" }
-                                    )
-                                    isGeneratingAi = false
-                                    if (result.isSuccess) {
-                                        val res = result.getOrNull()!!
-                                        val newTrack = TrackDto(
-                                            id = "ai_" + System.currentTimeMillis(),
-                                            title = res.vibeTitle.ifBlank { "AI $selectedAiMood Mix" },
-                                            artist = "Zynera AI Studio",
-                                            album = "AI Signatures",
-                                            durationMs = 180000L,
-                                            audioUrl = res.aiGeneratedAudioUrl.ifBlank { "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3" },
-                                            coverUrl = "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=500",
-                                            playsCount = "Generated just now",
-                                            isLiked = false
+                        // Duration Section
+                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Text(
+                                text = "Duration",
+                                style = AppleType.caption1Bold,
+                                color = Color.White
+                            )
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                durationChips.forEach { duration ->
+                                    val isSelected = selectedAiDuration == duration
+                                    Box(
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .clip(RoundedCornerShape(16.dp))
+                                            .background(
+                                                if (isSelected) {
+                                                    Brush.horizontalGradient(listOf(Color(0xFFA855F7), Color(0xFF7C3AED)))
+                                                } else {
+                                                    Brush.horizontalGradient(listOf(Color(0xFF221835), Color(0xFF1B132B)))
+                                                }
+                                            )
+                                            .border(
+                                                1.dp,
+                                                if (isSelected) Color.White.copy(alpha = 0.3f) else Color.White.copy(alpha = 0.08f),
+                                                RoundedCornerShape(16.dp)
+                                            )
+                                            .clickable { selectedAiDuration = duration }
+                                            .padding(vertical = 8.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = duration,
+                                            style = AppleType.caption1Bold,
+                                            color = Color.White
                                         )
-                                        generatedAiTrack = newTrack
-                                        playbackViewModel.play(newTrack, "AI Studio Mix")
-                                        onOpenFullPlayer()
-                                        Toast.makeText(context, "AI Track Generated & Playing!", Toast.LENGTH_SHORT).show()
-                                    } else {
-                                        Toast.makeText(context, "Failed to generate AI track", Toast.LENGTH_SHORT).show()
                                     }
                                 }
-                            },
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = SpotifyGreen
-                            ),
-                            shape = RoundedCornerShape(20.dp),
+                            }
+                        }
+
+                        // Generate AI Track Now Button (Full Width Gradient Pill with Circle Arrow on right)
+                        Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(46.dp)
+                                .height(52.dp)
+                                .clip(RoundedCornerShape(26.dp))
+                                .background(
+                                    Brush.horizontalGradient(
+                                        listOf(Color(0xFFEC4899), Color(0xFFA855F7), Color(0xFF6366F1))
+                                    )
+                                )
+                                .appleBounce {
+                                    coroutineScope.launch {
+                                        isGeneratingAi = true
+                                        val result = musicRepository.generateAiSignature(
+                                            mood = selectedAiMood,
+                                            genre = "Lo-Fi Piano",
+                                            prompt = aiPrompt.ifBlank { "Personalized beat for $selectedAiMood, duration $selectedAiDuration" }
+                                        )
+                                        isGeneratingAi = false
+                                        if (result.isSuccess) {
+                                            val res = result.getOrNull()!!
+                                            val newTrack = TrackDto(
+                                                id = "ai_" + System.currentTimeMillis(),
+                                                title = res.vibeTitle.ifBlank { "AI $selectedAiMood Mix" },
+                                                artist = "Zynera AI Studio",
+                                                album = "AI Signatures",
+                                                durationMs = 180000L,
+                                                audioUrl = res.aiGeneratedAudioUrl.ifBlank { "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3" },
+                                                coverUrl = "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=500",
+                                                playsCount = "Generated just now",
+                                                isLiked = false
+                                            )
+                                            generatedAiTrack = newTrack
+                                            playbackViewModel.play(newTrack, "AI Studio Mix")
+                                            onOpenFullPlayer()
+                                            Toast.makeText(context, "AI Track Generated & Playing!", Toast.LENGTH_SHORT).show()
+                                        } else {
+                                            Toast.makeText(context, "Failed to generate AI track", Toast.LENGTH_SHORT).show()
+                                        }
+                                    }
+                                }
+                                .padding(horizontal = 18.dp),
+                            contentAlignment = Alignment.Center
                         ) {
-                            if (isGeneratingAi) {
-                                CircularProgressIndicator(color = Color.Black, modifier = Modifier.size(20.dp))
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text("Synthesizing Neural Audio...", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                            } else {
-                                Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = Color.Black, modifier = Modifier.size(18.dp))
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text("Generate AI Track Now ⚡", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Spacer(modifier = Modifier.width(28.dp))
+
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    if (isGeneratingAi) {
+                                        CircularProgressIndicator(color = Color.White, modifier = Modifier.size(20.dp))
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(
+                                            text = "Synthesizing Neural Audio...",
+                                            style = AppleType.headlineBold,
+                                            color = Color.White
+                                        )
+                                    } else {
+                                        Text(
+                                            text = "✨ Generate AI Track Now",
+                                            style = AppleType.headlineBold,
+                                            color = Color.White
+                                        )
+                                    }
+                                }
+
+                                Box(
+                                    modifier = Modifier
+                                        .size(34.dp)
+                                        .clip(CircleShape)
+                                        .background(Color.White),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        Icons.Default.ChevronRight,
+                                        contentDescription = "Generate",
+                                        tint = Color(0xFF7C3AED),
+                                        modifier = Modifier.size(22.dp)
+                                    )
+                                }
                             }
                         }
                     }
                 }
             }
 
-            // Section: Your Created Playlists
+            // ── 4. "Your Playlists (3)" Section Header + Sort + New Button ─────
             item {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -292,34 +538,100 @@ fun CreateHubScreen(
                 ) {
                     Text(
                         text = "Your Playlists (${userPlaylists.size})",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
+                        style = AppleType.title2Bold,
                         color = Color.White
                     )
-                    TextButton(onClick = { showCreatePlaylistDialog = true }) {
-                        Text("+ New", color = SpotifyGreen, fontWeight = FontWeight.Bold)
+
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        // Sort Pill
+                        Box {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(20.dp))
+                                    .background(Color.White.copy(alpha = 0.08f))
+                                    .clickable { showSortMenu = true }
+                                    .padding(horizontal = 10.dp, vertical = 6.dp)
+                            ) {
+                                Icon(
+                                    Icons.Default.SwapVert,
+                                    contentDescription = "Sort",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = "Sort",
+                                    style = AppleType.caption1Bold,
+                                    color = Color.White
+                                )
+                                Icon(
+                                    Icons.Default.KeyboardArrowDown,
+                                    contentDescription = null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+
+                            DropdownMenu(
+                                expanded = showSortMenu,
+                                onDismissRequest = { showSortMenu = false },
+                                modifier = Modifier.background(Color(0xFF241C35))
+                            ) {
+                                listOf("Recents", "Recently Added", "Alphabetical").forEach { option ->
+                                    DropdownMenuItem(
+                                        text = { Text(option, color = Color.White) },
+                                        onClick = { showSortMenu = false }
+                                    )
+                                }
+                            }
+                        }
+
+                        // "+ New" Pill Button
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(20.dp))
+                                .background(PurplePrimary)
+                                .clickable { showCreatePlaylistDialog = true }
+                                .padding(horizontal = 12.dp, vertical = 6.dp)
+                        ) {
+                            Text(
+                                text = "+ New",
+                                style = AppleType.caption1Bold,
+                                color = Color.White
+                            )
+                        }
                     }
                 }
             }
 
-            // User Playlists List
+            // ── 5. User Playlists List (matches Screenshot 2) ─────
             if (userPlaylists.isEmpty()) {
                 item {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(vertical = 16.dp),
+                            .padding(vertical = 20.dp),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text("No playlists created yet. Tap '+ New' to start!", color = Color(0xFFA19BAE), fontSize = 13.sp)
+                        Text(
+                            text = "No playlists created yet. Tap '+ New' to start!",
+                            style = AppleType.subheadline,
+                            color = Color(0xFFA19BAE)
+                        )
                     }
                 }
             } else {
                 items(userPlaylists) { pl ->
+                    var showItemMenu by remember { mutableStateOf(false) }
+
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clip(RoundedCornerShape(8.dp))
+                            .clip(RoundedCornerShape(12.dp))
                             .clickable { onOpenPlaylist(pl.id) }
                             .padding(vertical = 6.dp),
                         verticalAlignment = Alignment.CenterVertically,
@@ -331,9 +643,9 @@ fun CreateHubScreen(
                         ) {
                             Box(
                                 modifier = Modifier
-                                    .size(52.dp)
-                                    .clip(RoundedCornerShape(6.dp))
-                                    .background(Color(0xFF282828))
+                                    .size(56.dp)
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(Color(0xFF221735))
                             ) {
                                 if (pl.coverUrl.isNotBlank()) {
                                     AsyncImage(
@@ -346,8 +658,10 @@ fun CreateHubScreen(
                                     Icon(
                                         Icons.AutoMirrored.Filled.QueueMusic,
                                         contentDescription = null,
-                                        tint = Color.White,
-                                        modifier = Modifier.size(24.dp).align(Alignment.Center)
+                                        tint = Color(0xFFC4B5FD),
+                                        modifier = Modifier
+                                            .size(26.dp)
+                                            .align(Alignment.Center)
                                     )
                                 }
                             }
@@ -357,22 +671,51 @@ fun CreateHubScreen(
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
                                     text = pl.title,
-                                    fontSize = 15.sp,
-                                    fontWeight = FontWeight.Bold,
+                                    style = AppleType.headlineBold,
                                     color = Color.White,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
                                 )
+                                Spacer(modifier = Modifier.height(2.dp))
                                 Text(
-                                    text = "${pl.trackCount} songs • ${pl.creatorName}",
-                                    fontSize = 12.sp,
+                                    text = "${pl.trackCount} songs • You",
+                                    style = AppleType.caption1,
                                     color = Color(0xFFA19BAE)
                                 )
                             }
                         }
 
-                        IconButton(onClick = { onOpenPlaylist(pl.id) }) {
-                            Icon(Icons.Default.ChevronRight, contentDescription = null, tint = Color(0xFFA19BAE))
+                        Box {
+                            IconButton(onClick = { showItemMenu = true }) {
+                                Icon(
+                                    Icons.Default.MoreVert,
+                                    contentDescription = "Options",
+                                    tint = Color(0xFFA19BAE),
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+
+                            DropdownMenu(
+                                expanded = showItemMenu,
+                                onDismissRequest = { showItemMenu = false },
+                                modifier = Modifier.background(Color(0xFF241C35))
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text("Open Playlist", color = Color.White) },
+                                    onClick = {
+                                        showItemMenu = false
+                                        onOpenPlaylist(pl.id)
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Delete Playlist", color = Color(0xFFEF4444)) },
+                                    onClick = {
+                                        showItemMenu = false
+                                        UserPlaylistStore.deletePlaylist(context, pl.id)
+                                        Toast.makeText(context, "Playlist deleted", Toast.LENGTH_SHORT).show()
+                                    }
+                                )
+                            }
                         }
                     }
                 }
@@ -380,98 +723,54 @@ fun CreateHubScreen(
         }
     }
 
-    // 1. Create Playlist Dialog
+    // ── Dialogs: Create Playlist, Friend Blend, Import Track ─────
     if (showCreatePlaylistDialog) {
         var playlistName by remember { mutableStateOf("") }
         var playlistDesc by remember { mutableStateOf("") }
-        var selectedCoverPreset by remember { mutableStateOf(0) }
-
-        val coverPresets = listOf(
-            "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=500",
-            "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=500",
-            "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=500",
-            "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=500"
-        )
 
         AlertDialog(
             onDismissRequest = { showCreatePlaylistDialog = false },
-            containerColor = Color(0xFF242424),
-            title = { Text("Create New Playlist", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp) },
+            containerColor = Color(0xFF211833),
+            title = { Text("Create New Playlist", color = Color.White, style = AppleType.title3Bold) },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     OutlinedTextField(
                         value = playlistName,
                         onValueChange = { playlistName = it },
-                        placeholder = { Text("My Studio Playlist", color = Color(0xFFA19BAE)) },
-                        singleLine = true,
+                        label = { Text("Playlist Name", color = Color(0xFFA19BAE)) },
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedTextColor = Color.White,
                             unfocusedTextColor = Color.White,
-                            focusedBorderColor = SpotifyGreen,
-                            unfocusedBorderColor = Color(0xFF444444)
+                            focusedBorderColor = PurplePrimary,
+                            unfocusedBorderColor = Color(0xFF443860)
                         ),
                         modifier = Modifier.fillMaxWidth()
                     )
-
                     OutlinedTextField(
                         value = playlistDesc,
                         onValueChange = { playlistDesc = it },
-                        placeholder = { Text("Description (optional)", color = Color(0xFFA19BAE)) },
-                        maxLines = 2,
+                        label = { Text("Description (Optional)", color = Color(0xFFA19BAE)) },
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedTextColor = Color.White,
                             unfocusedTextColor = Color.White,
-                            focusedBorderColor = SpotifyGreen,
-                            unfocusedBorderColor = Color(0xFF444444)
+                            focusedBorderColor = PurplePrimary,
+                            unfocusedBorderColor = Color(0xFF443860)
                         ),
                         modifier = Modifier.fillMaxWidth()
                     )
-
-                    Text("Choose cover artwork:", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-
-                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        coverPresets.forEachIndexed { index, url ->
-                            Box(
-                                modifier = Modifier
-                                    .size(52.dp)
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .border(
-                                        width = if (selectedCoverPreset == index) 2.dp else 0.dp,
-                                        color = if (selectedCoverPreset == index) SpotifyGreen else Color.Transparent,
-                                        shape = RoundedCornerShape(8.dp)
-                                    )
-                                    .clickable { selectedCoverPreset = index }
-                            ) {
-                                AsyncImage(
-                                    model = ImageRequest.Builder(context).data(url).crossfade(true).build(),
-                                    contentDescription = null,
-                                    contentScale = ContentScale.Crop,
-                                    modifier = Modifier.fillMaxSize()
-                                )
-                            }
-                        }
-                    }
                 }
             },
             confirmButton = {
                 Button(
                     onClick = {
-                        val title = playlistName.trim().ifBlank { "My Studio Playlist #${userPlaylists.size + 1}" }
-                        val cover = coverPresets.getOrElse(selectedCoverPreset) { coverPresets[0] }
-                        libraryViewModel.createPlaylist(
-                            context = context,
-                            title = title,
-                            description = playlistDesc.trim(),
-                            coverUrl = cover
-                        ) { newPl ->
-                            onOpenPlaylist(newPl.id)
-                        }
+                        val name = playlistName.trim().ifBlank { "My Playlist #${userPlaylists.size + 1}" }
+                        UserPlaylistStore.createPlaylist(context, name, playlistDesc.trim(), "")
                         showCreatePlaylistDialog = false
-                        Toast.makeText(context, "Playlist Created!", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, "Playlist '$name' created!", Toast.LENGTH_SHORT).show()
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = SpotifyGreen)
+                    colors = ButtonDefaults.buttonColors(containerColor = PurplePrimary)
                 ) {
-                    Text("Create & Open", color = Color.Black, fontWeight = FontWeight.Bold)
+                    Text("Create", color = Color.White, fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
@@ -482,183 +781,68 @@ fun CreateHubScreen(
         )
     }
 
-    // 2. AI Studio Prompt Dialog
-    if (showAiStudioDialog) {
+    if (showBlendDialog) {
+        var friendCode by remember { mutableStateOf("") }
         AlertDialog(
-            onDismissRequest = { showAiStudioDialog = false },
-            containerColor = Color(0xFF242424),
-            title = { Text("AI DJ Beat Studio", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp) },
+            onDismissRequest = { showBlendDialog = false },
+            containerColor = Color(0xFF211833),
+            title = { Text("Friend Blend", color = Color.White, style = AppleType.title3Bold) },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text("Describe what you want to hear:", color = Color(0xFFA19BAE), fontSize = 13.sp)
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Combine taste with a friend into a dynamic synchronized blend playlist.", color = Color(0xFFA19BAE), style = AppleType.subheadline)
                     OutlinedTextField(
-                        value = aiPrompt,
-                        onValueChange = { aiPrompt = it },
-                        placeholder = { Text("e.g. Dreamy midnight lo-fi beats with rain sounds", color = Color(0xFFA19BAE)) },
-                        maxLines = 3,
+                        value = friendCode,
+                        onValueChange = { friendCode = it },
+                        label = { Text("Friend's Zynera Username or Invite Code", color = Color(0xFFA19BAE)) },
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedTextColor = Color.White,
                             unfocusedTextColor = Color.White,
-                            focusedBorderColor = SpotifyGreen,
-                            unfocusedBorderColor = Color(0xFF444444)
+                            focusedBorderColor = PurplePrimary,
+                            unfocusedBorderColor = Color(0xFF443860)
                         ),
                         modifier = Modifier.fillMaxWidth()
                     )
-
-                    Text("Instrument / Beat Style:", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-                    LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        items(aiStyles) { style ->
-                            val isSelected = selectedAiGenre == style
-                            Box(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .background(if (isSelected) SpotifyGreen else Color(0xFF333333))
-                                    .clickable { selectedAiGenre = style }
-                                    .padding(horizontal = 10.dp, vertical = 5.dp)
-                            ) {
-                                Text(
-                                    text = style,
-                                    color = if (isSelected) Color.Black else Color.White,
-                                    fontSize = 11.5.sp,
-                                    fontWeight = FontWeight.SemiBold
-                                )
-                            }
-                        }
-                    }
                 }
             },
             confirmButton = {
                 Button(
                     onClick = {
-                        showAiStudioDialog = false
-                        coroutineScope.launch {
-                            isGeneratingAi = true
-                            val result = musicRepository.generateAiSignature(
-                                mood = selectedAiMood,
-                                genre = selectedAiGenre,
-                                prompt = aiPrompt.ifBlank { "Custom studio mix in $selectedAiGenre" }
-                            )
-                            isGeneratingAi = false
-                            if (result.isSuccess) {
-                                val res = result.getOrNull()!!
-                                val newTrack = TrackDto(
-                                    id = "ai_" + System.currentTimeMillis(),
-                                    title = res.vibeTitle.ifBlank { "Studio AI: $selectedAiGenre" },
-                                    artist = "Zynera AI Studio",
-                                    album = "AI Generator",
-                                    durationMs = 180000L,
-                                    audioUrl = res.aiGeneratedAudioUrl.ifBlank { "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3" },
-                                    coverUrl = "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=500",
-                                    isLiked = false
-                                )
-                                playbackViewModel.play(newTrack, "Studio AI")
-                                onOpenFullPlayer()
-                            }
-                        }
+                        val blendName = "Blend: $userDisplayName & ${friendCode.trim().ifBlank { "Friend" }}"
+                        UserPlaylistStore.createPlaylist(context, blendName, "Dynamic Friend Blend session", "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=500")
+                        showBlendDialog = false
+                        Toast.makeText(context, "Blend playlist created!", Toast.LENGTH_SHORT).show()
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = SpotifyGreen)
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF059669))
                 ) {
-                    Text("Generate & Play", color = Color.Black, fontWeight = FontWeight.Bold)
+                    Text("Create Blend", color = Color.White, fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showAiStudioDialog = false }) {
+                TextButton(onClick = { showBlendDialog = false }) {
                     Text("Cancel", color = Color(0xFFA19BAE))
                 }
             }
         )
     }
 
-    // 3. Friend Blend Invitation Dialog
-    if (showBlendDialog) {
-        val blendCode = remember { "ZYNERA-BLEND-${(1000..9999).random()}" }
-        AlertDialog(
-            onDismissRequest = { showBlendDialog = false },
-            containerColor = Color(0xFF242424),
-            title = { Text("Friend Blend Session", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp) },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text("Blend combines your music tastes with friends into a daily updated shared playlist.", color = Color(0xFFA19BAE), fontSize = 13.sp)
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(Color(0xFF1E1E1E))
-                            .padding(14.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(blendCode, color = SpotifyGreen, fontSize = 18.sp, fontWeight = FontWeight.ExtraBold)
-                    }
-                }
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        val shareIntent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
-                            type = "text/plain"
-                            putExtra(android.content.Intent.EXTRA_TEXT, "Join my Zynera Blend Session with code $blendCode!\nhttps://zynera.app/blend/$blendCode")
-                        }
-                        context.startActivity(android.content.Intent.createChooser(shareIntent, "Share Blend Invite"))
-                        showBlendDialog = false
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = SpotifyGreen)
-                ) {
-                    Text("Share Invite Code", color = Color.Black, fontWeight = FontWeight.Bold)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showBlendDialog = false }) {
-                    Text("Close", color = Color(0xFFA19BAE))
-                }
-            }
-        )
-    }
-
-    // 4. Import Audio URL Dialog
     if (showImportDialog) {
         var importUrl by remember { mutableStateOf("") }
-        var importTitle by remember { mutableStateOf("") }
-        var importArtist by remember { mutableStateOf("") }
-
         AlertDialog(
             onDismissRequest = { showImportDialog = false },
-            containerColor = Color(0xFF242424),
-            title = { Text("Import Audio Track", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp) },
+            containerColor = Color(0xFF211833),
+            title = { Text("Import Audio Track", color = Color.White, style = AppleType.title3Bold) },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Paste any public MP3, YouTube, or direct audio link to stream or add to playlists.", color = Color(0xFFA19BAE), style = AppleType.subheadline)
                     OutlinedTextField(
                         value = importUrl,
                         onValueChange = { importUrl = it },
-                        label = { Text("Audio URL / YouTube Link", color = Color(0xFFA19BAE)) },
+                        label = { Text("Media Stream URL", color = Color(0xFFA19BAE)) },
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedTextColor = Color.White,
                             unfocusedTextColor = Color.White,
-                            focusedBorderColor = SpotifyGreen,
-                            unfocusedBorderColor = Color(0xFF444444)
-                        ),
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    OutlinedTextField(
-                        value = importTitle,
-                        onValueChange = { importTitle = it },
-                        label = { Text("Track Title", color = Color(0xFFA19BAE)) },
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedTextColor = Color.White,
-                            unfocusedTextColor = Color.White,
-                            focusedBorderColor = SpotifyGreen,
-                            unfocusedBorderColor = Color(0xFF444444)
-                        ),
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    OutlinedTextField(
-                        value = importArtist,
-                        onValueChange = { importArtist = it },
-                        label = { Text("Artist Name", color = Color(0xFFA19BAE)) },
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedTextColor = Color.White,
-                            unfocusedTextColor = Color.White,
-                            focusedBorderColor = SpotifyGreen,
-                            unfocusedBorderColor = Color(0xFF444444)
+                            focusedBorderColor = PurplePrimary,
+                            unfocusedBorderColor = Color(0xFF443860)
                         ),
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -668,30 +852,25 @@ fun CreateHubScreen(
                 Button(
                     onClick = {
                         val url = importUrl.trim()
-                        val title = importTitle.trim().ifBlank { "Imported Track" }
-                        val artist = importArtist.trim().ifBlank { "External Artist" }
-
-                        if (url.isBlank()) {
-                            Toast.makeText(context, "Please enter an audio URL", Toast.LENGTH_SHORT).show()
-                            return@Button
+                        if (url.isNotBlank()) {
+                            val importedTrack = TrackDto(
+                                id = "import_" + System.currentTimeMillis(),
+                                title = "Imported Track",
+                                artist = "External Source",
+                                album = "Web Stream",
+                                durationMs = 180000L,
+                                audioUrl = url,
+                                coverUrl = "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=500"
+                            )
+                            playbackViewModel.play(importedTrack, "Imported Stream")
+                            onOpenFullPlayer()
+                            showImportDialog = false
+                            Toast.makeText(context, "Stream playing!", Toast.LENGTH_SHORT).show()
                         }
-
-                        val newTrack = TrackDto(
-                            id = "imp_" + System.currentTimeMillis(),
-                            title = title,
-                            artist = artist,
-                            album = "Imported Tracks",
-                            durationMs = 210000L,
-                            audioUrl = url,
-                            coverUrl = "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=500"
-                        )
-                        showImportDialog = false
-                        trackForAddToPlaylist = newTrack
-                        Toast.makeText(context, "Track ready! Select a playlist to save.", Toast.LENGTH_SHORT).show()
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = SpotifyGreen)
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD97706))
                 ) {
-                    Text("Add to Playlist", color = Color.Black, fontWeight = FontWeight.Bold)
+                    Text("Play & Import", color = Color.White, fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
@@ -701,41 +880,79 @@ fun CreateHubScreen(
             }
         )
     }
-
-    trackForAddToPlaylist?.let { tr ->
-        AddToPlaylistBottomSheet(
-            track = tr,
-            onDismiss = { trackForAddToPlaylist = null }
-        )
-    }
 }
 
 @Composable
-private fun CreationActionCard(
+private fun CreatorFeatureCard(
+    icon: ImageVector,
     title: String,
     subtitle: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
     gradientColors: List<Color>,
     modifier: Modifier = Modifier,
     onClick: () -> Unit
 ) {
     Box(
         modifier = modifier
-            .height(110.dp)
-            .clip(RoundedCornerShape(14.dp))
+            .height(130.dp)
+            .clip(RoundedCornerShape(18.dp))
             .background(Brush.linearGradient(gradientColors))
-            .clickable { onClick() }
+            .border(1.dp, AppleMaterials.specularBorder, RoundedCornerShape(18.dp))
+            .appleBounce { onClick() }
             .padding(14.dp)
     ) {
         Column(
             modifier = Modifier.fillMaxSize(),
             verticalArrangement = Arrangement.SpaceBetween
         ) {
-            Icon(icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(26.dp))
-            Column {
-                Text(title, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Color.White)
-                Text(subtitle, fontSize = 11.sp, color = Color.White.copy(alpha = 0.85f))
+            Box(
+                modifier = Modifier
+                    .size(34.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(Color.White.copy(alpha = 0.2f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = title,
+                    tint = Color.White,
+                    modifier = Modifier.size(20.dp)
+                )
             }
+
+            Column {
+                Text(
+                    text = title,
+                    style = AppleType.headlineBold,
+                    color = Color.White,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = subtitle,
+                    style = AppleType.caption1,
+                    color = Color.White.copy(alpha = 0.82f),
+                    maxLines = 2,
+                    lineHeight = 14.sp
+                )
+            }
+        }
+
+        // Circular Arrow Button on bottom right
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .size(28.dp)
+                .clip(CircleShape)
+                .background(Color.White.copy(alpha = 0.25f)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                Icons.Default.ChevronRight,
+                contentDescription = null,
+                tint = Color.White,
+                modifier = Modifier.size(18.dp)
+            )
         }
     }
 }

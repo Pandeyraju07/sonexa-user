@@ -55,6 +55,8 @@ enum class AppStep {
     MUSIC_DNA,
     MUSIC_JOURNEY,
     MUSIC_INTELLIGENCE_HUB,
+    AUDIOBOOK_DETAIL,
+    AUDIOBOOK_PLAYER,
     NO_INTERNET_ERROR,
     SERVER_ERROR
 }
@@ -98,6 +100,8 @@ fun SonexaAppFlow() {
         AppStep.AUTH_UTILITIES,
         AppStep.MUSIC_DNA,
         AppStep.MUSIC_JOURNEY,
+        AppStep.AUDIOBOOK_DETAIL,
+        AppStep.AUDIOBOOK_PLAYER,
         AppStep.NO_INTERNET_ERROR,
         AppStep.SERVER_ERROR
     )
@@ -285,6 +289,13 @@ fun SonexaAppFlow() {
                     onOpenMusicDna = { currentStep = AppStep.MUSIC_DNA },
                     onOpenMusicJourney = { currentStep = AppStep.MUSIC_JOURNEY },
                     onOpenMusicIntelligence = { currentStep = AppStep.MUSIC_INTELLIGENCE_HUB },
+                    onOpenAudiobookDetail = { id ->
+                        detailId = id
+                        currentStep = AppStep.AUDIOBOOK_DETAIL
+                    },
+                    onOpenAudiobookPlayer = {
+                        currentStep = AppStep.AUDIOBOOK_PLAYER
+                    },
                     homeViewModel = homeVm,
                     playbackViewModel = playbackViewModel
                 )
@@ -421,6 +432,16 @@ fun SonexaAppFlow() {
                 )
                 AppStep.MUSIC_INTELLIGENCE_HUB -> MusicIntelligenceHubScreen(
                     onBack = ::goHome,
+                    playbackViewModel = playbackViewModel
+                )
+                AppStep.AUDIOBOOK_DETAIL -> AudiobookDetailScreen(
+                    audiobookId = detailId,
+                    onNavigateBack = ::goHome,
+                    onOpenAudiobookPlayer = { currentStep = AppStep.AUDIOBOOK_PLAYER },
+                    playbackViewModel = playbackViewModel
+                )
+                AppStep.AUDIOBOOK_PLAYER -> AudiobookPlayerScreen(
+                    onMinimize = ::goHome,
                     playbackViewModel = playbackViewModel
                 )
                 AppStep.NO_INTERNET_ERROR -> NoInternetScreen(

@@ -9,7 +9,9 @@ import android.content.pm.ServiceInfo
 import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
+import androidx.media3.common.ForwardingPlayer
 import androidx.media3.common.Player
+import androidx.media3.session.DefaultMediaNotificationProvider
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
 import com.sonexa.app.MainActivity
@@ -23,8 +25,33 @@ class SonexaPlaybackService : MediaSessionService() {
     override fun onCreate() {
         super.onCreate()
         ensureNotificationChannel()
-        enterForeground("Zynera Playback")
-        val player: Player = (application as SonexaApp).playbackManager.nativeProvider.player
+
+        val playbackManager = (application as SonexaApp).playbackManager
+        val rawPlayer: Player = playbackManager.nativeProvider.player
+
+        val forwardingPlayer = object : ForwardingPlayer(rawPlayer) {
+            override fun getAvailableCommands(): Player.Commands {
+                return super.getAvailableCommands().buildUpon()
+                    .add(Player.COMMAND_SEEK_TO_NEXT)
+                    .add(Player.COMMAND_SEEK_TO_PREVIOUS)
+                    .build()
+            }
+
+            override fun isCommandAvailable(command: Int): Boolean {
+                return command == Player.COMMAND_SEEK_TO_NEXT ||
+                        command == Player.COMMAND_SEEK_TO_PREVIOUS ||
+                        super.isCommandAvailable(command)
+            }
+
+            override fun seekToNext() {
+                playbackManager.onSkipNext?.invoke()
+            }
+
+            override fun seekToPrevious() {
+                playbackManager.onSkipPrevious?.invoke()
+            }
+        }
+
         val sessionActivity = PendingIntent.getActivity(
             this,
             0,
@@ -33,24 +60,30 @@ class SonexaPlaybackService : MediaSessionService() {
             },
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
-        mediaSession = MediaSession.Builder(this, player)
+
+        val notificationProvider = DefaultMediaNotificationProvider.Builder(this)
+            .setChannelId(CHANNEL_ID)
+            .build()
+        setMediaNotificationProvider(notificationProvider)
+
+        mediaSession = MediaSession.Builder(this, forwardingPlayer)
             .setSessionActivity(sessionActivity)
             .build()
-        enterForeground("Zynera Playback")
+        enterForeground("Playing audio")
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         ensureNotificationChannel()
-        enterForeground("Zynera Playback")
+        enterForeground("Playing audio")
         val result = super.onStartCommand(intent, flags, startId)
-        enterForeground("Zynera Playback")
+        enterForeground("Playing audio")
         return result
     }
 
     override fun onUpdateNotification(session: MediaSession, startInForegroundRequired: Boolean) {
         super.onUpdateNotification(session, startInForegroundRequired)
         if (startInForegroundRequired) {
-            enterForeground("Zynera Playback")
+            enterForeground("Playing audio")
         }
     }
 
@@ -97,7 +130,7 @@ class SonexaPlaybackService : MediaSessionService() {
 
     private fun enterForeground(text: String) {
         val notification = buildPlaceholderNotification(text)
-        runCatching {
+        try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 ServiceCompat.startForeground(
                     this,
@@ -108,6 +141,8 @@ class SonexaPlaybackService : MediaSessionService() {
             } else {
                 startForeground(NOTIFICATION_ID, notification)
             }
+        } catch (t: Throwable) {
+            android.util.Log.e("SonexaPlaybackService", "enterForeground failed: ${t.message}")
         }
     }
 

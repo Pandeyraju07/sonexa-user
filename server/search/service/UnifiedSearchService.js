@@ -8,6 +8,7 @@ const { searchRankingService } = require('../ranking/SearchRankingService');
 const { catalogStore, normalizeString } = require('../../catalog/catalogStore');
 const { hybridRecommendationEngine } = require('../../recommendation/engine/HybridRecommendationEngine');
 const { affinityEngine } = require('../../events/AffinityEngine');
+const { audiobooks } = require('../../data/audiobooks');
 
 class UnifiedSearchService {
   search(rawQuery, userId = 'usr_anonymous') {
@@ -22,7 +23,8 @@ class UnifiedSearchService {
         artists: catalogStore.artists.slice(0, 3),
         albums: catalogStore.albums.slice(0, 2),
         movies: catalogStore.movies.slice(0, 2),
-        playlists: catalogStore.playlists.slice(0, 2)
+        playlists: catalogStore.playlists.slice(0, 2),
+        audiobooks: audiobooks.slice(0, 4)
       };
     }
 
@@ -220,7 +222,15 @@ class UnifiedSearchService {
       movies: matchedMovies,
       playlists: catalogStore.playlists.filter(p =>
         normalizeString(p.title).includes(normalizeString(query))
-      )
+      ),
+      audiobooks: audiobooks.filter(b => {
+        const qNorm = normalizeString(query);
+        return normalizeString(b.title).includes(qNorm) ||
+          normalizeString(b.author).includes(qNorm) ||
+          normalizeString(b.narrator).includes(qNorm) ||
+          normalizeString(b.category).includes(qNorm) ||
+          normalizeString(b.languageName).includes(qNorm);
+      })
     };
   }
 }

@@ -59,8 +59,14 @@ const recommendationsRouter = require('./routes/recommendations');
 const searchRouter = require('./routes/search');
 const eventsRouter = require('./routes/events');
 const adminRouter = require('./routes/admin');
+const audiobooksRouter = require('./routes/audiobooks');
+const { audiobookCategories } = require('./data/audiobooks');
 
 // Mount API Routers (both /api/v1/ and /api/ for universal standard compliance)
+app.use(['/api/v1/audiobooks', '/api/audiobooks'], audiobooksRouter);
+app.get(['/api/v1/audiobook-categories', '/api/audiobook-categories'], (req, res) => {
+  res.json({ success: true, data: audiobookCategories });
+});
 app.use(['/api/v1/recommendations', '/api/recommendations'], recommendationsRouter);
 app.use(['/api/v1/search', '/api/search'], searchRouter);
 app.use(['/api/v1/events', '/api/events'], eventsRouter);

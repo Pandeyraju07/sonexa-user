@@ -294,24 +294,18 @@ class PlaylistDetailViewModel @JvmOverloads constructor(
             // Liked Songs playlist
             if (id == "pl_liked" || id.contains("liked", ignoreCase = true)) {
                 val likedTracks = com.sonexa.app.data.local.LikedSongsStore.getLikedTracks()
-                val effectiveTracks = if (likedTracks.isNotEmpty()) {
-                    likedTracks
-                } else {
-                    saavnProvider.search("Top Romantic Hits", limit = 20).getOrDefault(emptyList()).map { it.copySafe(isLiked = true) }
-                }
-
                 val playlist = PlaylistDto(
                     id = "pl_liked",
                     title = "Liked Songs",
                     subtitle = "📌 Playlist • Liked Songs",
                     artworkType = "gradient",
-                    coverUrl = effectiveTracks.firstOrNull()?.effectiveCoverUrl.orEmpty(),
-                    trackCount = effectiveTracks.size,
+                    coverUrl = likedTracks.firstOrNull()?.effectiveCoverUrl.orEmpty(),
+                    trackCount = likedTracks.size,
                     creatorName = "You",
                     isUserCreated = true,
                     isPinned = true
                 )
-                _uiState.value = CatalogUiState.Ready(PlaylistDetailResponse(true, playlist, effectiveTracks))
+                _uiState.value = CatalogUiState.Ready(PlaylistDetailResponse(true, playlist, likedTracks))
                 return@launch
             }
 

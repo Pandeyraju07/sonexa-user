@@ -60,6 +60,8 @@ fun SearchScreen(
     onOpenArtistProfile: (String) -> Unit = {},
     onOpenPlaylistDetail: (String) -> Unit = {},
     onOpenPodcasts: () -> Unit = {},
+    onOpenAudiobooks: () -> Unit = {},
+    onOpenAudiobookDetail: (String) -> Unit = {},
     onOpenLiveEvents: () -> Unit = {},
     onOpenIPop: () -> Unit = {},
     onOpenProfile: () -> Unit = {},
@@ -121,17 +123,24 @@ fun SearchScreen(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 10.dp),
+                        .padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 8.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.appleBounce { onOpenProfile() }
+                    ) {
                         Box(
                             modifier = Modifier
-                                .size(36.dp)
+                                .size(44.dp)
                                 .clip(CircleShape)
-                                .background(Color(0xFF8C67AC))
-                                .clickable { onOpenProfile() },
+                                .border(1.2.dp, AppleMaterials.specularBorder, CircleShape)
+                                .background(
+                                    Brush.linearGradient(
+                                        listOf(Color(0xFFFE2C55), Color(0xFF8B5CF6))
+                                    )
+                                ),
                             contentAlignment = Alignment.Center
                         ) {
                             if (currentUserAvatar.isNotBlank()) {
@@ -149,46 +158,57 @@ fun SearchScreen(
                             } else {
                                 Text(
                                     text = avatarInitial,
-                                    fontSize = 16.sp,
-                                    fontWeight = FontWeight.Bold,
+                                    style = AppleType.headlineBold,
                                     color = Color.White
                                 )
                             }
                         }
+
                         Spacer(modifier = Modifier.width(14.dp))
-                        Text(
-                            text = "Search",
-                            fontSize = 26.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White
-                        )
+
+                        Column {
+                            Text(
+                                text = "Search",
+                                style = AppleType.largeTitle,
+                                color = Color.White
+                            )
+                            Text(
+                                text = "Find your next favorite sound",
+                                style = AppleType.subheadline,
+                                color = SonexaTextMuted
+                            )
+                        }
                     }
 
-                    IconButton(
-                        onClick = { showVoiceSheet = true },
+                    // Green Glowing Voice Search Button
+                    Box(
                         modifier = Modifier
-                            .size(38.dp)
+                            .size(42.dp)
                             .clip(CircleShape)
-                            .background(SpotifyGreen.copy(alpha = 0.15f))
+                            .background(SpotifyGreen)
+                            .border(1.dp, Color.White.copy(alpha = 0.25f), CircleShape)
+                            .appleBounce { showVoiceSheet = true },
+                        contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = Icons.Default.Mic,
                             contentDescription = "Voice Search",
-                            tint = SpotifyGreen,
+                            tint = Color.Black,
                             modifier = Modifier.size(22.dp)
                         )
                     }
                 }
 
-                // White Search Bar Trigger Box
+                // Apple Glassmorphic Search Bar Trigger Box
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 4.dp)
-                        .height(48.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(Color.White)
-                        .clickable { isSearchActive = true }
+                        .padding(horizontal = 16.dp, vertical = 6.dp)
+                        .height(50.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(AppleMaterials.inputBackground)
+                        .border(1.dp, AppleMaterials.specularBorder, RoundedCornerShape(16.dp))
+                        .appleBounce { isSearchActive = true }
                         .padding(horizontal = 14.dp),
                     contentAlignment = Alignment.CenterStart
                 ) {
@@ -201,26 +221,29 @@ fun SearchScreen(
                             Icon(
                                 Icons.Default.Search,
                                 contentDescription = "Search",
-                                tint = Color(0xFF121212),
-                                modifier = Modifier.size(22.dp)
+                                tint = SonexaTextMuted,
+                                modifier = Modifier.size(20.dp)
                             )
                             Spacer(modifier = Modifier.width(10.dp))
                             Text(
                                 text = "What do you want to listen to?",
-                                fontSize = 15.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = Color(0xFF242424)
+                                style = AppleType.callout,
+                                color = SonexaTextMuted
                             )
                         }
 
-                        IconButton(
-                            onClick = { showVoiceSheet = true },
-                            modifier = Modifier.size(32.dp)
-                        ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .width(1.dp)
+                                    .height(20.dp)
+                                    .background(Color.White.copy(alpha = 0.15f))
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
                             Icon(
                                 imageVector = Icons.Default.Mic,
                                 contentDescription = "Voice Search",
-                                tint = Color(0xFF121212),
+                                tint = SonexaTextMuted,
                                 modifier = Modifier.size(20.dp)
                             )
                         }
@@ -341,6 +364,7 @@ fun SearchScreen(
                 val quickMoodChips = remember {
                     listOf(
                         "🔥 Trending" to "Top Trending Songs India",
+                        "📚 Audiobooks" to "Audiobooks Classics Munshi Premchand",
                         "💖 Romance" to "Romantic Hindi Love Songs",
                         "⚡ High Energy" to "High Energy Workout Songs",
                         "🎧 Lo-Fi Chill" to "Lo-Fi Bollywood Beats",
@@ -357,38 +381,43 @@ fun SearchScreen(
                     contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 120.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    // 0. Quick Mood & Vibe Chips
+                    // 0. Quick Mood & Vibe Chips with Apple styling
                     item {
                         LazyRow(
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             items(quickMoodChips) { (moodText, genreQuery) ->
+                                val isTrending = moodText.contains("Trending")
                                 Box(
                                     modifier = Modifier
                                         .clip(RoundedCornerShape(20.dp))
-                                        .background(SonexaInputBg)
-                                        .border(1.dp, SonexaCardBorder, RoundedCornerShape(20.dp))
-                                        .clickable {
-                                            // Use the proper genre query, not the chip label word
+                                        .background(
+                                            if (isTrending) Color(0xFF2A0D15) else AppleMaterials.glassFill
+                                        )
+                                        .border(
+                                            1.dp,
+                                            if (isTrending) Color(0xFFFE2C55).copy(alpha = 0.85f) else AppleMaterials.subtleBorder,
+                                            RoundedCornerShape(20.dp)
+                                        )
+                                        .appleBounce {
                                             query = genreQuery
                                             isSearchActive = true
                                             searchViewModel.onSearchQueryChanged(genreQuery)
                                         }
-                                        .padding(horizontal = 14.dp, vertical = 8.dp)
+                                        .padding(horizontal = 14.dp, vertical = 7.dp)
                                 ) {
                                     Text(
                                         text = moodText,
-                                        fontSize = 12.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = Color.White
+                                        style = AppleType.footnoteBold,
+                                        color = if (isTrending) Color(0xFFFF8FA3) else Color.White
                                     )
                                 }
                             }
                         }
                     }
 
-                    // 1. 2x2 Hero Category Cards
+                    // 1. 2x2 Hero Category Cards (Apple "Font Box" squircle cards)
                     item {
                         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                             heroCategories.chunked(2).forEach { rowPair ->
@@ -398,6 +427,7 @@ fun SearchScreen(
                                 ) {
                                     BrowseHeroCard(rowPair[0], Modifier.weight(1f)) { cat ->
                                         when {
+                                            cat.id.contains("audiobook", ignoreCase = true) || cat.title.contains("audiobook", ignoreCase = true) -> onOpenAudiobooks()
                                             cat.id.contains("podcast", ignoreCase = true) || cat.title.contains("podcast", ignoreCase = true) || cat.query.contains("podcast", ignoreCase = true) -> onOpenPodcasts()
                                             cat.id.contains("event", ignoreCase = true) || cat.title.contains("event", ignoreCase = true) || cat.title.contains("concert", ignoreCase = true) -> onOpenLiveEvents()
                                             cat.id.contains("ipop", ignoreCase = true) || cat.title.contains("i-pop", ignoreCase = true) || cat.title.contains("I-Pop", ignoreCase = true) -> onOpenIPop()
@@ -407,6 +437,7 @@ fun SearchScreen(
                                     if (rowPair.size > 1) {
                                         BrowseHeroCard(rowPair[1], Modifier.weight(1f)) { cat ->
                                             when {
+                                                cat.id.contains("audiobook", ignoreCase = true) || cat.title.contains("audiobook", ignoreCase = true) -> onOpenAudiobooks()
                                                 cat.id.contains("podcast", ignoreCase = true) || cat.title.contains("podcast", ignoreCase = true) || cat.query.contains("podcast", ignoreCase = true) -> onOpenPodcasts()
                                                 cat.id.contains("event", ignoreCase = true) || cat.title.contains("event", ignoreCase = true) || cat.title.contains("concert", ignoreCase = true) -> onOpenLiveEvents()
                                                 cat.id.contains("ipop", ignoreCase = true) || cat.title.contains("i-pop", ignoreCase = true) || cat.title.contains("I-Pop", ignoreCase = true) -> onOpenIPop()
@@ -421,33 +452,123 @@ fun SearchScreen(
                         }
                     }
 
-
-                    // 2. "Discover something new" (Redesigned with guaranteed covers & Play action)
+                    // 2. "Browse by mood" Section (Apple Squircle Grid as in screenshot)
                     item {
                         Column {
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(vertical = 8.dp),
+                                    .padding(top = 8.dp, bottom = 10.dp),
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Column {
+                                Text(
+                                    text = "Browse by mood",
+                                    style = AppleType.title3Bold,
+                                    color = Color.White
+                                )
+
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.appleBounce {
+                                        query = "Moods"
+                                        isSearchActive = true
+                                        searchViewModel.onSearchQueryChanged("Moods")
+                                    }
+                                ) {
                                     Text(
-                                        text = "Discover something new",
-                                        fontSize = 20.sp,
-                                        fontWeight = FontWeight.ExtraBold,
-                                        color = Color.White
-                                    )
-                                    Text(
-                                        text = "Curated trending tags & fresh sounds",
-                                        fontSize = 12.sp,
+                                        text = "See All",
+                                        style = AppleType.footnoteBold,
                                         color = SonexaTextMuted
+                                    )
+                                    Icon(
+                                        imageVector = Icons.Default.KeyboardArrowRight,
+                                        contentDescription = null,
+                                        tint = SonexaTextMuted,
+                                        modifier = Modifier.size(16.dp)
                                     )
                                 }
                             }
 
-                            Spacer(modifier = Modifier.height(4.dp))
+                            val moodItems = listOf(
+                                Triple("Feel Good", Icons.Default.WbSunny, listOf(Color(0xFFF59E0B), Color(0xFF78350F))),
+                                Triple("Romance", Icons.Default.Favorite, listOf(Color(0xFFF43F5E), Color(0xFF881337))),
+                                Triple("Workout", Icons.Default.DirectionsRun, listOf(Color(0xFFEAB308), Color(0xFF713F12))),
+                                Triple("Chill", Icons.Default.Spa, listOf(Color(0xFFA855F7), Color(0xFF581C87))),
+                                Triple("Sleep", Icons.Default.NightsStay, listOf(Color(0xFF3B82F6), Color(0xFF1E3A8A))),
+                                Triple("Party", Icons.Default.Celebration, listOf(Color(0xFFEC4899), Color(0xFF831843)))
+                            )
+
+                            LazyRow(
+                                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                items(moodItems) { (moodName, moodIcon, moodGradient) ->
+                                    BrowseMoodCard(
+                                        title = moodName,
+                                        icon = moodIcon,
+                                        gradientColors = moodGradient,
+                                        onClick = {
+                                            val genreQuery = when (moodName) {
+                                                "Feel Good" -> "Feel Good Bollywood Hits"
+                                                "Romance" -> "Romantic Hindi Love Songs"
+                                                "Workout" -> "High Energy Workout Songs"
+                                                "Chill" -> "Lo-Fi Bollywood Beats"
+                                                "Sleep" -> "Calm Sleeping Ambient Songs"
+                                                else -> "Bollywood Party Songs"
+                                            }
+                                            query = genreQuery
+                                            isSearchActive = true
+                                            searchViewModel.onSearchQueryChanged(genreQuery)
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    // 3. "Discover something new" (Curated trending tags & fresh sounds)
+                    item {
+                        Column {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(top = 10.dp, bottom = 4.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = "Discover something new",
+                                        style = AppleType.title3Bold,
+                                        color = Color.White
+                                    )
+                                    Text(
+                                        text = "Curated trending tags & fresh sounds",
+                                        style = AppleType.caption1,
+                                        color = SonexaTextMuted
+                                    )
+                                }
+
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.appleBounce {}
+                                ) {
+                                    Text(
+                                        text = "See All",
+                                        style = AppleType.footnoteBold,
+                                        color = SonexaTextMuted
+                                    )
+                                    Icon(
+                                        imageVector = Icons.Default.KeyboardArrowRight,
+                                        contentDescription = null,
+                                        tint = SonexaTextMuted,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(10.dp))
 
                             LazyRow(
                                 horizontalArrangement = Arrangement.spacedBy(14.dp),
@@ -456,12 +577,12 @@ fun SearchScreen(
                                 items(discoverItems) { item ->
                                     Box(
                                         modifier = Modifier
-                                            .width(155.dp)
-                                            .height(235.dp)
-                                            .clip(RoundedCornerShape(18.dp))
-                                            .background(SonexaInputBg)
-                                            .border(1.dp, SonexaCardBorder, RoundedCornerShape(18.dp))
-                                            .clickable {
+                                            .width(170.dp)
+                                            .height(245.dp)
+                                            .clip(RoundedCornerShape(20.dp))
+                                            .background(AppleMaterials.cardSurface)
+                                            .border(1.dp, AppleMaterials.specularBorder, RoundedCornerShape(20.dp))
+                                            .appleBounce {
                                                 when {
                                                     item.tag.contains("podcast", ignoreCase = true) || item.query.contains("podcast", ignoreCase = true) -> onOpenPodcasts()
                                                     item.tag.contains("concert", ignoreCase = true) || item.tag.contains("event", ignoreCase = true) || item.id.contains("event", ignoreCase = true) -> onOpenLiveEvents()
@@ -503,7 +624,7 @@ fun SearchScreen(
                                                 .align(Alignment.TopStart)
                                                 .padding(10.dp)
                                                 .clip(RoundedCornerShape(10.dp))
-                                                .background(Color.Black.copy(alpha = 0.65f))
+                                                .background(Color.Black.copy(alpha = 0.70f))
                                                 .border(1.dp, Color.White.copy(alpha = 0.20f), RoundedCornerShape(10.dp))
                                                 .padding(horizontal = 8.dp, vertical = 4.dp)
                                         ) {
@@ -517,8 +638,7 @@ fun SearchScreen(
                                                 Spacer(modifier = Modifier.width(4.dp))
                                                 Text(
                                                     text = item.tag,
-                                                    fontSize = 11.sp,
-                                                    fontWeight = FontWeight.ExtraBold,
+                                                    style = AppleType.caption2Bold,
                                                     color = Color.White
                                                 )
                                             }
@@ -536,27 +656,25 @@ fun SearchScreen(
                                             Column(modifier = Modifier.weight(1f)) {
                                                 Text(
                                                     text = item.title,
-                                                    fontSize = 14.sp,
-                                                    fontWeight = FontWeight.Bold,
+                                                    style = AppleType.subheadlineBold,
                                                     color = Color.White,
                                                     maxLines = 2,
                                                     overflow = TextOverflow.Ellipsis
                                                 )
                                                 Text(
                                                     text = "Explore Flow",
-                                                    fontSize = 11.sp,
-                                                    color = SpotifyGreen,
-                                                    fontWeight = FontWeight.SemiBold
+                                                    style = AppleType.caption1Bold,
+                                                    color = SpotifyGreen
                                                 )
                                             }
 
-                                            // Quick Play Circle
+                                            // Quick Play Circle (Pure white circular button as in screenshot)
                                             Box(
                                                 modifier = Modifier
                                                     .size(34.dp)
                                                     .clip(CircleShape)
-                                                    .background(SpotifyGreen)
-                                                    .clickable {
+                                                    .background(Color.White)
+                                                    .appleBounce {
                                                         if (item.track != null) {
                                                             playTrackList(listOf(item.track), 0, item.tag)
                                                         } else {
@@ -579,14 +697,13 @@ fun SearchScreen(
                         }
                     }
 
-                    // 3. "Browse all"
+                    // 4. "Browse all"
                     item {
                         Text(
                             text = "Browse all",
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.Bold,
+                            style = AppleType.title3Bold,
                             color = Color.White,
-                            modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
+                            modifier = Modifier.padding(top = 10.dp, bottom = 4.dp)
                         )
                     }
 
@@ -598,6 +715,7 @@ fun SearchScreen(
                         ) {
                             BrowseCategoryCard(pair[0], Modifier.weight(1f)) { cat ->
                                 when {
+                                    cat.id.contains("audiobook", ignoreCase = true) || cat.title.contains("audiobook", ignoreCase = true) -> onOpenAudiobooks()
                                     cat.id.contains("podcast", ignoreCase = true) || cat.title.contains("podcast", ignoreCase = true) || cat.query.contains("podcast", ignoreCase = true) -> onOpenPodcasts()
                                     cat.id.contains("event", ignoreCase = true) || cat.title.contains("event", ignoreCase = true) || cat.title.contains("concert", ignoreCase = true) -> onOpenLiveEvents()
                                     cat.id.contains("ipop", ignoreCase = true) || cat.title.contains("i-pop", ignoreCase = true) || cat.title.contains("I-Pop", ignoreCase = true) -> onOpenIPop()
@@ -607,6 +725,7 @@ fun SearchScreen(
                             if (pair.size > 1) {
                                 BrowseCategoryCard(pair[1], Modifier.weight(1f)) { cat ->
                                     when {
+                                        cat.id.contains("audiobook", ignoreCase = true) || cat.title.contains("audiobook", ignoreCase = true) -> onOpenAudiobooks()
                                         cat.id.contains("podcast", ignoreCase = true) || cat.title.contains("podcast", ignoreCase = true) || cat.query.contains("podcast", ignoreCase = true) -> onOpenPodcasts()
                                         cat.id.contains("event", ignoreCase = true) || cat.title.contains("event", ignoreCase = true) || cat.title.contains("concert", ignoreCase = true) -> onOpenLiveEvents()
                                         cat.id.contains("ipop", ignoreCase = true) || cat.title.contains("i-pop", ignoreCase = true) || cat.title.contains("I-Pop", ignoreCase = true) -> onOpenIPop()
@@ -1402,44 +1521,153 @@ private fun BrowseHeroCard(
     modifier: Modifier = Modifier,
     onClick: (BrowseCategoryItem) -> Unit
 ) {
+    val isMusic = category.id.contains("music", ignoreCase = true) || category.title.contains("music", ignoreCase = true)
+    val isPodcast = category.id.contains("podcast", ignoreCase = true) || category.title.contains("podcast", ignoreCase = true)
+    val isEvent = category.id.contains("event", ignoreCase = true) || category.title.contains("event", ignoreCase = true)
+    val isIPop = category.id.contains("ipop", ignoreCase = true) || category.title.contains("pop", ignoreCase = true)
+
+    val cardTitle = when {
+        isMusic -> "Music"
+        isPodcast -> "Podcasts"
+        isEvent -> "Live\nEvents"
+        else -> "Home of\nI-Pop"
+    }
+
+    val cardSubtitle = when {
+        isMusic -> "Millions of songs\nfor every mood"
+        isPodcast -> "Stories, ideas\nand more"
+        isEvent -> "Concerts, shows\nand festivals"
+        else -> "Independent.\nFresh. Original."
+    }
+
+    val gradientColors = when {
+        isMusic -> listOf(Color(0xFFE11D48), Color(0xFF881337), Color(0xFF4C0519))
+        isPodcast -> listOf(Color(0xFF0D9488), Color(0xFF064E3B), Color(0xFF022C22))
+        isEvent -> listOf(Color(0xFF7C3AED), Color(0xFF4C1D95), Color(0xFF1E1B4B))
+        else -> listOf(Color(0xFF2563EB), Color(0xFF1E3A8A), Color(0xFF0F172A))
+    }
+
+    val buttonBgColor = when {
+        isMusic -> Color.White
+        isPodcast -> Color(0xFF2DD4BF)
+        isEvent -> Color(0xFFA855F7)
+        else -> Color(0xFF38BDF8)
+    }
+
+    val defaultArtwork = when {
+        isMusic -> "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400"
+        isPodcast -> "https://images.unsplash.com/photo-1590602847861-f357a9332bbc?w=400"
+        isEvent -> "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=400"
+        else -> "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=400"
+    }
+
+    val artworkUrl = category.imageUrl.takeIf { it.isNotBlank() } ?: defaultArtwork
+
     Box(
         modifier = modifier
-            .height(96.dp)
-            .clip(RoundedCornerShape(16.dp))
-            .background(
-                Brush.linearGradient(
-                    listOf(
-                        Color(category.colorHex),
-                        Color(category.colorHex).copy(alpha = 0.75f)
-                    )
-                )
-            )
-            .border(1.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(16.dp))
-            .clickable { onClick(category) }
-            .padding(14.dp)
+            .height(112.dp)
+            .clip(RoundedCornerShape(20.dp))
+            .background(Brush.linearGradient(gradientColors))
+            .border(1.dp, AppleMaterials.specularBorder, RoundedCornerShape(20.dp))
+            .appleBounce { onClick(category) }
+            .padding(12.dp)
     ) {
-        Text(
-            text = category.title,
-            fontSize = 17.sp,
-            fontWeight = FontWeight.ExtraBold,
-            color = Color.White,
-            lineHeight = 21.sp,
-            modifier = Modifier.align(Alignment.TopStart)
-        )
+        // Artwork on the right
         AsyncImage(
             model = ImageRequest.Builder(LocalContext.current)
-                .data(category.imageUrl)
+                .data(artworkUrl)
                 .crossfade(true)
                 .build(),
             contentDescription = null,
             contentScale = ContentScale.Crop,
             modifier = Modifier
-                .size(62.dp)
+                .size(76.dp)
                 .align(Alignment.BottomEnd)
-                .offset(x = 12.dp, y = 12.dp)
-                .rotate(22f)
-                .clip(RoundedCornerShape(8.dp))
-                .border(1.dp, Color.White.copy(alpha = 0.25f), RoundedCornerShape(8.dp))
+                .clip(RoundedCornerShape(12.dp))
+                .border(0.8.dp, Color.White.copy(alpha = 0.20f), RoundedCornerShape(12.dp))
+        )
+
+        // Text & Action button on left
+        Column(
+            modifier = Modifier
+                .fillMaxHeight()
+                .fillMaxWidth(0.64f),
+            verticalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column {
+                Text(
+                    text = cardTitle,
+                    style = AppleType.title3Bold,
+                    color = Color.White,
+                    lineHeight = 22.sp
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = cardSubtitle,
+                    style = AppleType.caption2,
+                    color = Color.White.copy(alpha = 0.85f),
+                    lineHeight = 13.sp
+                )
+            }
+
+            // Circular Forward Arrow Button
+            Box(
+                modifier = Modifier
+                    .size(28.dp)
+                    .clip(CircleShape)
+                    .background(buttonBgColor),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.ArrowForward,
+                    contentDescription = "Open",
+                    tint = Color.Black,
+                    modifier = Modifier.size(15.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun BrowseMoodCard(
+    title: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    gradientColors: List<Color>,
+    onClick: () -> Unit
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier
+            .width(82.dp)
+            .clip(RoundedCornerShape(18.dp))
+            .background(AppleMaterials.cardSurface)
+            .border(1.dp, AppleMaterials.specularBorder, RoundedCornerShape(18.dp))
+            .appleBounce { onClick() }
+            .padding(vertical = 12.dp, horizontal = 6.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(42.dp)
+                .clip(CircleShape)
+                .background(Brush.linearGradient(gradientColors))
+                .border(1.dp, Color.White.copy(alpha = 0.25f), CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = title,
+                tint = Color.White,
+                modifier = Modifier.size(22.dp)
+            )
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = title,
+            style = AppleType.caption2Bold,
+            color = Color.White,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
         )
     }
 }
@@ -1452,8 +1680,8 @@ private fun BrowseCategoryCard(
 ) {
     Box(
         modifier = modifier
-            .height(102.dp)
-            .clip(RoundedCornerShape(16.dp))
+            .height(104.dp)
+            .clip(RoundedCornerShape(18.dp))
             .background(
                 Brush.linearGradient(
                     listOf(
@@ -1462,14 +1690,13 @@ private fun BrowseCategoryCard(
                     )
                 )
             )
-            .border(1.dp, Color.White.copy(alpha = 0.12f), RoundedCornerShape(16.dp))
-            .clickable { onClick(category) }
+            .border(1.dp, AppleMaterials.specularBorder, RoundedCornerShape(18.dp))
+            .appleBounce { onClick(category) }
             .padding(14.dp)
     ) {
         Text(
             text = category.title,
-            fontSize = 16.sp,
-            fontWeight = FontWeight.ExtraBold,
+            style = AppleType.headlineBold,
             color = Color.White,
             lineHeight = 20.sp,
             modifier = Modifier.align(Alignment.TopStart)

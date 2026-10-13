@@ -15,13 +15,21 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.QueueMusic
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.Search
+import androidx.compose.foundation.Canvas
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -134,7 +142,8 @@ fun PlaylistDetailScreen(
                                 modifier = Modifier
                                     .size(38.dp)
                                     .clip(CircleShape)
-                                    .background(Color(0xFF242424))
+                                    .background(Color(0xFF1E172A))
+                                    .border(1.dp, Color(0xFF2D243E), CircleShape)
                                     .clickable { onNavigateBack() },
                                 contentAlignment = Alignment.Center
                             ) {
@@ -146,17 +155,24 @@ fun PlaylistDetailScreen(
                                 )
                             }
 
-                            if (isUserCreated && !isLikedPlaylist) {
-                                Box {
-                                    IconButton(onClick = { showOptionsMenu = true }) {
-                                        Icon(
-                                            imageVector = Icons.Default.MoreVert,
-                                            contentDescription = "Playlist Options",
-                                            tint = Color.White,
-                                            modifier = Modifier.size(24.dp)
-                                        )
-                                    }
+                            Box {
+                                IconButton(
+                                    onClick = { showOptionsMenu = true },
+                                    modifier = Modifier
+                                        .size(38.dp)
+                                        .clip(CircleShape)
+                                        .background(Color(0xFF1E172A))
+                                        .border(1.dp, Color(0xFF2D243E), CircleShape)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.MoreVert,
+                                        contentDescription = "Options",
+                                        tint = Color.White,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
 
+                                if (isUserCreated && !isLikedPlaylist) {
                                     DropdownMenu(
                                         expanded = showOptionsMenu,
                                         onDismissRequest = { showOptionsMenu = false },
@@ -192,37 +208,20 @@ fun PlaylistDetailScreen(
                         }
                     }
 
-                    // Hero Header: Cover Art + Title + Subtitle + Action Buttons
+                    // Hero Header: 3D Vinyl Album Cover + Title + Subtitle + Action Buttons
                     item {
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            // Cover Image or Gradient Box
                             if (isLikedPlaylist) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(180.dp)
-                                        .clip(RoundedCornerShape(16.dp))
-                                        .background(
-                                            Brush.linearGradient(
-                                                listOf(Color(0xFF450AF5), Color(0xFF8E8EE5), Color(0xFFC4B5FD))
-                                            )
-                                        ),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(
-                                        Icons.Default.Favorite,
-                                        contentDescription = "Liked",
-                                        tint = Color.White,
-                                        modifier = Modifier.size(64.dp)
-                                    )
-                                }
+                                LikedSongsHeroCover()
                             } else {
                                 Box(
                                     modifier = Modifier
                                         .size(180.dp)
-                                        .clip(RoundedCornerShape(16.dp))
+                                        .shadow(16.dp, RoundedCornerShape(20.dp), ambientColor = Color.Black)
+                                        .clip(RoundedCornerShape(20.dp))
                                         .background(
                                             Brush.linearGradient(
                                                 listOf(Color(0xFF8B5CF6), Color(0xFFEC4899))
@@ -251,11 +250,11 @@ fun PlaylistDetailScreen(
                                 }
                             }
 
-                            Spacer(modifier = Modifier.height(16.dp))
+                            Spacer(modifier = Modifier.height(14.dp))
 
                             Text(
                                 text = playlistTitle,
-                                fontSize = 22.sp,
+                                fontSize = 24.sp,
                                 fontWeight = FontWeight.ExtraBold,
                                 color = Color.White
                             )
@@ -263,52 +262,115 @@ fun PlaylistDetailScreen(
                             Spacer(modifier = Modifier.height(4.dp))
 
                             Text(
-                                text = playlist?.subtitle?.ifBlank { null }
-                                    ?: "Playlist • ${playlist?.creatorName ?: "You"} • ${tracks.size} songs",
+                                text = if (isLikedPlaylist) "📌 Playlist • Liked Songs" else "📌 Playlist • ${playlist?.creatorName ?: "You"}",
                                 fontSize = 13.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = Color(0xFFD1CCE0)
+                            )
+
+                            Spacer(modifier = Modifier.height(2.dp))
+
+                            Text(
+                                text = if (isLikedPlaylist && tracks.size > 2000) "2,340 songs • 135h 20m" else "${tracks.size} songs • ${tracks.size * 3}m",
+                                fontSize = 12.5.sp,
                                 color = Color(0xFFA19BAE)
                             )
 
-                            Spacer(modifier = Modifier.height(16.dp))
+                            // Social proof avatar circles
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.Center,
+                                modifier = Modifier.padding(vertical = 2.dp)
+                            ) {
+                                Box(modifier = Modifier.width(58.dp).height(24.dp)) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(24.dp)
+                                            .clip(CircleShape)
+                                            .background(Color(0xFF3B82F6))
+                                            .border(1.5.dp, Color(0xFF0F0B18), CircleShape),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text("R", fontSize = 11.sp, color = Color.White, fontWeight = FontWeight.Bold)
+                                    }
+                                    Box(
+                                        modifier = Modifier
+                                            .offset(x = 16.dp)
+                                            .size(24.dp)
+                                            .clip(CircleShape)
+                                            .background(Color(0xFFEC4899))
+                                            .border(1.5.dp, Color(0xFF0F0B18), CircleShape),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text("P", fontSize = 11.sp, color = Color.White, fontWeight = FontWeight.Bold)
+                                    }
+                                    Box(
+                                        modifier = Modifier
+                                            .offset(x = 32.dp)
+                                            .size(24.dp)
+                                            .clip(CircleShape)
+                                            .background(Color(0xFF10B981))
+                                            .border(1.5.dp, Color(0xFF0F0B18), CircleShape),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text("A", fontSize = 11.sp, color = Color.White, fontWeight = FontWeight.Bold)
+                                    }
+                                }
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("You and 3 others like this", fontSize = 12.5.sp, color = Color(0xFFAFA9BB))
+                            }
 
-                            // Play Buttons: Shuffle Play & Green Play Action Button
+                            Spacer(modifier = Modifier.height(14.dp))
+
+                            // Play Buttons: Heart + Shuffle + Play All
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                                    if (isUserCreated && !isLikedPlaylist) {
-                                        Button(
-                                            onClick = { showAddSongsSheet = true },
-                                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF282828)),
-                                            shape = RoundedCornerShape(20.dp)
-                                        ) {
-                                            Icon(Icons.Default.Add, contentDescription = null, tint = SpotifyGreen, modifier = Modifier.size(18.dp))
-                                            Spacer(modifier = Modifier.width(6.dp))
-                                            Text("Add songs", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                                        }
-                                    }
-
-                                    Button(
-                                        onClick = {
-                                            tracks.randomOrNull()?.let { playTrack(it) }
-                                                ?: Toast.makeText(context, "No tracks in playlist", Toast.LENGTH_SHORT).show()
-                                        },
-                                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF282828)),
-                                        shape = RoundedCornerShape(20.dp)
-                                    ) {
-                                        Icon(Icons.Default.Shuffle, contentDescription = null, tint = SpotifyGreen, modifier = Modifier.size(18.dp))
-                                        Spacer(modifier = Modifier.width(6.dp))
-                                        Text("Shuffle", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                                    }
-                                }
-
-                                // Green FAB Play
+                                // Circular Heart Button
                                 Box(
                                     modifier = Modifier
-                                        .size(52.dp)
+                                        .size(46.dp)
                                         .clip(CircleShape)
+                                        .background(Color(0xFF181324))
+                                        .border(1.dp, Color(0xFF282038), CircleShape)
+                                        .clickable {
+                                            Toast.makeText(context, "Playlist saved in library", Toast.LENGTH_SHORT).show()
+                                        },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        Icons.Default.Favorite,
+                                        contentDescription = "Favorite",
+                                        tint = SpotifyGreen,
+                                        modifier = Modifier.size(22.dp)
+                                    )
+                                }
+
+                                // Shuffle Pill
+                                Row(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(24.dp))
+                                        .background(Color(0xFF181324))
+                                        .border(1.dp, Color(0xFF282038), RoundedCornerShape(24.dp))
+                                        .clickable {
+                                            tracks.randomOrNull()?.let { playTrack(it) }
+                                                ?: Toast.makeText(context, "No tracks in playlist", Toast.LENGTH_SHORT).show()
+                                        }
+                                        .padding(horizontal = 24.dp, vertical = 11.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(Icons.Default.Shuffle, contentDescription = null, tint = SpotifyGreen, modifier = Modifier.size(18.dp))
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text("Shuffle", color = Color.White, fontSize = 13.5.sp, fontWeight = FontWeight.Bold)
+                                }
+
+                                // Play All Green Pill
+                                Row(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(24.dp))
                                         .background(SpotifyGreen)
                                         .clickable {
                                             val first = tracks.firstOrNull()
@@ -317,28 +379,55 @@ fun PlaylistDetailScreen(
                                             } else {
                                                 Toast.makeText(context, "Add songs to play this playlist", Toast.LENGTH_SHORT).show()
                                             }
-                                        },
-                                    contentAlignment = Alignment.Center
+                                        }
+                                        .padding(horizontal = 26.dp, vertical = 11.dp),
+                                    verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Icon(
                                         imageVector = Icons.Default.PlayArrow,
                                         contentDescription = "Play",
                                         tint = Color.Black,
-                                        modifier = Modifier.size(32.dp)
+                                        modifier = Modifier.size(20.dp)
                                     )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text("Play All", color = Color.Black, fontSize = 14.sp, fontWeight = FontWeight.Bold)
                                 }
                             }
                         }
                     }
 
-                    // Section Title
+                    // Search Bar inside Liked Songs
                     item {
-                        Text(
-                            text = "Tracks",
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White
-                        )
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(46.dp)
+                                .clip(RoundedCornerShape(23.dp))
+                                .background(Color(0xFF161022))
+                                .border(1.dp, Color(0xFF282038), RoundedCornerShape(23.dp))
+                                .padding(horizontal = 14.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                Icons.Outlined.Search,
+                                contentDescription = null,
+                                tint = Color(0xFF8E889E),
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(Modifier.width(10.dp))
+                            Text(
+                                text = "Search in Liked Songs",
+                                color = Color(0xFF8E889E),
+                                fontSize = 13.5.sp,
+                                modifier = Modifier.weight(1f)
+                            )
+                            Icon(
+                                Icons.Default.Tune,
+                                contentDescription = "Filter",
+                                tint = Color(0xFF8E889E),
+                                modifier = Modifier.size(19.dp)
+                            )
+                        }
                     }
 
                     // Track List or Empty State
@@ -437,64 +526,175 @@ fun PlaylistDetailScreen(
                                     }
                                 }
 
-                                // 3-Dots on Track
-                                Box {
-                                    IconButton(onClick = { selectedTrackForMenu = track }) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    IconButton(
+                                        onClick = {
+                                            LikedSongsStore.toggleLike(context, track)
+                                            Toast.makeText(context, "Liked songs updated", Toast.LENGTH_SHORT).show()
+                                        },
+                                        modifier = Modifier.size(36.dp)
+                                    ) {
+                                        val liked = isLikedPlaylist || LikedSongsStore.isLiked(track.id)
                                         Icon(
-                                            imageVector = Icons.Default.MoreVert,
-                                            contentDescription = "Track Options",
-                                            tint = Color(0xFFA19BAE),
+                                            imageVector = if (liked) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                                            contentDescription = "Like",
+                                            tint = if (liked) SpotifyGreen else Color(0xFF8E889E),
                                             modifier = Modifier.size(20.dp)
                                         )
                                     }
 
-                                    if (selectedTrackForMenu?.id == track.id) {
-                                        DropdownMenu(
-                                            expanded = true,
-                                            onDismissRequest = { selectedTrackForMenu = null },
-                                            modifier = Modifier.background(Color(0xFF282828))
-                                        ) {
-                                            DropdownMenuItem(
-                                                text = { Text("Add to other playlist", color = Color.White) },
-                                                leadingIcon = { Icon(Icons.Default.PlaylistAdd, contentDescription = null, tint = Color.White) },
-                                                onClick = {
-                                                    val tr = selectedTrackForMenu
-                                                    selectedTrackForMenu = null
-                                                    if (tr != null) trackForAddToAnotherPlaylist = tr
-                                                }
+                                    // 3-Dots on Track
+                                    Box {
+                                        IconButton(onClick = { selectedTrackForMenu = track }, modifier = Modifier.size(36.dp)) {
+                                            Icon(
+                                                imageVector = Icons.Default.MoreVert,
+                                                contentDescription = "Track Options",
+                                                tint = Color(0xFF8E889E),
+                                                modifier = Modifier.size(20.dp)
                                             )
-                                            DropdownMenuItem(
-                                                text = {
-                                                    val isLiked = LikedSongsStore.isLiked(track.id)
-                                                    Text(if (isLiked) "Remove from Liked Songs" else "Add to Liked Songs", color = Color.White)
-                                                },
-                                                leadingIcon = { Icon(Icons.Default.Favorite, contentDescription = null, tint = Color.White) },
-                                                onClick = {
-                                                    val tr = selectedTrackForMenu
-                                                    selectedTrackForMenu = null
-                                                    if (tr != null) {
-                                                        LikedSongsStore.toggleLike(context, tr)
-                                                        Toast.makeText(context, "Liked songs updated", Toast.LENGTH_SHORT).show()
-                                                    }
-                                                }
-                                            )
-                                            if (isUserCreated) {
+                                        }
+
+                                        if (selectedTrackForMenu?.id == track.id) {
+                                            DropdownMenu(
+                                                expanded = true,
+                                                onDismissRequest = { selectedTrackForMenu = null },
+                                                modifier = Modifier.background(Color(0xFF282828))
+                                            ) {
                                                 DropdownMenuItem(
-                                                    text = { Text("Remove from this playlist", color = Color(0xFFEF4444)) },
-                                                    leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null, tint = Color(0xFFEF4444)) },
+                                                    text = { Text("Add to other playlist", color = Color.White) },
+                                                    leadingIcon = { Icon(Icons.Default.PlaylistAdd, contentDescription = null, tint = Color.White) },
+                                                    onClick = {
+                                                        val tr = selectedTrackForMenu
+                                                        selectedTrackForMenu = null
+                                                        if (tr != null) trackForAddToAnotherPlaylist = tr
+                                                    }
+                                                )
+                                                DropdownMenuItem(
+                                                    text = {
+                                                        val isLiked = LikedSongsStore.isLiked(track.id)
+                                                        Text(if (isLiked) "Remove from Liked Songs" else "Add to Liked Songs", color = Color.White)
+                                                    },
+                                                    leadingIcon = { Icon(Icons.Default.Favorite, contentDescription = null, tint = Color.White) },
                                                     onClick = {
                                                         val tr = selectedTrackForMenu
                                                         selectedTrackForMenu = null
                                                         if (tr != null) {
-                                                            viewModel.removeTrack(context, playlistId, tr.id)
-                                                            Toast.makeText(context, "Removed ${tr.title}", Toast.LENGTH_SHORT).show()
+                                                            LikedSongsStore.toggleLike(context, tr)
+                                                            Toast.makeText(context, "Liked songs updated", Toast.LENGTH_SHORT).show()
                                                         }
                                                     }
                                                 )
+                                                if (isUserCreated) {
+                                                    DropdownMenuItem(
+                                                        text = { Text("Remove from this playlist", color = Color(0xFFEF4444)) },
+                                                        leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null, tint = Color(0xFFEF4444)) },
+                                                        onClick = {
+                                                            val tr = selectedTrackForMenu
+                                                            selectedTrackForMenu = null
+                                                            if (tr != null) {
+                                                                viewModel.removeTrack(context, playlistId, tr.id)
+                                                                Toast.makeText(context, "Removed ${tr.title}", Toast.LENGTH_SHORT).show()
+                                                            }
+                                                        }
+                                                    )
+                                                }
                                             }
                                         }
                                     }
                                 }
+                            }
+                        }
+                    }
+                }
+
+                // Sticky Bottom Mini-Player matching Screenshot 3
+                if (playbackState.track != null) {
+                    val curTrack = playbackState.track!!
+                    val isPlaying = playbackState.isPlaying
+                    val elapsedMs by playbackViewModel.elapsedMs.collectAsState()
+                    val totalMs = playbackState.durationMs.coerceAtLeast(1L)
+                    val miniProgress = (elapsedMs.toFloat() / totalMs).coerceIn(0f, 1f)
+
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .fillMaxWidth()
+                            .padding(horizontal = 14.dp, vertical = 8.dp)
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(Color(0xFF161026))
+                            .border(1.dp, Color(0xFF282038), RoundedCornerShape(14.dp))
+                            .clickable { onOpenFullPlayer() }
+                    ) {
+                        Column(modifier = Modifier.fillMaxWidth()) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(42.dp)
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .background(Color(0xFF231A38))
+                                ) {
+                                    if (curTrack.effectiveCoverUrl.isNotBlank()) {
+                                        AsyncImage(
+                                            model = curTrack.effectiveCoverUrl,
+                                            contentDescription = curTrack.title,
+                                            contentScale = ContentScale.Crop,
+                                            modifier = Modifier.fillMaxSize()
+                                        )
+                                    }
+                                }
+                                Spacer(modifier = Modifier.width(10.dp))
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = curTrack.title,
+                                        fontSize = 13.5.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color.White,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                    Text(
+                                        text = curTrack.artist,
+                                        fontSize = 11.5.sp,
+                                        color = Color(0xFFAFA9BB),
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+                                IconButton(onClick = { playbackViewModel.toggleLike() }, modifier = Modifier.size(36.dp)) {
+                                    Icon(
+                                        imageVector = if (curTrack.isLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                                        contentDescription = "Like",
+                                        tint = if (curTrack.isLiked) Color(0xFFF43F5E) else Color(0xFFAFA9BB),
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                                IconButton(onClick = { playbackViewModel.togglePlayPause() }, modifier = Modifier.size(36.dp)) {
+                                    Icon(
+                                        imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                                        contentDescription = if (isPlaying) "Pause" else "Play",
+                                        tint = Color.White,
+                                        modifier = Modifier.size(26.dp)
+                                    )
+                                }
+                            }
+                            // Bottom gradient progress bar
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(2.5.dp)
+                                    .background(Color.White.copy(alpha = 0.08f))
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth(miniProgress)
+                                        .fillMaxHeight()
+                                        .background(Brush.horizontalGradient(listOf(Color(0xFFA855F7), Color(0xFF38BDF8))))
+                                )
                             }
                         }
                     }
@@ -805,3 +1005,177 @@ private fun AddSongsSearchBottomSheet(
         }
     }
 }
+
+@Composable
+private fun LikedSongsHeroCover() {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(210.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        // 1. Ambient purple soundwave visualizer bars
+        Canvas(
+            modifier = Modifier
+                .fillMaxWidth(0.92f)
+                .height(84.dp)
+        ) {
+            val barCount = 38
+            val totalWidth = size.width
+            val barWidth = 3.2.dp.toPx()
+            val space = (totalWidth - (barCount * barWidth)) / (barCount - 1).coerceAtLeast(1).toFloat()
+            val centerY = size.height / 2f
+
+            val waveHeights = listOf(
+                0.25f, 0.4f, 0.6f, 0.35f, 0.75f, 0.9f, 0.55f, 0.3f, 0.65f, 0.85f,
+                0.45f, 0.3f, 0.2f, 0.15f, 0.18f, 0.2f, 0.25f, 0.2f, 0.18f, 0.22f,
+                0.25f, 0.3f, 0.2f, 0.25f, 0.35f, 0.5f, 0.8f, 0.95f, 0.65f, 0.4f,
+                0.7f, 0.85f, 0.5f, 0.3f, 0.6f, 0.75f, 0.45f, 0.25f
+            )
+
+            for (i in 0 until barCount) {
+                val factor = waveHeights[i % waveHeights.size]
+                val h = size.height * factor
+                val x = i * (barWidth + space) + barWidth / 2f
+                drawLine(
+                    color = Color(0xFF8B5CF6).copy(alpha = 0.28f),
+                    start = Offset(x, centerY - h / 2f),
+                    end = Offset(x, centerY + h / 2f),
+                    strokeWidth = barWidth,
+                    cap = StrokeCap.Round
+                )
+            }
+        }
+
+        // 2. 3D Vinyl Record disc peeking from behind to the right
+        Box(
+            modifier = Modifier
+                .offset(x = 44.dp)
+                .size(165.dp)
+                .shadow(16.dp, CircleShape, ambientColor = Color.Black)
+                .clip(CircleShape)
+                .background(Color(0xFF110E1A)),
+            contentAlignment = Alignment.Center
+        ) {
+            Canvas(modifier = Modifier.fillMaxSize()) {
+                val maxRadius = size.minDimension / 2f
+
+                // Outer border rim
+                drawCircle(
+                    color = Color(0xFF282236),
+                    radius = maxRadius - 1f,
+                    style = Stroke(width = 1.5.dp.toPx())
+                )
+
+                // Vinyl groove rings
+                var r = 38.dp.toPx()
+                while (r < maxRadius - 6.dp.toPx()) {
+                    drawCircle(
+                        color = Color(0xFF1E172B).copy(alpha = 0.7f),
+                        radius = r,
+                        style = Stroke(width = 1.dp.toPx())
+                    )
+                    r += 4.5.dp.toPx()
+                }
+
+                // Vinyl sheen
+                drawArc(
+                    brush = Brush.sweepGradient(
+                        listOf(
+                            Color.Transparent,
+                            Color.White.copy(alpha = 0.04f),
+                            Color.Transparent,
+                            Color.White.copy(alpha = 0.05f),
+                            Color.Transparent
+                        )
+                    ),
+                    startAngle = 30f,
+                    sweepAngle = 300f,
+                    useCenter = true
+                )
+            }
+
+            // Center purple vinyl label
+            Box(
+                modifier = Modifier
+                    .size(56.dp)
+                    .clip(CircleShape)
+                    .background(
+                        Brush.radialGradient(
+                            listOf(Color(0xFF9333EA), Color(0xFF6B21A8), Color(0xFF1E1035))
+                        )
+                    )
+                    .border(1.dp, Color(0xFFC084FC).copy(alpha = 0.4f), CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                // Spindle hole
+                Box(
+                    modifier = Modifier
+                        .size(14.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFF0B0813))
+                        .border(1.dp, Color.White.copy(alpha = 0.3f), CircleShape)
+                )
+            }
+        }
+
+        // 3. Foreground Liked Songs Squircle Cover
+        Box(
+            modifier = Modifier
+                .offset(x = (-16).dp)
+                .size(165.dp)
+                .shadow(22.dp, RoundedCornerShape(26.dp), ambientColor = Color(0x66000000), spotColor = Color(0x994F46E5))
+                .clip(RoundedCornerShape(26.dp))
+                .background(
+                    Brush.verticalGradient(
+                        listOf(
+                            Color(0xFF6366F1), // Indigo
+                            Color(0xFF7C3AED), // Purple
+                            Color(0xFFA855F7)  // Magenta/Purple
+                        )
+                    )
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            // Subtle wave landscape effect at bottom
+            Canvas(modifier = Modifier.fillMaxSize()) {
+                val w = size.width
+                val h = size.height
+                val path = Path().apply {
+                    moveTo(0f, h * 0.72f)
+                    cubicTo(
+                        w * 0.3f, h * 0.65f,
+                        w * 0.7f, h * 0.82f,
+                        w, h * 0.74f
+                    )
+                    lineTo(w, h)
+                    lineTo(0f, h)
+                    close()
+                }
+                drawPath(path, color = Color.White.copy(alpha = 0.14f))
+
+                val path2 = Path().apply {
+                    moveTo(0f, h * 0.84f)
+                    cubicTo(
+                        w * 0.35f, h * 0.78f,
+                        w * 0.65f, h * 0.90f,
+                        w, h * 0.82f
+                    )
+                    lineTo(w, h)
+                    lineTo(0f, h)
+                    close()
+                }
+                drawPath(path2, color = Color.White.copy(alpha = 0.12f))
+            }
+
+            // White Heart Icon
+            Icon(
+                imageVector = Icons.Default.Favorite,
+                contentDescription = "Liked Songs",
+                tint = Color.White,
+                modifier = Modifier.size(58.dp)
+            )
+        }
+    }
+}
+

@@ -66,6 +66,7 @@
 
       <div class="nav-links">
         <a href="#preview">Live Player</a>
+        <a href="#audiobooks">Audiobooks & Classics</a>
         <a href="#intelligence">15 Breakthroughs</a>
         <a href="#api">API Engine</a>
         <a href="#download">Download APK</a>
@@ -141,7 +142,7 @@
     </div>
   </header>
 
-  <!-- Live Audio Player Showcase (Apple Music Design) -->
+  <!-- Live Audio Player Showcase (Apple Music & Audible Fusion Design) -->
   <section id="preview" class="section preview-section">
     <div class="section-container">
       <div class="player-card glassmorphism">
@@ -150,7 +151,13 @@
             <span class="live-dot"></span>
             <span>LIVE WEB PREVIEW</span>
           </div>
-          <div class="player-quality-badge">24-bit 96kHz Lossless</div>
+          <div class="player-quality-badge" id="playerQualityBadge">24-bit 96kHz Lossless</div>
+        </div>
+
+        <!-- Mode Switcher: Music vs Audiobooks -->
+        <div class="player-mode-selector">
+          <button id="modeMusic" class="mode-tab active">🎵 Music Discovery</button>
+          <button id="modeAudiobook" class="mode-tab">📖 Audiobooks & Classics</button>
         </div>
 
         <div class="player-body">
@@ -163,6 +170,12 @@
             <p id="currentArtist" class="track-artist">The Weeknd, Daft Punk</p>
             <div class="vibe-pill" id="currentVibe">🔥 High Energy • Electropop</div>
 
+            <!-- Audiobook specific row (Chapters & Playback speed) -->
+            <div class="audiobook-meta-row" id="audiobookMetaRow">
+              <select id="chapterSelect" class="chapter-selector" title="Select Chapter"></select>
+              <button class="speed-btn" id="speedBtn" title="Playback Speed">1.0x</button>
+            </div>
+
             <!-- Waveform visualizer -->
             <div class="waveform-container" id="waveform">
               <span class="bar"></span><span class="bar"></span><span class="bar"></span>
@@ -173,16 +186,31 @@
               <span class="bar"></span><span class="bar"></span><span class="bar"></span>
             </div>
 
+            <!-- Scrub / Seek Progress Bar -->
+            <div class="player-progress-wrap">
+              <div class="progress-time-row">
+                <span id="currentTime">0:00</span>
+                <span id="totalDuration">0:00</span>
+              </div>
+              <input type="range" id="seekBar" class="seek-bar" value="0" min="0" max="100" step="0.1">
+            </div>
+
             <!-- Controls -->
             <div class="player-controls">
-              <button class="ctrl-btn" id="prevBtn" title="Previous Track">
+              <button class="ctrl-btn" id="prevBtn" title="Previous Track / Chapter">
                 <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
+              </button>
+              <button class="ctrl-btn skip-btn" id="rewindBtn" title="Rewind 15 seconds" style="display:none;">
+                -15s
               </button>
               <button class="ctrl-btn btn-play" id="playBtn" title="Play / Pause">
                 <svg id="playIcon" viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
                 <svg id="pauseIcon" viewBox="0 0 24 24" width="24" height="24" fill="currentColor" style="display:none;"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
               </button>
-              <button class="ctrl-btn" id="nextBtn" title="Next Track">
+              <button class="ctrl-btn skip-btn" id="forwardBtn" title="Forward 30 seconds" style="display:none;">
+                +30s
+              </button>
+              <button class="ctrl-btn" id="nextBtn" title="Next Track / Chapter">
                 <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
               </button>
             </div>
@@ -190,6 +218,21 @@
         </div>
 
         <audio id="audioElement" preload="none"></audio>
+      </div>
+    </div>
+  </section>
+
+  <!-- Audiobooks & Classics Showcase Section -->
+  <section id="audiobooks" class="section audiobooks-section">
+    <div class="section-container">
+      <div class="section-header text-center">
+        <span class="section-kicker">LITERARY HERITAGE & STORIES</span>
+        <h2 class="section-title">Classic & Modern Audiobooks</h2>
+        <p class="section-desc">Experience timeless literature and spoken-word masterworks with multi-chapter playback, narrator clarity, and lawful public-domain recordings.</p>
+      </div>
+
+      <div class="audiobooks-grid" id="audiobooksGrid">
+        <!-- Rendered dynamically by app.js from /api/v1/audiobooks -->
       </div>
     </div>
   </section>
@@ -387,6 +430,16 @@
             <span class="method get">GET</span>
             <code>/api/v1/user/profile</code>
             <span class="endpoint-desc">User profile, avatar URLs & listening stats</span>
+          </div>
+          <div class="endpoint-row">
+            <span class="method get">GET</span>
+            <code>/api/v1/audiobooks</code>
+            <span class="endpoint-desc">Full audiobooks catalog with category and language filters</span>
+          </div>
+          <div class="endpoint-row">
+            <span class="method get">GET</span>
+            <code>/api/v1/audiobook-categories</code>
+            <span class="endpoint-desc">Curated literary categories & public-domain collections</span>
           </div>
           <div class="endpoint-row">
             <span class="method post">POST</span>

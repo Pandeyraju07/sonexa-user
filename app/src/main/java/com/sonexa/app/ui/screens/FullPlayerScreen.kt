@@ -1,6 +1,7 @@
 package com.sonexa.app.ui.screens
 
 import android.widget.Toast
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectDragGestures
@@ -14,8 +15,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -149,11 +154,10 @@ fun FullPlayerScreen(
                 isFavorite = isFavorite,
                 onToggleLike = { playbackViewModel.toggleLike() }
             )
-            Spacer(modifier = Modifier.height(2.dp))
+            Spacer(modifier = Modifier.height(8.dp))
             FullPlayerProgressSection(
                 durationMs = playbackState.durationMs.coerceAtLeast(0),
-                playbackViewModel = playbackViewModel,
-                onShowQuality = { showQualityDialog = true }
+                playbackViewModel = playbackViewModel
             )
             Spacer(modifier = Modifier.height(2.dp))
             FullPlayerTransportControls(
@@ -278,10 +282,22 @@ internal fun PremiumSongProgressBar(
     var dragProgress by remember { mutableFloatStateOf(progress) }
     val activeFraction = if (isDragging) dragProgress else progress.coerceIn(0f, 1f)
 
+    // Pre-calculated representative musical waveform pattern (54 bars) matching Screenshot 5
+    val waveHeights = remember {
+        floatArrayOf(
+            0.20f, 0.35f, 0.28f, 0.48f, 0.65f, 0.42f, 0.78f, 0.92f, 0.82f, 0.58f,
+            0.72f, 0.88f, 0.98f, 0.68f, 0.48f, 0.62f, 0.82f, 0.92f, 0.58f, 0.38f,
+            0.52f, 0.72f, 0.88f, 0.78f, 0.62f, 0.82f, 0.98f, 0.88f, 0.68f, 0.42f,
+            0.58f, 0.78f, 0.68f, 0.48f, 0.32f, 0.42f, 0.62f, 0.52f, 0.68f, 0.82f,
+            0.58f, 0.38f, 0.48f, 0.62f, 0.42f, 0.32f, 0.38f, 0.48f, 0.28f, 0.38f,
+            0.22f, 0.32f, 0.18f, 0.22f
+        )
+    }
+
     BoxWithConstraints(
         modifier = modifier
             .fillMaxWidth()
-            .height(28.dp)
+            .height(38.dp)
             .pointerInput(Unit) {
                 detectTapGestures { offset ->
                     val frac = (offset.x / size.width).coerceIn(0f, 1f)
@@ -309,47 +325,66 @@ internal fun PremiumSongProgressBar(
             },
         contentAlignment = Alignment.CenterStart
     ) {
-        val widthPx = constraints.maxWidth.toFloat()
-        val trackHeight = if (isDragging) 6.dp else 4.dp
+        val totalBars = waveHeights.size
 
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(trackHeight)
-                .clip(RoundedCornerShape(3.dp))
-                .background(Color.White.copy(alpha = 0.18f))
-        )
-        Box(
-            modifier = Modifier
-                .fillMaxWidth(activeFraction.coerceIn(0.001f, 1f))
-                .height(trackHeight)
-                .clip(RoundedCornerShape(3.dp))
-                .background(
-                    Brush.horizontalGradient(
-                        listOf(Color(0xFFE0E7FF), Color(0xFF1ED760), Color(0xFF1ED760))
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            val canvasWidth = size.width
+            val canvasHeight = size.height
+            val spacingPx = 2.dp.toPx()
+            val totalSpacing = (totalBars - 1) * spacingPx
+            val barWidth = ((canvasWidth - totalSpacing) / totalBars).coerceAtLeast(1.5f)
+            val step = barWidth + spacingPx
+            val activeWidth = canvasWidth * activeFraction
+
+            for (i in 0 until totalBars) {
+                val barX = i * step
+                val heightRatio = waveHeights[i]
+                val barHeight = (canvasHeight * heightRatio * 0.82f).coerceAtLeast(3.dp.toPx())
+                val topY = (canvasHeight - barHeight) / 2f
+
+                val isPlayed = (barX + barWidth / 2f) <= activeWidth
+
+                if (isPlayed) {
+                    val fracInPlayed = if (activeWidth > 0) (barX / activeWidth).coerceIn(0f, 1f) else 0f
+                    val barColor = lerp(
+                        Color(0xFFE879F9), // vibrant neon magenta/purple
+                        Color(0xFF38BDF8), // electric cyan/blue near thumb
+                        fracInPlayed
                     )
-                )
-        )
-        val thumbRadiusPx = if (isDragging) {
-            with(LocalDensity.current) { 9.dp.toPx() }
-        } else {
-            with(LocalDensity.current) { 6.5.dp.toPx() }
+                    drawRoundRect(
+                        color = barColor,
+                        topLeft = Offset(barX, topY),
+                        size = Size(barWidth, barHeight),
+                        cornerRadius = CornerRadius(barWidth / 2, barWidth / 2)
+                    )
+                } else {
+                    drawRoundRect(
+                        color = Color(0xFF322E42),
+                        topLeft = Offset(barX, topY),
+                        size = Size(barWidth, barHeight),
+                        cornerRadius = CornerRadius(barWidth / 2, barWidth / 2)
+                    )
+                }
+            }
+
+            // Draw active vertical indicator line and glowing white circular thumb
+            val thumbX = activeWidth.coerceIn(0f, canvasWidth)
+            drawLine(
+                color = Color.White,
+                start = Offset(thumbX, 2.dp.toPx()),
+                end = Offset(thumbX, canvasHeight - 2.dp.toPx()),
+                strokeWidth = 2.dp.toPx()
+            )
+            drawCircle(
+                color = Color(0xFF38BDF8).copy(alpha = 0.45f),
+                radius = if (isDragging) 8.dp.toPx() else 6.dp.toPx(),
+                center = Offset(thumbX, canvasHeight / 2f)
+            )
+            drawCircle(
+                color = Color.White,
+                radius = if (isDragging) 5.dp.toPx() else 4.dp.toPx(),
+                center = Offset(thumbX, canvasHeight / 2f)
+            )
         }
-        val thumbOffsetPx = ((widthPx * activeFraction) - thumbRadiusPx)
-            .coerceIn(0f, (widthPx - thumbRadiusPx * 2).coerceAtLeast(0f))
-        Box(
-            modifier = Modifier
-                .offset(x = with(LocalDensity.current) { thumbOffsetPx.toDp() })
-                .size(if (isDragging) 18.dp else 13.dp)
-                .shadow(
-                    elevation = 8.dp,
-                    shape = CircleShape,
-                    ambientColor = SpotifyGreen,
-                    spotColor = SpotifyGreen
-                )
-                .clip(CircleShape)
-                .background(Color.White)
-                .border(2.dp, SpotifyGreen, CircleShape)
-        )
     }
 }

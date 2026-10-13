@@ -25,7 +25,7 @@ function buildHomeFeed() {
       { id: 'rad_1', title: 'Arijit Singh Radio', subtitle: 'With Pritam, Atif Aslam, Mohit Chauhan', coverUrl: allTracks[1].coverUrl },
       { id: 'rad_2', title: 'Indie Vibes Radio', subtitle: 'With Anuv Jain, Prateek Kuhad, Jasleen Royal', coverUrl: allTracks[2].coverUrl }
     ],
-    categories: ['All', 'Music', 'Podcasts', 'Live Events', 'I-Pop'],
+    categories: ['All', 'Music', 'Audiobooks', 'Podcasts', 'Classics', 'Live Events'],
     heroBanners: [
       {
         id: 'banner_1',
@@ -69,6 +69,7 @@ router.get('/search', (req, res) => {
       playlists: searchResult.playlists,
       albums: searchResult.albums,
       movies: searchResult.movies,
+      audiobooks: searchResult.audiobooks || [],
       intent: searchResult.intent,
       topResult: searchResult.topResult
     }

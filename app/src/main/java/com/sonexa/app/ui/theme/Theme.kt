@@ -10,26 +10,27 @@ import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
 private val DarkColorScheme = darkColorScheme(
-    primary = SonexaPurpleLight,
-    secondary = SonexaMagenta,
-    background = SonexaBgDark,
-    surface = SonexaCardDark,
-    onPrimary = SonexaTextWhite,
-    onSecondary = SonexaTextWhite,
-    onBackground = SonexaTextWhite,
-    onSurface = SonexaTextWhite
+    primary = ZyneraPrimaryBright,
+    secondary = ZyneraSecondary,
+    background = ZyneraBg,
+    surface = ZyneraSurface,
+    onPrimary = ZyneraTextPrimary,
+    onSecondary = ZyneraTextPrimary,
+    onBackground = ZyneraTextPrimary,
+    onSurface = ZyneraTextPrimary,
+    outline = ZyneraBorder
 )
 
 @Composable
-fun SonexaTheme(
+fun ZyneraTheme(
     content: @Composable () -> Unit
 ) {
     val view = LocalView.current
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as Activity).window
-            window.statusBarColor = SonexaBgDark.toArgb()
-            window.navigationBarColor = SonexaBgDark.toArgb()
+            window.statusBarColor = ZyneraBg.toArgb()
+            window.navigationBarColor = ZyneraBg.toArgb()
             WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = false
         }
     }
@@ -38,4 +39,12 @@ fun SonexaTheme(
         colorScheme = DarkColorScheme,
         content = content
     )
+}
+
+// Alias for existing callers
+@Composable
+fun SonexaTheme(
+    content: @Composable () -> Unit
+) {
+    ZyneraTheme(content = content)
 }

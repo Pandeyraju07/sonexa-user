@@ -31,6 +31,8 @@ class PlaybackManager(
 
     var onTrackEnded: (() -> Unit)? = null
     var onTrackError: ((String) -> Unit)? = null
+    var onSkipNext: (() -> Unit)? = null
+    var onSkipPrevious: (() -> Unit)? = null
 
     init {
         nativeProvider.onTrackEnded = { onTrackEnded?.invoke() }
@@ -123,13 +125,14 @@ class PlaybackManager(
     private fun startPlaybackService() {
         val intent = Intent(appContext, SonexaPlaybackService::class.java)
         runCatching {
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-                ContextCompat.startForegroundService(appContext, intent)
-            } else {
-                appContext.startService(intent)
-            }
+            // When app is in foreground, standard startService() starts the MediaSessionService
+            // safely without triggering Android's 10-second startForeground timeout watchdog.
+            appContext.startService(intent)
         }.onFailure {
-            runCatching { appContext.startService(intent) }
+            // If background execution restriction prevents startService, fallback to startForegroundService
+            runCatching {
+                ContextCompat.startForegroundService(appContext, intent)
+            }
         }
     }
 }

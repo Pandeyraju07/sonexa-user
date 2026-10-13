@@ -80,6 +80,8 @@ fun HomeScreen(
     onOpenMusicDna: () -> Unit = {},
     onOpenMusicJourney: () -> Unit = {},
     onOpenMusicIntelligence: () -> Unit = {},
+    onOpenAudiobookDetail: (String) -> Unit = {},
+    onOpenAudiobookPlayer: () -> Unit = {},
     homeViewModel: HomeViewModel = viewModel(),
     playbackViewModel: PlaybackViewModel,
     modifier: Modifier = Modifier
@@ -187,19 +189,27 @@ fun HomeScreen(
                 HomeFeedContent(
                     avatarInitial = avatarInitial,
                     avatarUrl = avatarPhotoUrl,
+                    userDisplayName = userDisplayName,
                     selectedFeedCategory = selectedFeedCategory,
                     onSelectFeedCategory = { cat ->
                         selectedFeedCategory = cat
                         when (cat) {
+                            "Audiobooks" -> selectedNavTab = "Audiobooks"
+                            "Classics" -> selectedNavTab = "Audiobooks"
                             "Podcasts" -> onOpenPodcasts()
                             "Live Events" -> onOpenLiveEvents()
                             "I-Pop" -> onOpenIPop()
                         }
                     },
+                    onOpenSearchTab = { selectedNavTab = "Search" },
+                    onOpenNotifications = onOpenNotifications,
+                    onOpenSettings = onOpenSettings,
                     onOpenProfileDrawer = { showProfileDrawer = true },
                     onOpenMusicDna = onOpenMusicDna,
                     onOpenMusicJourney = onOpenMusicJourney,
                     onOpenMusicIntelligence = onOpenMusicIntelligence,
+                    onOpenAudiobooks = { selectedNavTab = "Audiobooks" },
+                    onOpenAudiobookDetail = onOpenAudiobookDetail,
                     quickAccessItems = quickAccessItems,
                     continueListening = continueListening,
                     allTrending = allTrending,
@@ -210,6 +220,7 @@ fun HomeScreen(
                     onOpenLikedPlaylist = { onOpenPlaylist("pl_liked") },
                     onOpenAlbum = onOpenAlbum,
                     onOpenArtist = onOpenArtist,
+                    onOpenPlaylist = onOpenPlaylist,
                     onTogglePlayPause = { playbackViewModel.togglePlayPause() }
                 )
             }
@@ -220,9 +231,19 @@ fun HomeScreen(
                 onOpenArtistProfile = onOpenArtist,
                 onOpenPlaylistDetail = onOpenPlaylist,
                 onOpenPodcasts = onOpenPodcasts,
+                onOpenAudiobooks = { selectedNavTab = "Audiobooks" },
+                onOpenAudiobookDetail = onOpenAudiobookDetail,
                 onOpenLiveEvents = onOpenLiveEvents,
                 onOpenIPop = onOpenIPop,
                 onOpenProfile = { showProfileDrawer = true }
+            )
+
+            "Audiobooks" -> AudiobooksHubScreen(
+                onNavigateBack = { selectedNavTab = "Home" },
+                onOpenAudiobookDetail = onOpenAudiobookDetail,
+                onOpenAudiobookPlayer = onOpenAudiobookPlayer,
+                onOpenSearch = { selectedNavTab = "Search" },
+                playbackViewModel = playbackViewModel
             )
 
             "Library", "Your Library" -> LibraryScreen(
@@ -231,6 +252,7 @@ fun HomeScreen(
                 onOpenAlbum = onOpenAlbum,
                 onOpenArtist = onOpenArtist,
                 onOpenPodcast = { onOpenPodcasts() },
+                onOpenAudiobook = onOpenAudiobookDetail,
                 onPlayDownloadedEpisode = { downloaded ->
                     playbackViewModel.play(
                         com.sonexa.app.data.local.PodcastDownloadManager.toTrack(downloaded),
@@ -258,7 +280,17 @@ fun HomeScreen(
                 track = playbackState.track,
                 isPlaying = playbackState.isPlaying,
                 isFavorite = isFavorite,
-                onOpenFullPlayer = onOpenFullPlayer,
+                isAudiobookMode = playbackState.isAudiobookMode,
+                audiobookTitle = playbackState.activeAudiobook?.title,
+                positionMs = playbackState.positionMs,
+                durationMs = playbackState.durationMs,
+                onOpenFullPlayer = {
+                    if (playbackState.isAudiobookMode) {
+                        onOpenAudiobookPlayer()
+                    } else {
+                        onOpenFullPlayer()
+                    }
+                },
                 onToggleLike = { playbackViewModel.toggleLike() },
                 onTogglePlayPause = {
                     if (playbackState.track != null) {
@@ -274,7 +306,7 @@ fun HomeScreen(
                         }
                         context.startActivity(intent)
                     } catch (e: Exception) {
-                        Toast.makeText(context, "Scanning for Cast / Bluetooth devices", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, "Bluetooth audio connected", Toast.LENGTH_SHORT).show()
                     }
                 }
             )
@@ -728,44 +760,88 @@ private fun ZyneraBottomNavigationBar(
     selectedTab: String,
     onSelectTab: (String) -> Unit
 ) {
-    NavigationBar(
-        containerColor = Color(0xFF100720).copy(alpha = 0.98f),
-        modifier = Modifier.height(58.dp)
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(Color(0xFF09090F).copy(alpha = 0.96f))
+            .border(
+                width = 0.8.dp,
+                brush = AppleMaterials.specularBorder,
+                shape = RoundedCornerShape(topStart = 0.dp, topEnd = 0.dp)
+            )
+            .padding(top = 6.dp, bottom = 4.dp)
     ) {
-        val navItems = listOf(
-            Triple("Home", Icons.Default.Home, "Home"),
-            Triple("Search", Icons.Default.Search, "Search"),
-            Triple("Your Library", Icons.Default.VideoLibrary, "Your Library"),
-            Triple("Premium", Icons.Default.Stars, "Premium"),
-            Triple("Create", Icons.Default.Add, "Create")
-        )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(54.dp),
+            horizontalArrangement = Arrangement.SpaceAround,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            val navItems = listOf(
+                Triple("Home", Icons.Default.Home, "Home"),
+                Triple("Search", Icons.Default.Search, "Search"),
+                Triple("Audiobooks", Icons.Default.AutoStories, "Audiobooks"),
+                Triple("Your Library", Icons.Default.VideoLibrary, "Your Library"),
+                Triple("Premium", Icons.Default.Stars, "Premium")
+            )
 
-        navItems.forEach { (label, icon, _) ->
-            val isSelected = selectedTab == label
-            NavigationBarItem(
-                selected = isSelected,
-                onClick = { onSelectTab(label) },
-                icon = {
+            navItems.forEach { (label, icon, _) ->
+                val isSelected = selectedTab == label || (selectedTab == "Library" && label == "Your Library")
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center,
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                        .appleBounce { onSelectTab(label) }
+                ) {
                     Icon(
                         imageVector = icon,
                         contentDescription = label,
-                        tint = if (isSelected) Color(0xFFB062FF) else Color(0xFFA19BAE),
-                        modifier = Modifier.size(24.dp)
+                        tint = if (isSelected) Color(0xFFA855F7) else Color(0xFF8E8E98),
+                        modifier = Modifier.size(23.dp)
                     )
-                },
-                label = {
+                    Spacer(modifier = Modifier.height(3.dp))
                     Text(
-                        text = label,
-                        fontSize = 9.5.sp,
-                        color = if (isSelected) Color.White else Color(0xFFA19BAE),
-                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                        text = if (label == "Your Library") "Library" else label,
+                        style = if (isSelected) AppleType.caption2Bold else AppleType.caption2,
+                        color = if (isSelected) Color.White else Color(0xFF8E8E98)
                     )
-                },
-                colors = NavigationBarItemDefaults.colors(
-                    indicatorColor = Color.Transparent
-                )
-            )
+
+                    Spacer(modifier = Modifier.height(3.dp))
+
+                    // Apple Indicator Pill Line for active tab
+                    if (isSelected) {
+                        Box(
+                            modifier = Modifier
+                                .width(20.dp)
+                                .height(2.5.dp)
+                                .clip(RoundedCornerShape(2.dp))
+                                .background(Color(0xFFA855F7))
+                        )
+                    } else {
+                        Spacer(modifier = Modifier.height(2.5.dp))
+                    }
+                }
+            }
         }
+    }
+}
+
+private fun isBluetoothAudioConnected(context: android.content.Context): Boolean {
+    val am = context.getSystemService(android.content.Context.AUDIO_SERVICE) as? android.media.AudioManager ?: return false
+    return if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+        val outputs = am.getDevices(android.media.AudioManager.GET_DEVICES_OUTPUTS)
+        outputs.any {
+            it.type == android.media.AudioDeviceInfo.TYPE_BLUETOOTH_A2DP ||
+            it.type == android.media.AudioDeviceInfo.TYPE_BLUETOOTH_SCO ||
+            it.type == android.media.AudioDeviceInfo.TYPE_BLE_HEADSET ||
+            it.type == android.media.AudioDeviceInfo.TYPE_BLE_SPEAKER
+        }
+    } else {
+        @Suppress("DEPRECATION")
+        am.isBluetoothA2dpOn || am.isBluetoothScoOn
     }
 }
 
@@ -774,6 +850,10 @@ private fun HomeStickyMiniPlayer(
     track: TrackDto?,
     isPlaying: Boolean,
     isFavorite: Boolean,
+    isAudiobookMode: Boolean = false,
+    audiobookTitle: String? = null,
+    positionMs: Long = 0L,
+    durationMs: Long = 0L,
     onOpenFullPlayer: () -> Unit,
     onToggleLike: () -> Unit,
     onTogglePlayPause: () -> Unit,
@@ -781,30 +861,37 @@ private fun HomeStickyMiniPlayer(
 ) {
     if (track == null) return
     val context = LocalContext.current
+    val isBluetooth = remember(track.id, isPlaying) { isBluetoothAudioConnected(context) }
 
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 8.dp, vertical = 4.dp)
+            .padding(horizontal = 10.dp, vertical = 4.dp)
             .height(58.dp)
-            .clip(RoundedCornerShape(8.dp))
-            .background(Color(0xFF2E1C44))
-            .clickable { onOpenFullPlayer() }
-            .padding(horizontal = 8.dp),
+            .clip(RoundedCornerShape(16.dp))
+            .background(Color(0xFF1E1430))
+            .border(1.dp, AppleMaterials.specularBorder, RoundedCornerShape(16.dp))
+            .appleBounce { onOpenFullPlayer() },
         contentAlignment = Alignment.CenterStart
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
                 modifier = Modifier
                     .size(42.dp)
-                    .clip(RoundedCornerShape(4.dp))
-                    .background(Color(0xFF1E1E1E))
+                    .clip(RoundedCornerShape(10.dp))
+                    .border(0.8.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(10.dp))
+                    .background(Color(0xFF14141E))
             ) {
                 AsyncImage(
-                    model = ImageRequest.Builder(context).data(track.effectiveCoverUrl).crossfade(true).build(),
+                    model = ImageRequest.Builder(context)
+                        .data(track.effectiveCoverUrl)
+                        .crossfade(true)
+                        .build(),
                     contentDescription = track.title,
                     contentScale = ContentScale.Crop,
                     modifier = Modifier.fillMaxSize()
@@ -816,28 +903,57 @@ private fun HomeStickyMiniPlayer(
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = track.title,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Bold,
+                    style = AppleType.subheadlineBold,
                     color = Color.White,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-                Text(
-                    text = track.artist,
-                    fontSize = 11.5.sp,
-                    color = Color(0xFFC4B5FD),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (isAudiobookMode) {
+                        Icon(
+                            Icons.Default.AutoStories,
+                            contentDescription = "Audiobook",
+                            tint = Color(0xFFA855F7),
+                            modifier = Modifier.size(12.dp)
+                        )
+                        Spacer(modifier = Modifier.width(3.dp))
+                        Text(
+                            text = "${audiobookTitle ?: "Audiobook"} • ${track.artist}",
+                            style = AppleType.caption1,
+                            color = Color(0xFFC4B5FD),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    } else {
+                        if (isBluetooth) {
+                            Icon(
+                                Icons.Default.Bluetooth,
+                                contentDescription = "Bluetooth",
+                                tint = Color(0xFF38BDF8),
+                                modifier = Modifier.size(12.dp)
+                            )
+                            Spacer(modifier = Modifier.width(3.dp))
+                        }
+                        Text(
+                            text = track.artist,
+                            style = AppleType.caption1,
+                            color = Color(0xFFC4B5FD),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
             }
 
-            IconButton(onClick = onCastClick, modifier = Modifier.size(34.dp)) {
-                Icon(
-                    Icons.Default.Devices,
-                    contentDescription = "Devices",
-                    tint = Color(0xFF38BDF8),
-                    modifier = Modifier.size(19.dp)
-                )
+            if (isBluetooth) {
+                IconButton(onClick = onCastClick, modifier = Modifier.size(34.dp)) {
+                    Icon(
+                        Icons.Default.Bluetooth,
+                        contentDescription = "Bluetooth Device",
+                        tint = Color(0xFF38BDF8),
+                        modifier = Modifier.size(19.dp)
+                    )
+                }
             }
 
             IconButton(onClick = onToggleLike, modifier = Modifier.size(34.dp)) {
@@ -849,12 +965,43 @@ private fun HomeStickyMiniPlayer(
                 )
             }
 
-            IconButton(onClick = onTogglePlayPause, modifier = Modifier.size(34.dp)) {
-                Icon(
-                    if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                    contentDescription = "Play/Pause",
-                    tint = Color.White,
-                    modifier = Modifier.size(24.dp)
+            IconButton(onClick = onTogglePlayPause, modifier = Modifier.size(36.dp)) {
+                Box(
+                    modifier = Modifier
+                        .size(32.dp)
+                        .clip(CircleShape)
+                        .background(Color.White),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                        contentDescription = "Play/Pause",
+                        tint = Color.Black,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+            }
+        }
+
+        // Bottom Progress Bar (Spotify / Screenshot 1 aesthetic)
+        val progress = if (durationMs > 0L) (positionMs.toFloat() / durationMs.toFloat()).coerceIn(0f, 1f) else 0f
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomStart)
+                .fillMaxWidth()
+                .height(2.5.dp)
+                .background(Color.White.copy(alpha = 0.08f))
+        ) {
+            if (progress > 0f) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth(progress)
+                        .fillMaxHeight()
+                        .background(
+                            Brush.horizontalGradient(
+                                listOf(Color(0xFFE11D48), Color(0xFFA855F7), Color(0xFF6366F1))
+                            )
+                        )
                 )
             }
         }

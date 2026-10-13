@@ -68,7 +68,8 @@ data class MilestoneBadge(
     val icon: String,
     val progress: Float,
     val progressText: String,
-    val accent: Color
+    val accent: Color,
+    val isLocked: Boolean = false
 )
 
 data class LiveFriendItem(
@@ -108,7 +109,7 @@ fun ProfileHubScreen(
     val profile = (profileState as? CatalogUiState.Ready)?.data
     val profileName = currentUserName.takeIf { it.isNotBlank() }
         ?: profile?.name?.takeIf { it.isNotBlank() }
-        ?: "Zynera Listener"
+        ?: "Pandeyraju071"
     val profilePhotoUrl = currentUserAvatar.takeIf { it.isNotBlank() }
         ?: profile?.profilePicUrl?.takeIf { it.isNotBlank() }
         ?: ""
@@ -123,16 +124,16 @@ fun ProfileHubScreen(
     }
     val bio = profile?.bio?.takeIf { it.isNotBlank() }
         ?: "Music enthusiast • Hi-Fi Audio lover • Exploring AI vibes"
-    val initial = profileName.firstOrNull()?.uppercase() ?: "Z"
+    val initial = profileName.firstOrNull()?.uppercase() ?: "P"
     val isLoading = profileState is CatalogUiState.Loading
 
     val badges = remember {
         listOf(
-            MilestoneBadge("AI DJ Pioneer", "50h+ AI DJ sessions", "🤖", 1f, "Completed", Color(0xFF9825DD)),
-            MilestoneBadge("Audiophile Pro", "Stream in 320k Lossless", "🎧", 0.85f, "85/100 tracks", Color(0xFF10B981)),
-            MilestoneBadge("Night Explorer", "Late night listening flow", "🌙", 0.7f, "14/20 nights", Color(0xFF38BDF8)),
-            MilestoneBadge("Taste Curator", "Created 5+ custom mixes", "✨", 0.6f, "3/5 playlists", Color(0xFFF59E0B)),
-            MilestoneBadge("Vibe Master", "Explored all mood spectrums", "🔥", 1f, "Mastered", Color(0xFFEC4899))
+            MilestoneBadge("AI DJ Pioneer", "50+ AI DJ sessions", "🤖", 1f, "Completed", Color(0xFF9333EA)),
+            MilestoneBadge("Audiophile Pro", "Stream in 320K Lossless", "🎧", 0.85f, "85/100 tracks", Color(0xFF06B6D4)),
+            MilestoneBadge("Playlist Creator", "Create 10 playlists", "🎼", 0.4f, "4/10", Color(0xFF6B7280), isLocked = true),
+            MilestoneBadge("Live Streamer", "Join 5 live sessions", "🔥", 0.2f, "1/5", Color(0xFFF97316)),
+            MilestoneBadge("Taste Curator", "Explored all mood spectrums", "✨", 0.6f, "3/5", Color(0xFFEC4899))
         )
     }
 
@@ -147,8 +148,7 @@ fun ProfileHubScreen(
 
     val filteredFriends = remember(selectedSocialFilter, friendsActivity) {
         when (selectedSocialFilter) {
-            "Listening Now" -> friendsActivity.filter { it.isLive }
-            "Recent" -> friendsActivity.filter { !it.isLive }
+            "Listening", "Live Now" -> friendsActivity.filter { it.isLive }
             else -> friendsActivity
         }
     }
@@ -292,52 +292,87 @@ fun ProfileHubScreen(
                 )
             }
 
-            // ── MUSIC STUDIO & TASTE SHORTCUTS ──
+            // ── STUDIO & INTELLIGENCE ──
             item {
-                Text(
-                    text = "STUDIO & INTELLIGENCE",
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = SonexaTextMuted,
-                    letterSpacing = 1.4.sp
-                )
-                Spacer(modifier = Modifier.height(10.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    PremiumStudioTile(
-                        title = "Music DNA",
-                        subtitle = "Acoustic taste map",
-                        icon = Icons.Default.Psychology,
-                        gradientColors = listOf(Color(0xFF8B5CF6), Color(0xFF6D28D9)),
-                        onClick = onOpenMusicDna,
-                        modifier = Modifier.weight(1f)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Studio & Intelligence",
+                        fontSize = 17.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
                     )
-                    PremiumStudioTile(
-                        title = "Music Journey",
-                        subtitle = "Your listening story",
-                        icon = Icons.Default.Timeline,
-                        gradientColors = listOf(Color(0xFF06B6D4), Color(0xFF0284C7)),
-                        onClick = onOpenMusicJourney,
-                        modifier = Modifier.weight(1f)
+                    Text(
+                        text = "See All >",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFFA78BFA),
+                        modifier = Modifier.clickable { onOpenMusicDna() }
                     )
                 }
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = "Tools to enhance your music journey",
+                    fontSize = 12.sp,
+                    color = Color(0xFF8E889E)
+                )
                 Spacer(modifier = Modifier.height(10.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    PremiumStudioTile(
-                        title = if (profile?.isPremium == true) "Zynera Hi-Fi" else "Get Premium",
-                        subtitle = if (profile?.isPremium == true) "Active lossless plan" else "Unlock 320k audio",
-                        icon = Icons.Default.Star,
-                        gradientColors = listOf(Color(0xFFE534B2), Color(0xFF9825DD)),
-                        onClick = onOpenPremium,
-                        modifier = Modifier.weight(1f)
-                    )
-                    PremiumStudioTile(
-                        title = "Your Updates",
-                        subtitle = "Alerts & releases",
-                        icon = Icons.Default.Notifications,
-                        gradientColors = listOf(Color(0xFF10B981), Color(0xFF059669)),
-                        onClick = onOpenNotifications,
-                        modifier = Modifier.weight(1f)
-                    )
+
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    contentPadding = PaddingValues(horizontal = 2.dp)
+                ) {
+                    item {
+                        StudioSquircleCard(
+                            title = "Music DNA",
+                            subtitle = "Discover your taste",
+                            icon = Icons.Default.Psychology,
+                            badgeBg = Color(0xFF581C87).copy(alpha = 0.5f),
+                            badgeTint = Color(0xFFC084FC),
+                            cardBg = Color(0xFF140E24),
+                            borderColor = Color(0xFF281C44),
+                            onClick = onOpenMusicDna
+                        )
+                    }
+                    item {
+                        StudioSquircleCard(
+                            title = "Music Journey",
+                            subtitle = "Your listening insights",
+                            icon = Icons.Default.TrendingUp,
+                            badgeBg = Color(0xFF0C4A6E).copy(alpha = 0.5f),
+                            badgeTint = Color(0xFF38BDF8),
+                            cardBg = Color(0xFF0C1929),
+                            borderColor = Color(0xFF193252),
+                            onClick = onOpenMusicJourney
+                        )
+                    }
+                    item {
+                        StudioSquircleCard(
+                            title = if (profile?.isPremium == true) "Zynera Hi-Fi" else "Get Premium",
+                            subtitle = if (profile?.isPremium == true) "Active lossless plan" else "Unlock 320K audio quality",
+                            icon = Icons.Default.Star,
+                            badgeBg = Color(0xFF831843).copy(alpha = 0.5f),
+                            badgeTint = Color(0xFFF43F5E),
+                            cardBg = Color(0xFF260D19),
+                            borderColor = Color(0xFF4C1D33),
+                            onClick = onOpenPremium
+                        )
+                    }
+                    item {
+                        StudioSquircleCard(
+                            title = "Your Updates",
+                            subtitle = "Alerts & releases",
+                            icon = Icons.Default.Notifications,
+                            badgeBg = Color(0xFF064E3B).copy(alpha = 0.5f),
+                            badgeTint = Color(0xFF34D399),
+                            cardBg = Color(0xFF0B2118),
+                            borderColor = Color(0xFF174230),
+                            onClick = onOpenNotifications
+                        )
+                    }
                 }
             }
 
@@ -349,22 +384,27 @@ fun ProfileHubScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "LISTENING MILESTONES",
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = SonexaTextMuted,
-                        letterSpacing = 1.4.sp
+                        text = "Listening Milestones",
+                        fontSize = 17.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
                     )
                     Text(
-                        text = "${badges.count { it.progress >= 1f }} of ${badges.size} unlocked",
-                        fontSize = 11.sp,
-                        color = SonexaPurpleLight,
-                        fontWeight = FontWeight.SemiBold
+                        text = "2 of 5 unlocked >",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFFA78BFA)
                     )
                 }
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = "Track your progress and earn badges",
+                    fontSize = 12.sp,
+                    color = Color(0xFF8E889E)
+                )
                 Spacer(modifier = Modifier.height(10.dp))
                 LazyRow(
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
                     contentPadding = PaddingValues(horizontal = 2.dp)
                 ) {
                     items(badges) { badge ->
@@ -373,43 +413,51 @@ fun ProfileHubScreen(
                 }
             }
 
-            // ── SOCIAL CIRCLE & LIVE FRIENDS ──
+            // ── SOCIAL CIRCLE & LIVE SESSIONS ──
             item {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = "SOCIAL CIRCLE & LIVE SESSIONS",
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = SonexaTextMuted,
-                        letterSpacing = 1.4.sp
-                    )
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Social Circle & Live Sessions",
+                            fontSize = 17.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = "See what your friends are listening to",
+                            fontSize = 12.sp,
+                            color = Color(0xFF8E889E)
+                        )
+                    }
 
-                    // Filter row
+                    // Filter row: All, Listening, Live Now
                     Row(
                         modifier = Modifier
                             .clip(RoundedCornerShape(16.dp))
-                            .background(SonexaInputBg)
+                            .background(Color(0xFF161026))
+                            .border(1.dp, Color(0xFF282038), RoundedCornerShape(16.dp))
                             .padding(2.dp),
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        horizontalArrangement = Arrangement.spacedBy(2.dp)
                     ) {
-                        listOf("All", "Listening Now").forEach { filter ->
+                        listOf("All", "Listening", "Live Now").forEach { filter ->
                             val isSelected = selectedSocialFilter == filter
                             Box(
                                 modifier = Modifier
-                                    .clip(RoundedCornerShape(14.dp))
-                                    .background(if (isSelected) SonexaPurplePrimary else Color.Transparent)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(if (isSelected) Color(0xFF7C3AED) else Color.Transparent)
                                     .clickable { selectedSocialFilter = filter }
-                                    .padding(horizontal = 10.dp, vertical = 4.dp)
+                                    .padding(horizontal = 9.dp, vertical = 4.dp)
                             ) {
                                 Text(
                                     text = filter,
                                     fontSize = 10.5.sp,
-                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                    color = if (isSelected) Color.White else SonexaTextMuted
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                    color = if (isSelected) Color.White else Color(0xFF8E889E)
                                 )
                             }
                         }
@@ -515,13 +563,13 @@ private fun PremiumProfileHeroCard(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(26.dp))
+            .clip(RoundedCornerShape(24.dp))
             .background(
-                Brush.verticalGradient(
+                Brush.linearGradient(
                     colors = listOf(
-                        Color(0xFF28154A),
-                        Color(0xFF190C30),
-                        Color(0xFF100720)
+                        Color(0xFF22133D),
+                        Color(0xFF150A26),
+                        Color(0xFF0F071C)
                     )
                 )
             )
@@ -529,192 +577,309 @@ private fun PremiumProfileHeroCard(
                 width = 1.dp,
                 brush = Brush.verticalGradient(
                     colors = listOf(
-                        SonexaPurpleLight.copy(alpha = 0.5f),
-                        SonexaMagenta.copy(alpha = 0.2f),
+                        Color(0xFF8B5CF6).copy(alpha = 0.45f),
+                        Color(0xFF6B21A8).copy(alpha = 0.2f),
                         Color.White.copy(alpha = 0.05f)
                     )
                 ),
-                shape = RoundedCornerShape(26.dp)
+                shape = RoundedCornerShape(24.dp)
             )
-            .padding(20.dp)
+            .padding(16.dp)
     ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            // Avatar with neon gradient glow ring & tap to change photo
-            Box(
-                contentAlignment = Alignment.BottomEnd,
-                modifier = Modifier.clickable(onClick = onEdit)
+        Column(modifier = Modifier.fillMaxWidth()) {
+            // Row with Avatar on left and Name / Handle / Member / Bio on right
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
             ) {
+                // Avatar with Camera Edit Badge
                 Box(
-                    modifier = Modifier
-                        .size(104.dp)
-                        .clip(CircleShape)
-                        .background(
-                            Brush.linearGradient(
-                                listOf(Color(0xFFB062FF), Color(0xFFE534B2), Color(0xFF38BDF8))
-                            )
-                        )
-                        .padding(3.dp)
-                        .clip(CircleShape)
-                        .background(SonexaCardDark),
-                    contentAlignment = Alignment.Center
+                    contentAlignment = Alignment.BottomEnd,
+                    modifier = Modifier.clickable(onClick = onEdit)
                 ) {
-                    if (photoUrl.isNotBlank()) {
-                        AsyncImage(
-                            model = ImageRequest.Builder(LocalContext.current)
-                                .data(photoUrl)
-                                .crossfade(true)
-                                .build(),
-                            contentDescription = "Profile Photo",
-                            contentScale = ContentScale.Crop,
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .clip(CircleShape)
-                        )
-                    } else {
-                        Text(
-                            text = initial,
-                            color = SonexaTextWhite,
-                            fontSize = 40.sp,
-                            fontWeight = FontWeight.ExtraBold
+                    Box(
+                        modifier = Modifier
+                            .size(80.dp)
+                            .clip(CircleShape)
+                            .background(
+                                Brush.sweepGradient(
+                                    listOf(
+                                        Color(0xFFA855F7),
+                                        Color(0xFF6366F1),
+                                        Color(0xFFEC4899),
+                                        Color(0xFFA855F7)
+                                    )
+                                )
+                            )
+                            .padding(2.5.dp)
+                            .clip(CircleShape)
+                            .background(Color(0xFF160E26)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (photoUrl.isNotBlank()) {
+                            AsyncImage(
+                                model = ImageRequest.Builder(LocalContext.current)
+                                    .data(photoUrl)
+                                    .crossfade(true)
+                                    .build(),
+                                contentDescription = "Profile Photo",
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .clip(CircleShape)
+                            )
+                        } else {
+                            Text(
+                                text = initial,
+                                color = Color.White,
+                                fontSize = 32.sp,
+                                fontWeight = FontWeight.ExtraBold
+                            )
+                        }
+                    }
+
+                    // Camera Edit Badge
+                    Box(
+                        modifier = Modifier
+                            .offset(x = 2.dp, y = 2.dp)
+                            .size(26.dp)
+                            .clip(CircleShape)
+                            .background(Color(0xFF1E1730))
+                            .border(1.5.dp, Color(0xFF382A54), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.CameraAlt,
+                            contentDescription = "Change Photo",
+                            tint = Color(0xFFD1CCE0),
+                            modifier = Modifier.size(13.dp)
                         )
                     }
                 }
 
-                // Camera Edit Badge
-                Box(
-                    modifier = Modifier
-                        .size(32.dp)
-                        .clip(CircleShape)
-                        .background(
-                            Brush.linearGradient(listOf(SonexaPurpleLight, SonexaMagenta))
-                        )
-                        .border(2.dp, SonexaCardDark, CircleShape),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.CameraAlt,
-                        contentDescription = "Change Photo",
-                        tint = Color.White,
-                        modifier = Modifier.size(16.dp)
+                Spacer(modifier = Modifier.width(14.dp))
+
+                // Name, Handle, Member Badge, Bio
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = name,
+                        fontSize = 19.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+
+                    Spacer(modifier = Modifier.height(3.dp))
+
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.clickable(onClick = onCopyHandle)
+                        ) {
+                            Text(
+                                text = handle,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = Color(0xFFA78BFA)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Icon(
+                                imageVector = Icons.Outlined.ContentCopy,
+                                contentDescription = "Copy",
+                                tint = Color(0xFF8E889E),
+                                modifier = Modifier.size(11.dp)
+                            )
+                        }
+
+                        // Member pill badge
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(Color(0xFF3B1554))
+                                .border(1.dp, Color(0xFF6B21A8).copy(alpha = 0.5f), RoundedCornerShape(6.dp))
+                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                        ) {
+                            Text(
+                                text = "👑",
+                                fontSize = 9.sp
+                            )
+                            Spacer(modifier = Modifier.width(3.dp))
+                            Text(
+                                text = if (isPremium) "VIP" else "Member",
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFFE9D5FF)
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    Text(
+                        text = bio,
+                        fontSize = 11.5.sp,
+                        color = Color(0xFFA19BAE),
+                        lineHeight = 15.sp,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
             }
 
             Spacer(modifier = Modifier.height(14.dp))
 
-            // User Display Name & Verified Tick
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center
-            ) {
-                Text(
-                    text = name,
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = SonexaTextWhite,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                if (isVerified) {
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Icon(
-                        imageVector = Icons.Default.CheckCircle,
-                        contentDescription = "Verified",
-                        tint = Color(0xFF38BDF8),
-                        modifier = Modifier.size(18.dp)
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(3.dp))
-
-            // Handle pill (clickable to copy)
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(Color.White.copy(alpha = 0.06f))
-                    .clickable(onClick = onCopyHandle)
-                    .padding(horizontal = 10.dp, vertical = 4.dp)
-            ) {
-                Text(
-                    text = handle,
-                    fontSize = 12.5.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = SonexaPurpleLight
-                )
-                Spacer(modifier = Modifier.width(6.dp))
-                Icon(
-                    imageVector = Icons.Outlined.ContentCopy,
-                    contentDescription = "Copy",
-                    tint = SonexaTextSubtle,
-                    modifier = Modifier.size(12.dp)
-                )
-                Spacer(modifier = Modifier.width(4.dp))
-                Text(
-                    text = if (isPremium) "• Hi-Fi" else "• Member",
-                    fontSize = 11.sp,
-                    color = SonexaTextMuted
-                )
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // Bio
-            Text(
-                text = bio,
-                fontSize = 12.5.sp,
-                color = SonexaTextMuted,
-                textAlign = TextAlign.Center,
-                lineHeight = 17.sp,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.padding(horizontal = 12.dp)
-            )
-
-            Spacer(modifier = Modifier.height(18.dp))
-
-            // Stats row (Followers, Following, Streamed)
+            // 3 Stat boxes: Followers, Following, Quality Score
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                StatPill(
-                    value = formatSocialCount(followers),
-                    label = "Followers",
-                    accent = Color(0xFF38BDF8),
-                    modifier = Modifier.weight(1f)
-                )
-                StatPill(
-                    value = formatSocialCount(following),
-                    label = "Following",
-                    accent = Color(0xFFA78BFA),
-                    modifier = Modifier.weight(1f)
-                )
-                StatPill(
-                    value = if (isPremium) "Hi-Fi" else "320k",
-                    label = "Quality",
-                    accent = Color(0xFF10B981),
-                    modifier = Modifier.weight(1f)
-                )
+                // Followers box
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Color(0xFF140E22))
+                        .border(1.dp, Color(0xFF261A3C), RoundedCornerShape(12.dp))
+                        .padding(horizontal = 8.dp, vertical = 8.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier
+                                .size(32.dp)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(Color(0xFF581C87).copy(alpha = 0.45f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Group,
+                                contentDescription = null,
+                                tint = Color(0xFFC084FC),
+                                modifier = Modifier.size(17.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Column {
+                            Text(
+                                text = formatSocialCount(followers),
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
+                            )
+                            Text(
+                                text = "Followers",
+                                fontSize = 10.sp,
+                                color = Color(0xFF8E889E)
+                            )
+                        }
+                    }
+                }
+
+                // Following box
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Color(0xFF140E22))
+                        .border(1.dp, Color(0xFF261A3C), RoundedCornerShape(12.dp))
+                        .padding(horizontal = 8.dp, vertical = 8.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier
+                                .size(32.dp)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(Color(0xFF064E3B).copy(alpha = 0.45f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Person,
+                                contentDescription = null,
+                                tint = Color(0xFF34D399),
+                                modifier = Modifier.size(17.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Column {
+                            Text(
+                                text = formatSocialCount(following),
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
+                            )
+                            Text(
+                                text = "Following",
+                                fontSize = 10.sp,
+                                color = Color(0xFF8E889E)
+                            )
+                        }
+                    }
+                }
+
+                // Quality Score box
+                Box(
+                    modifier = Modifier
+                        .weight(1.1f)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Color(0xFF140E22))
+                        .border(1.dp, Color(0xFF261A3C), RoundedCornerShape(12.dp))
+                        .padding(horizontal = 8.dp, vertical = 8.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier
+                                .size(32.dp)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(Color(0xFF831843).copy(alpha = 0.45f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.MusicNote,
+                                contentDescription = null,
+                                tint = Color(0xFFF43F5E),
+                                modifier = Modifier.size(17.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Column {
+                            Text(
+                                text = if (isPremium) "Lossless" else "320K",
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
+                            )
+                            Text(
+                                text = "Quality Score",
+                                fontSize = 10.sp,
+                                color = Color(0xFF8E889E)
+                            )
+                        }
+                    }
+                }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(14.dp))
 
-            // Action buttons: Edit Profile & Share
+            // Action buttons: Edit Profile & Share Profile
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
+                // Edit Profile Button
                 Box(
                     modifier = Modifier
                         .weight(1f)
-                        .height(44.dp)
-                        .clip(RoundedCornerShape(14.dp))
-                        .background(SonexaGradientBrush)
+                        .height(42.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(
+                            Brush.horizontalGradient(
+                                listOf(Color(0xFF8B5CF6), Color(0xFF6366F1))
+                            )
+                        )
                         .clickable(onClick = onEdit),
                     contentAlignment = Alignment.Center
                 ) {
@@ -723,25 +888,26 @@ private fun PremiumProfileHeroCard(
                             imageVector = Icons.Default.Edit,
                             contentDescription = null,
                             tint = Color.White,
-                            modifier = Modifier.size(16.dp)
+                            modifier = Modifier.size(15.dp)
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
                             text = "Edit Profile",
                             color = Color.White,
                             fontWeight = FontWeight.Bold,
-                            fontSize = 14.sp
+                            fontSize = 13.5.sp
                         )
                     }
                 }
 
+                // Share Profile Button
                 Box(
                     modifier = Modifier
                         .weight(1f)
-                        .height(44.dp)
-                        .clip(RoundedCornerShape(14.dp))
-                        .background(Color.White.copy(alpha = 0.08f))
-                        .border(1.dp, Color.White.copy(alpha = 0.12f), RoundedCornerShape(14.dp))
+                        .height(42.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Color(0xFF191328))
+                        .border(1.dp, Color(0xFF352B4D), RoundedCornerShape(12.dp))
                         .clickable(onClick = onShare),
                     contentAlignment = Alignment.Center
                 ) {
@@ -749,15 +915,15 @@ private fun PremiumProfileHeroCard(
                         Icon(
                             imageVector = Icons.Default.Share,
                             contentDescription = null,
-                            tint = SonexaTextWhite,
-                            modifier = Modifier.size(16.dp)
+                            tint = Color.White,
+                            modifier = Modifier.size(15.dp)
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
                             text = "Share Profile",
-                            color = SonexaTextWhite,
+                            color = Color.White,
                             fontWeight = FontWeight.Bold,
-                            fontSize = 14.sp
+                            fontSize = 13.5.sp
                         )
                     }
                 }
@@ -1148,60 +1314,81 @@ private fun StatPill(
 }
 
 @Composable
-private fun PremiumStudioTile(
+private fun StudioSquircleCard(
     title: String,
     subtitle: String,
     icon: ImageVector,
-    gradientColors: List<Color>,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    badgeBg: Color,
+    badgeTint: Color,
+    cardBg: Color,
+    borderColor: Color,
+    onClick: () -> Unit
 ) {
     Box(
-        modifier = modifier
-            .height(76.dp)
-            .clip(RoundedCornerShape(18.dp))
-            .background(SonexaInputBg)
-            .border(1.dp, SonexaInputBorder, RoundedCornerShape(18.dp))
+        modifier = Modifier
+            .width(108.dp)
+            .height(134.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .background(cardBg)
+            .border(1.dp, borderColor, RoundedCornerShape(16.dp))
             .clickable(onClick = onClick)
             .padding(12.dp)
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxSize()
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.SpaceBetween
         ) {
-            Box(
-                modifier = Modifier
-                    .size(42.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(Brush.linearGradient(gradientColors)),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    tint = Color.White,
-                    modifier = Modifier.size(20.dp)
+            Column {
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(badgeBg),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = badgeTint,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                Text(
+                    text = title,
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 13.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+
+                Spacer(modifier = Modifier.height(2.dp))
+
+                Text(
+                    text = subtitle,
+                    color = Color(0xFF8E889E),
+                    fontSize = 10.sp,
+                    lineHeight = 13.sp,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
 
-            Spacer(modifier = Modifier.width(10.dp))
-
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = title,
-                    color = SonexaTextWhite,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 13.5.sp,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(
-                    text = subtitle,
-                    color = SonexaTextSubtle,
-                    fontSize = 10.5.sp,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+            Box(
+                modifier = Modifier
+                    .size(24.dp)
+                    .clip(CircleShape)
+                    .background(Color.White.copy(alpha = 0.08f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.ChevronRight,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(15.dp)
                 )
             }
         }
@@ -1212,79 +1399,90 @@ private fun PremiumStudioTile(
 private fun PremiumBadgeCard(badge: MilestoneBadge) {
     Box(
         modifier = Modifier
-            .width(150.dp)
-            .clip(RoundedCornerShape(18.dp))
-            .background(SonexaInputBg)
+            .width(142.dp)
+            .height(132.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .background(Color(0xFF140E22))
             .border(
                 1.dp,
-                if (badge.progress >= 1f) badge.accent.copy(alpha = 0.5f) else SonexaInputBorder,
-                RoundedCornerShape(18.dp)
+                if (badge.progress >= 1f) badge.accent.copy(alpha = 0.5f) else Color(0xFF261A3C),
+                RoundedCornerShape(16.dp)
             )
             .padding(12.dp)
     ) {
-        Column {
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.SpaceBetween
+        ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(text = badge.icon, fontSize = 24.sp)
+                Text(text = badge.icon, fontSize = 22.sp)
                 if (badge.progress >= 1f) {
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(6.dp))
-                            .background(badge.accent.copy(alpha = 0.2f))
+                            .background(Color(0xFF7C3AED))
                             .padding(horizontal = 6.dp, vertical = 2.dp)
                     ) {
                         Text(
                             text = "UNLOCKED",
-                            fontSize = 8.5.sp,
+                            fontSize = 8.sp,
                             fontWeight = FontWeight.ExtraBold,
-                            color = badge.accent
+                            color = Color.White
                         )
                     }
+                } else if (badge.isLocked) {
+                    Icon(
+                        imageVector = Icons.Default.Lock,
+                        contentDescription = "Locked",
+                        tint = Color(0xFF8E889E),
+                        modifier = Modifier.size(13.dp)
+                    )
                 }
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Column {
+                Text(
+                    text = badge.title,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
 
-            Text(
-                text = badge.title,
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Bold,
-                color = SonexaTextWhite,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
+                Text(
+                    text = badge.subtitle,
+                    fontSize = 10.sp,
+                    color = Color(0xFF8E889E),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
 
-            Text(
-                text = badge.subtitle,
-                fontSize = 10.5.sp,
-                color = SonexaTextSubtle,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
+                Spacer(modifier = Modifier.height(8.dp))
 
-            Spacer(modifier = Modifier.height(10.dp))
+                LinearProgressIndicator(
+                    progress = { badge.progress },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(3.5.dp)
+                        .clip(RoundedCornerShape(2.dp)),
+                    color = badge.accent,
+                    trackColor = Color.White.copy(alpha = 0.08f)
+                )
 
-            LinearProgressIndicator(
-                progress = { badge.progress },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(4.dp)
-                    .clip(RoundedCornerShape(2.dp)),
-                color = badge.accent,
-                trackColor = Color.White.copy(alpha = 0.08f)
-            )
+                Spacer(modifier = Modifier.height(4.dp))
 
-            Spacer(modifier = Modifier.height(4.dp))
-
-            Text(
-                text = badge.progressText,
-                fontSize = 9.5.sp,
-                color = if (badge.progress >= 1f) badge.accent else SonexaTextSubtle,
-                fontWeight = FontWeight.SemiBold
-            )
+                Text(
+                    text = badge.progressText,
+                    fontSize = 9.5.sp,
+                    color = if (badge.progress >= 1f) badge.accent else Color(0xFF8E889E),
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
         }
     }
 }
@@ -1294,14 +1492,14 @@ private fun LiveFriendActivityCard(friend: LiveFriendItem) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(18.dp))
-            .background(SonexaInputBg)
+            .clip(RoundedCornerShape(14.dp))
+            .background(Color(0xFF140E22))
             .border(
                 1.dp,
-                if (friend.isLive) Color(0xFF10B981).copy(alpha = 0.35f) else SonexaInputBorder,
-                RoundedCornerShape(18.dp)
+                if (friend.isLive) Color(0xFF10B981).copy(alpha = 0.35f) else Color(0xFF261A3C),
+                RoundedCornerShape(14.dp)
             )
-            .padding(14.dp)
+            .padding(12.dp)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -1312,21 +1510,34 @@ private fun LiveFriendActivityCard(friend: LiveFriendItem) {
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.weight(1f)
             ) {
-                // Friend Avatar
-                Box(
-                    modifier = Modifier
-                        .size(44.dp)
-                        .clip(CircleShape)
-                        .background(friend.avatarColor.copy(alpha = 0.25f))
-                        .border(1.dp, friend.avatarColor.copy(alpha = 0.4f), CircleShape),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = friend.initial,
-                        color = friend.avatarColor,
-                        fontWeight = FontWeight.ExtraBold,
-                        fontSize = 16.sp
-                    )
+                // Friend Avatar with Online Dot
+                Box(contentAlignment = Alignment.BottomEnd) {
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(friend.avatarColor.copy(alpha = 0.22f))
+                            .border(1.dp, friend.avatarColor.copy(alpha = 0.45f), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = friend.initial,
+                            color = friend.avatarColor,
+                            fontWeight = FontWeight.ExtraBold,
+                            fontSize = 16.sp
+                        )
+                    }
+
+                    if (friend.isLive) {
+                        Box(
+                            modifier = Modifier
+                                .offset(x = 1.dp, y = 1.dp)
+                                .size(9.dp)
+                                .clip(CircleShape)
+                                .background(Color(0xFF10B981))
+                                .border(1.5.dp, Color(0xFF140E22), CircleShape)
+                        )
+                    }
                 }
 
                 Spacer(modifier = Modifier.width(12.dp))
@@ -1335,15 +1546,15 @@ private fun LiveFriendActivityCard(friend: LiveFriendItem) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
                             text = friend.name,
-                            fontSize = 14.sp,
+                            fontSize = 13.5.sp,
                             fontWeight = FontWeight.Bold,
-                            color = SonexaTextWhite
+                            color = Color.White
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
                             text = friend.handle,
                             fontSize = 11.sp,
-                            color = SonexaTextSubtle
+                            color = Color(0xFF8E889E)
                         )
                     }
                     Spacer(modifier = Modifier.height(2.dp))
@@ -1351,14 +1562,14 @@ private fun LiveFriendActivityCard(friend: LiveFriendItem) {
                         Icon(
                             imageVector = Icons.Default.MusicNote,
                             contentDescription = null,
-                            tint = if (friend.isLive) Color(0xFF10B981) else SonexaTextSubtle,
-                            modifier = Modifier.size(13.dp)
+                            tint = Color(0xFF10B981),
+                            modifier = Modifier.size(12.dp)
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
                             text = "${friend.songTitle} • ${friend.artistName}",
                             fontSize = 11.5.sp,
-                            color = if (friend.isLive) Color.White else SonexaTextMuted,
+                            color = Color(0xFFA19BAE),
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
@@ -1366,36 +1577,47 @@ private fun LiveFriendActivityCard(friend: LiveFriendItem) {
                 }
             }
 
-            Spacer(modifier = Modifier.width(10.dp))
+            Spacer(modifier = Modifier.width(8.dp))
 
-            if (friend.isLive) {
-                // Animated Equalizer Wave indicator
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(Color(0xFF10B981).copy(alpha = 0.15f))
-                        .padding(horizontal = 8.dp, vertical = 4.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.GraphicEq,
-                        contentDescription = "Live",
-                        tint = Color(0xFF10B981),
-                        modifier = Modifier.size(14.dp)
-                    )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (friend.isLive) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(Color(0xFF064E3B).copy(alpha = 0.5f))
+                            .border(1.dp, Color(0xFF10B981).copy(alpha = 0.5f), RoundedCornerShape(8.dp))
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.GraphicEq,
+                            contentDescription = "Live",
+                            tint = Color(0xFF10B981),
+                            modifier = Modifier.size(13.dp)
+                        )
+                        Text(
+                            text = "LIVE",
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = Color(0xFF10B981)
+                        )
+                    }
+                } else {
                     Text(
-                        text = "LIVE",
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = Color(0xFF10B981)
+                        text = friend.timeAgo,
+                        fontSize = 10.5.sp,
+                        color = Color(0xFF8E889E)
                     )
                 }
-            } else {
-                Text(
-                    text = friend.timeAgo,
-                    fontSize = 10.5.sp,
-                    color = SonexaTextSubtle
+
+                Spacer(modifier = Modifier.width(4.dp))
+
+                Icon(
+                    imageVector = Icons.Default.MoreVert,
+                    contentDescription = null,
+                    tint = Color(0xFF8E889E),
+                    modifier = Modifier.size(18.dp)
                 )
             }
         }
@@ -1407,83 +1629,65 @@ private fun ListeningCircleInviteCard(onInvite: () -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(22.dp))
+            .clip(RoundedCornerShape(18.dp))
             .background(
-                Brush.linearGradient(
-                    colors = listOf(Color(0xFF28154A), Color(0xFF160C2A))
+                Brush.horizontalGradient(
+                    colors = listOf(Color(0xFF38144D), Color(0xFF180A26))
                 )
             )
-            .border(1.dp, SonexaPurplePrimary.copy(alpha = 0.35f), RoundedCornerShape(22.dp))
-            .padding(18.dp)
+            .border(1.dp, Color(0xFF581C87).copy(alpha = 0.45f), RoundedCornerShape(18.dp))
+            .clickable(onClick = onInvite)
+            .padding(14.dp)
     ) {
-        Column {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    modifier = Modifier
-                        .size(44.dp)
-                        .clip(CircleShape)
-                        .background(SonexaPurplePrimary.copy(alpha = 0.25f)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.GroupAdd,
-                        contentDescription = null,
-                        tint = SonexaPurpleLight,
-                        modifier = Modifier.size(22.dp)
-                    )
-                }
-                Spacer(modifier = Modifier.width(12.dp))
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = "Expand your Listening Circle",
-                        color = SonexaTextWhite,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 15.sp
-                    )
-                    Text(
-                        text = "Share vibe flows & discover tracks with friends",
-                        color = SonexaTextMuted,
-                        fontSize = 11.5.sp
-                    )
-                }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .clip(CircleShape)
+                    .background(Color(0xFF9333EA).copy(alpha = 0.35f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.GroupAdd,
+                    contentDescription = null,
+                    tint = Color(0xFFE879F9),
+                    modifier = Modifier.size(22.dp)
+                )
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.width(12.dp))
 
-            Text(
-                text = "When your friends join Zynera, their live sessions and shared playlists will automatically appear in your feed.",
-                color = SonexaTextSubtle,
-                fontSize = 12.sp,
-                lineHeight = 17.sp
-            )
-
-            Spacer(modifier = Modifier.height(14.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "Expand your Listening Circle",
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 14.sp
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = "Share vibe flows & discover tracks with friends",
+                    color = Color(0xFFA19BAE),
+                    fontSize = 11.sp
+                )
+            }
 
             Box(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .height(44.dp)
-                    .clip(RoundedCornerShape(14.dp))
-                    .background(Color.White.copy(alpha = 0.08f))
-                    .border(1.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(14.dp))
-                    .clickable(onClick = onInvite),
+                    .size(32.dp)
+                    .clip(CircleShape)
+                    .background(Color(0xFF2A153E)),
                 contentAlignment = Alignment.Center
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Default.Share,
-                        contentDescription = null,
-                        tint = SonexaTextWhite,
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "Invite friends to Zynera",
-                        color = SonexaTextWhite,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 13.5.sp
-                    )
-                }
+                Icon(
+                    imageVector = Icons.Default.ChevronRight,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(18.dp)
+                )
             }
         }
     }

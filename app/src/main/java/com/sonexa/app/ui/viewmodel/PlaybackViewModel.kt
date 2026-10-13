@@ -40,7 +40,10 @@ data class PlaybackUiState(
     val errorMessage: String? = null,
     val activeProviderType: String = "native_audio",
     val isYouTubeMode: Boolean = false,
-    val audioQuality: AudioQuality = AudioQuality.LOSSLESS
+    val audioQuality: AudioQuality = AudioQuality.LOSSLESS,
+    val activeAudiobook: com.sonexa.app.data.model.AudiobookDto? = null,
+    val activeChapterIndex: Int = 0,
+    val isAudiobookMode: Boolean = false
 )
 
 enum class RepeatMode { OFF, ALL, ONE }
@@ -64,6 +67,7 @@ class PlaybackViewModel : AndroidViewModel {
 
     private var sleepJob: Job? = null
     private var originalQueue: List<TrackDto> = emptyList()
+    private var lastAudiobookProgressSaveMs = 0L
 
     constructor(application: Application) : super(application) {
         sessionManager = SessionManager.getInstance(application)
@@ -92,6 +96,9 @@ class PlaybackViewModel : AndroidViewModel {
             bindEqualizer(sessionId)
         }
 
+        playbackManager.onSkipNext = { skipNext() }
+        playbackManager.onSkipPrevious = { skipPrevious() }
+
         // Collect engine state from active provider (native or YouTube).
         // Position ticks stay on elapsedMs so the full player is not recomposed 3x/sec.
         viewModelScope.launch {
@@ -100,6 +107,26 @@ class PlaybackViewModel : AndroidViewModel {
                 val active = _uiState.value.track
                 if (active != null && engine.isPlaying) {
                     recommendationTracker.onProgressTick(active, engine.positionMs, _uiState.value.durationMs)
+                    if (_uiState.value.isAudiobookMode) {
+                        val now = System.currentTimeMillis()
+                        if (now - lastAudiobookProgressSaveMs > 4000L) {
+                            lastAudiobookProgressSaveMs = now
+                            val book = _uiState.value.activeAudiobook
+                            if (book != null) {
+                                val ch = book.chapters.getOrNull(_uiState.value.activeChapterIndex)
+                                if (ch != null) {
+                                    com.sonexa.app.data.local.AudiobookStore.saveProgress(
+                                        audiobookId = book.id,
+                                        chapterId = ch.id,
+                                        chapterNumber = ch.chapterNumber,
+                                        chapterTitle = ch.title,
+                                        positionSeconds = engine.positionMs / 1000L,
+                                        totalDurationSeconds = book.totalDurationSec
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
                 _uiState.update { current ->
                     val activeTrack = current.track
@@ -200,6 +227,8 @@ class PlaybackViewModel : AndroidViewModel {
         }
         _uiState.update {
             it.copy(
+                isAudiobookMode = false,
+                activeAudiobook = null,
                 queue = ordered,
                 queueIndex = playIndex,
                 sourceTitle = sourceTitle.ifBlank { ordered.getOrNull(playIndex)?.album.orEmpty() }
@@ -275,6 +304,16 @@ class PlaybackViewModel : AndroidViewModel {
         _uiState.update { it.copy(repeatMode = next) }
     }
 
+    fun clearQueue() {
+        val current = _uiState.value.track
+        _uiState.update { state ->
+            state.copy(
+                queue = if (current != null) listOf(current) else emptyList(),
+                queueIndex = 0
+            )
+        }
+    }
+
     fun toggleLike(customTrack: TrackDto? = null) {
         val track = customTrack ?: _uiState.value.track ?: return
         val isNowLiked = com.sonexa.app.data.local.LikedSongsStore.toggleLike(getApplication(), track)
@@ -345,18 +384,99 @@ class PlaybackViewModel : AndroidViewModel {
     fun seekForward30() {
         val current = _elapsedMs.value.takeIf { it > 0 } ?: _uiState.value.positionMs
         val dur = _uiState.value.durationMs
-        val target = (current + 10_000L).coerceAtMost(if (dur > 0) dur else Long.MAX_VALUE)
+        val target = (current + 30_000L).coerceAtMost(if (dur > 0) dur else Long.MAX_VALUE)
+        seekToMs(target)
+    }
+
+    fun seekBackward15() {
+        val current = _elapsedMs.value.takeIf { it > 0 } ?: _uiState.value.positionMs
+        val target = (current - 15_000L).coerceAtLeast(0L)
         seekToMs(target)
     }
 
     fun seekBackward10() {
-        val current = _elapsedMs.value.takeIf { it > 0 } ?: _uiState.value.positionMs
-        val target = (current - 10_000L).coerceAtLeast(0L)
-        seekToMs(target)
+        seekBackward15()
     }
 
     fun seekToChapter(startTimeSeconds: Long) {
         seekToMs(startTimeSeconds * 1000L)
+    }
+
+    fun playAudiobook(
+        audiobook: com.sonexa.app.data.model.AudiobookDto,
+        chapterIndex: Int = 0,
+        startPositionMs: Long = 0L
+    ) {
+        val effectiveChapters = audiobook.chapters.ifEmpty {
+            listOf(
+                com.sonexa.app.data.model.AudiobookChapterDto(
+                    id = "${audiobook.id}_ch1",
+                    audiobookId = audiobook.id,
+                    chapterNumber = 1,
+                    title = "Chapter 1",
+                    durationSec = (audiobook.totalDurationSec / audiobook.chapterCount.coerceAtLeast(1)).coerceAtLeast(1800),
+                    streamUrl = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"
+                )
+            )
+        }
+        val safeIndex = chapterIndex.coerceIn(0, effectiveChapters.lastIndex)
+        val safeBook = audiobook.copy(chapters = effectiveChapters)
+        val currentChapter = effectiveChapters[safeIndex]
+        val track = safeBook.toTrackDto(safeIndex)
+
+        _uiState.update { current ->
+            current.copy(
+                activeAudiobook = safeBook,
+                activeChapterIndex = safeIndex,
+                isAudiobookMode = true,
+                track = track,
+                queue = effectiveChapters.mapIndexed { idx, _ -> safeBook.toTrackDto(idx) },
+                queueIndex = safeIndex,
+                sourceTitle = safeBook.title,
+                durationMs = currentChapter.durationMs
+            )
+        }
+
+        val resumePosition = if (startPositionMs > 0L) {
+            startPositionMs
+        } else {
+            val saved = com.sonexa.app.data.local.AudiobookStore.getProgress(safeBook.id)
+            if (saved != null && saved.currentChapterNumber - 1 == safeIndex) saved.positionMs else 0L
+        }
+
+        playbackManager.play(track, resumePosition)
+        if (_uiState.value.playbackSpeed != 1.0f) {
+            playbackManager.setPlaybackSpeed(_uiState.value.playbackSpeed)
+        }
+    }
+
+    fun nextChapter() {
+        val book = _uiState.value.activeAudiobook ?: return
+        val nextIdx = _uiState.value.activeChapterIndex + 1
+        if (nextIdx < book.chapters.size) {
+            playAudiobook(book, nextIdx, 0L)
+        }
+    }
+
+    fun previousChapter() {
+        val book = _uiState.value.activeAudiobook ?: return
+        if (_elapsedMs.value > 5000L) {
+            seekToMs(0L)
+            return
+        }
+        val prevIdx = _uiState.value.activeChapterIndex - 1
+        if (prevIdx >= 0) {
+            playAudiobook(book, prevIdx, 0L)
+        } else {
+            seekToMs(0L)
+        }
+    }
+
+    fun seekAudiobookChapter(chapterIndex: Int) {
+        val book = _uiState.value.activeAudiobook ?: return
+        if (chapterIndex in book.chapters.indices) {
+            playAudiobook(book, chapterIndex, 0L)
+        }
     }
 
     fun setSleepTimerMinutes(minutes: Int?) {
