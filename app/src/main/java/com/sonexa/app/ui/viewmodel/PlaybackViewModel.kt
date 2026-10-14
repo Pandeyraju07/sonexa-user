@@ -415,7 +415,7 @@ class PlaybackViewModel : AndroidViewModel {
                     chapterNumber = 1,
                     title = "Chapter 1",
                     durationSec = (audiobook.totalDurationSec / audiobook.chapterCount.coerceAtLeast(1)).coerceAtLeast(1800),
-                    streamUrl = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"
+                    streamUrl = "https://archive.org/download/YatharthGeetaHindiAudio/02Chapter1.mp3"
                 )
             )
         }

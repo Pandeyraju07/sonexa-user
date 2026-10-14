@@ -341,17 +341,11 @@ fun SearchScreen(
             }
 
             if (showVoiceSheet) {
-                com.sonexa.app.ui.components.VoiceSearchBottomSheet(
+                com.sonexa.app.ui.components.ZyneraVoiceAssistantSheet(
                     onDismiss = { showVoiceSheet = false },
-                    onVoiceResult = { response ->
-                        query = response.transcript
-                        isSearchActive = true
-                        searchViewModel.onSearchQueryChanged(response.transcript)
-                        if (response.tracks.isNotEmpty()) {
-                            playTrackList(response.tracks, 0, "Voice: ${response.transcript}")
-                        }
-                    },
-                    onDirectSearch = { voiceQuery ->
+                    playbackViewModel = playbackViewModel,
+                    searchViewModel = searchViewModel,
+                    onFallbackTextSearch = { voiceQuery ->
                         query = voiceQuery
                         isSearchActive = true
                         searchViewModel.onSearchQueryChanged(voiceQuery)
@@ -552,7 +546,11 @@ fun SearchScreen(
 
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
-                                    modifier = Modifier.appleBounce {}
+                                    modifier = Modifier.appleBounce {
+                                        query = "Trending"
+                                        isSearchActive = true
+                                        searchViewModel.onSearchQueryChanged("Trending")
+                                    }
                                 ) {
                                     Text(
                                         text = "See All",

@@ -6,9 +6,22 @@ const { hybridRecommendationEngine } = require('../recommendation/engine/HybridR
 const PlaybackContext = require('../recommendation/model/PlaybackContext');
 const { tracks: fallbackTracks, artists: fallbackArtists, playlists: fallbackPlaylists, podcasts, liveEvents } = require('../data/catalog');
 
+function formatTrackForClient(track) {
+  const moodScores = track.moods || {};
+  const sorted = Object.entries(moodScores).sort((a, b) => b[1] - a[1]);
+  const primaryMood = sorted[0] ? (sorted[0][0].charAt(0).toUpperCase() + sorted[0][0].slice(1).toLowerCase()) : 'Chill';
+  const moodList = sorted.map(([m]) => m.charAt(0).toUpperCase() + m.slice(1).toLowerCase());
+
+  return {
+    ...track,
+    mood: primaryMood,
+    moods: moodList.length ? moodList : ['Chill']
+  };
+}
+
 // Helper to build Home Feed payload
 function buildHomeFeed() {
-  const allTracks = catalogStore.getAllTracks();
+  const allTracks = catalogStore.getAllTracks().map(formatTrackForClient);
   const context = new PlaybackContext({ limit: 10 });
   const recs = hybridRecommendationEngine.recommend(context);
 
@@ -17,10 +30,10 @@ function buildHomeFeed() {
     userPhotoUrl: 'https://api.dicebear.com/7.x/initials/svg?seed=RP&backgroundColor=8b5cf6,ec4899&textColor=ffffff',
     continueListening: allTracks.slice(0, 4),
     trendingNow: allTracks,
-    madeForYou: recs.slice(0, 6).map(r => r.track),
+    madeForYou: recs.slice(0, 6).map(r => formatTrackForClient(r.track)),
     featuredPlaylists: catalogStore.playlists,
     topArtists: catalogStore.artists,
-    recommendedForYou: recs.slice(0, 4).map(r => r.track),
+    recommendedForYou: recs.slice(0, 4).map(r => formatTrackForClient(r.track)),
     popularRadio: [
       { id: 'rad_1', title: 'Arijit Singh Radio', subtitle: 'With Pritam, Atif Aslam, Mohit Chauhan', coverUrl: allTracks[1].coverUrl },
       { id: 'rad_2', title: 'Indie Vibes Radio', subtitle: 'With Anuv Jain, Prateek Kuhad, Jasleen Royal', coverUrl: allTracks[2].coverUrl }

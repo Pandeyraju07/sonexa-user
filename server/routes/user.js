@@ -45,6 +45,70 @@ const userSettings = {
 
 const userLikedTrackIds = new Set(['track_2', 'track_3', 'track_5']);
 
+// Listening history store (persistent across requests)
+const userListeningHistory = [
+  {
+    id: 'hist_1',
+    contentId: 'track_2',
+    contentType: 'song',
+    title: 'Apna Bana Le',
+    artist: 'Arijit Singh, Sachin-Jigar',
+    coverUrl: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=600&auto=format&fit=crop&q=80',
+    playedAt: new Date(Date.now() - 15 * 60 * 1000).toISOString(),
+    progressSeconds: 180,
+    durationSeconds: 261,
+    completed: false
+  },
+  {
+    id: 'hist_2',
+    contentId: 'ab_geeta',
+    contentType: 'audiobook',
+    title: 'श्रीमद्भगवद्गीता (Complete Geeta)',
+    artist: 'Shailendra Bharti',
+    coverUrl: 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=600&auto=format&fit=crop&q=80',
+    chapterId: 'ab_geeta_ch1',
+    chapterTitle: 'अध्याय 1: अर्जुनविषादयोग',
+    playedAt: new Date(Date.now() - 90 * 60 * 1000).toISOString(),
+    progressSeconds: 620,
+    durationSeconds: 2400,
+    completed: false
+  }
+];
+
+// Playback progress map: key = contentId -> progress object
+const userPlaybackProgressMap = new Map();
+userPlaybackProgressMap.set('track_2', {
+  contentId: 'track_2',
+  contentType: 'song',
+  positionMs: 180000,
+  durationMs: 261000,
+  percentage: 69,
+  updatedAt: new Date(Date.now() - 15 * 60 * 1000).toISOString()
+});
+userPlaybackProgressMap.set('ab_geeta', {
+  contentId: 'ab_geeta',
+  contentType: 'audiobook',
+  chapterId: 'ab_geeta_ch1',
+  chapterNumber: 1,
+  positionMs: 620000,
+  durationMs: 2400000,
+  percentage: 26,
+  updatedAt: new Date(Date.now() - 90 * 60 * 1000).toISOString()
+});
+
+// Bookmarks list
+const userBookmarksList = [
+  {
+    id: 'bm_1',
+    contentId: 'ab_geeta',
+    chapterId: 'ab_geeta_ch1',
+    chapterTitle: 'अध्याय 1: अर्जुनविषादयोग',
+    positionSeconds: 450,
+    note: 'कर्मण्येवाधिकारस्ते मा फलेषु कदाचन',
+    createdAt: new Date(Date.now() - 120 * 60 * 1000).toISOString()
+  }
+];
+
 // Helper to get active user
 function getActiveUser(req) {
   // Return first user or default profile
@@ -272,4 +336,126 @@ router.post('/premium/redeem', (req, res) => {
   });
 });
 
+// GET /api/v1/user/history (or /api/v1/me/history)
+router.get('/history', (req, res) => {
+  res.json({
+    success: true,
+    data: userListeningHistory
+  });
+});
+
+// POST /api/v1/user/history
+router.post('/history', (req, res) => {
+  const { contentId, contentType, title, artist, coverUrl, chapterId, chapterTitle, progressSeconds, durationSeconds, completed } = req.body;
+  const historyItem = {
+    id: `hist_${Date.now()}`,
+    contentId: contentId || `item_${Date.now()}`,
+    contentType: contentType || 'song',
+    title: title || 'Unknown',
+    artist: artist || 'Zynera Artist',
+    coverUrl: coverUrl || '',
+    chapterId: chapterId || null,
+    chapterTitle: chapterTitle || null,
+    playedAt: new Date().toISOString(),
+    progressSeconds: Number(progressSeconds) || 0,
+    durationSeconds: Number(durationSeconds) || 0,
+    completed: Boolean(completed)
+  };
+  userListeningHistory.unshift(historyItem);
+  if (userListeningHistory.length > 50) userListeningHistory.pop();
+  res.json({
+    success: true,
+    message: 'Added to listening history',
+    data: historyItem
+  });
+});
+
+// GET /api/v1/user/progress (or /api/v1/me/progress)
+router.get('/progress', (req, res) => {
+  const { contentId } = req.query;
+  if (contentId) {
+    const item = userPlaybackProgressMap.get(contentId);
+    return res.json({
+      success: true,
+      data: item || null
+    });
+  }
+  res.json({
+    success: true,
+    data: Array.from(userPlaybackProgressMap.values())
+  });
+});
+
+// POST /api/v1/user/progress
+router.post('/progress', (req, res) => {
+  const { contentId, contentType, chapterId, chapterNumber, positionMs, durationMs } = req.body;
+  if (!contentId) {
+    return res.status(400).json({ success: false, message: 'contentId is required' });
+  }
+  const pos = Number(positionMs) || 0;
+  const dur = Number(durationMs) || 1;
+  const record = {
+    contentId,
+    contentType: contentType || 'song',
+    chapterId: chapterId || null,
+    chapterNumber: chapterNumber ? Number(chapterNumber) : null,
+    positionMs: pos,
+    durationMs: dur,
+    percentage: Math.min(100, Math.round((pos / dur) * 100)),
+    updatedAt: new Date().toISOString()
+  };
+  userPlaybackProgressMap.set(contentId, record);
+  res.json({
+    success: true,
+    message: 'Playback progress synced successfully',
+    data: record
+  });
+});
+
+// GET /api/v1/user/bookmarks (or /api/v1/me/bookmarks)
+router.get('/bookmarks', (req, res) => {
+  const { contentId } = req.query;
+  let result = userBookmarksList;
+  if (contentId) {
+    result = result.filter(b => b.contentId === contentId);
+  }
+  res.json({
+    success: true,
+    data: result
+  });
+});
+
+// POST /api/v1/user/bookmarks
+router.post('/bookmarks', (req, res) => {
+  const { contentId, chapterId, chapterTitle, positionSeconds, note } = req.body;
+  const newBm = {
+    id: `bm_${Date.now()}`,
+    contentId: contentId || 'item',
+    chapterId: chapterId || null,
+    chapterTitle: chapterTitle || null,
+    positionSeconds: Number(positionSeconds) || 0,
+    note: note ? note.trim() : '',
+    createdAt: new Date().toISOString()
+  };
+  userBookmarksList.unshift(newBm);
+  res.json({
+    success: true,
+    message: 'Bookmark saved',
+    data: newBm
+  });
+});
+
+// DELETE /api/v1/user/bookmarks/:id
+router.delete('/bookmarks/:id', (req, res) => {
+  const idx = userBookmarksList.findIndex(b => b.id === req.params.id);
+  if (idx !== -1) {
+    userBookmarksList.splice(idx, 1);
+  }
+  res.json({
+    success: true,
+    message: 'Bookmark removed'
+  });
+});
+
 module.exports = router;
+

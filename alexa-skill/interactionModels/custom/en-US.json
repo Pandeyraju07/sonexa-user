@@ -1,0 +1,104 @@
+{
+  "interactionModel": {
+    "languageModel": {
+      "invocationName": "zynera audio",
+      "intents": [
+        {
+          "name": "PlayContentIntent",
+          "slots": [
+            {
+              "name": "query",
+              "type": "AMAZON.SearchQuery"
+            },
+            {
+              "name": "contentType",
+              "type": "AMAZON.Genre"
+            },
+            {
+              "name": "artist",
+              "type": "AMAZON.MusicArtist"
+            }
+          ],
+          "samples": [
+            "play {query}",
+            "play song {query}",
+            "play music by {artist}",
+            "play songs by {artist}",
+            "play some {contentType} music",
+            "play the track {query}",
+            "play my audiobook",
+            "play audiobook {query}",
+            "play podcast {query}",
+            "play something relaxing",
+            "play trending tracks",
+            "start playing {query}"
+          ]
+        },
+        {
+          "name": "SearchContentIntent",
+          "slots": [
+            {
+              "name": "query",
+              "type": "AMAZON.SearchQuery"
+            }
+          ],
+          "samples": [
+            "search for {query}",
+            "find music {query}",
+            "find songs by {query}",
+            "search tracks for {query}",
+            "what songs do you have for {query}"
+          ]
+        },
+        {
+          "name": "PlayPlaylistIntent",
+          "slots": [
+            {
+              "name": "playlist",
+              "type": "AMAZON.SearchQuery"
+            }
+          ],
+          "samples": [
+            "play my playlist {playlist}",
+            "play playlist {playlist}",
+            "play liked songs",
+            "play my favorites"
+          ]
+        },
+        {
+          "name": "AMAZON.PauseIntent",
+          "samples": []
+        },
+        {
+          "name": "AMAZON.ResumeIntent",
+          "samples": []
+        },
+        {
+          "name": "AMAZON.NextIntent",
+          "samples": []
+        },
+        {
+          "name": "AMAZON.PreviousIntent",
+          "samples": []
+        },
+        {
+          "name": "AMAZON.StopIntent",
+          "samples": []
+        },
+        {
+          "name": "AMAZON.CancelIntent",
+          "samples": []
+        },
+        {
+          "name": "AMAZON.HelpIntent",
+          "samples": []
+        },
+        {
+          "name": "AMAZON.FallbackIntent",
+          "samples": []
+        }
+      ],
+      "types": []
+    }
+  }
+}

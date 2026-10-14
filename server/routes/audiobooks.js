@@ -248,4 +248,34 @@ router.post('/:id/download-authorisation', (req, res) => {
   });
 });
 
+// GET /api/v1/audiobooks/librivox - Official LibriVox Public Domain Free Audiobooks API
+router.get('/librivox', (req, res) => {
+  const { title, author, genre } = req.query;
+  const https = require('https');
+  
+  let apiUrl = 'https://librivox.org/api/feed/audiobooks/?format=json&extended=1&limit=20';
+  if (title) apiUrl += `&title=${encodeURIComponent(title)}`;
+  if (author) apiUrl += `&author=${encodeURIComponent(author)}`;
+  if (genre) apiUrl += `&genre=${encodeURIComponent(genre)}`;
+
+  https.get(apiUrl, (apiRes) => {
+    let data = '';
+    apiRes.on('data', chunk => data += chunk);
+    apiRes.on('end', () => {
+      try {
+        const json = JSON.parse(data);
+        res.json({
+          success: true,
+          source: 'LibriVox Free Audiobook API & Internet Archive',
+          data: json.books || []
+        });
+      } catch (err) {
+        res.status(500).json({ success: false, message: 'Failed to parse LibriVox API response' });
+      }
+    });
+  }).on('error', (err) => {
+    res.status(502).json({ success: false, message: 'Error reaching LibriVox API', error: err.message });
+  });
+});
+
 module.exports = router;

@@ -176,6 +176,7 @@ fun HomeScreen(
         ?: "Listener"
     val avatarInitial = userDisplayName.firstOrNull()?.uppercase() ?: "U"
     val avatarPhotoUrl = currentUserAvatar.takeIf { it.isNotBlank() } ?: sessionManager.profilePicUrl.orEmpty()
+    var showVoiceAssistantSheet by remember { mutableStateOf(false) }
 
     Box(
         modifier = modifier
@@ -202,6 +203,7 @@ fun HomeScreen(
                         }
                     },
                     onOpenSearchTab = { selectedNavTab = "Search" },
+                    onOpenVoiceAssistant = { showVoiceAssistantSheet = true },
                     onOpenNotifications = onOpenNotifications,
                     onOpenSettings = onOpenSettings,
                     onOpenProfileDrawer = { showProfileDrawer = true },
@@ -243,6 +245,7 @@ fun HomeScreen(
                 onOpenAudiobookDetail = onOpenAudiobookDetail,
                 onOpenAudiobookPlayer = onOpenAudiobookPlayer,
                 onOpenSearch = { selectedNavTab = "Search" },
+                onOpenLibrary = { selectedNavTab = "Library" },
                 playbackViewModel = playbackViewModel
             )
 
@@ -269,6 +272,14 @@ fun HomeScreen(
                 onOpenPlaylist = onOpenPlaylist,
                 onOpenFullPlayer = onOpenFullPlayer,
                 playbackViewModel = playbackViewModel
+            )
+
+            "Profile" -> ProfileHubScreen(
+                onNavigateBack = { selectedNavTab = "Home" },
+                onOpenSettings = onOpenSettings,
+                onOpenPremium = onOpenPremium,
+                onOpenMusicJourney = onOpenMusicJourney,
+                onLogout = onLogout
             )
         }
 
@@ -314,6 +325,17 @@ fun HomeScreen(
             ZyneraBottomNavigationBar(
                 selectedTab = selectedNavTab,
                 onSelectTab = { selectedNavTab = it }
+            )
+        }
+
+        // Zynera Alexa-Grade Voice Assistant Sheet (1-Click Instant Voice Assistant)
+        if (showVoiceAssistantSheet) {
+            com.sonexa.app.ui.components.ZyneraVoiceAssistantSheet(
+                onDismiss = { showVoiceAssistantSheet = false },
+                playbackViewModel = playbackViewModel,
+                onFallbackTextSearch = { query ->
+                    selectedNavTab = "Search"
+                }
             )
         }
 
@@ -781,9 +803,9 @@ private fun ZyneraBottomNavigationBar(
             val navItems = listOf(
                 Triple("Home", Icons.Default.Home, "Home"),
                 Triple("Search", Icons.Default.Search, "Search"),
-                Triple("Audiobooks", Icons.Default.AutoStories, "Audiobooks"),
-                Triple("Your Library", Icons.Default.VideoLibrary, "Your Library"),
-                Triple("Premium", Icons.Default.Stars, "Premium")
+                Triple("Library", Icons.Default.VideoLibrary, "Library"),
+                Triple("Create", Icons.Default.AddCircleOutline, "Create"),
+                Triple("Profile", Icons.Default.Person, "Profile")
             )
 
             navItems.forEach { (label, icon, _) ->

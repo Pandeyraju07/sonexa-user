@@ -22,6 +22,7 @@ import androidx.compose.material.icons.automirrored.filled.QueueMusic
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material.icons.outlined.MoreHoriz
+import androidx.compose.material.icons.outlined.Timer
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -498,23 +499,38 @@ internal fun FullPlayerUtilityBar(
             Box(Modifier.height(2.5.dp).width(16.dp))
         }
 
-        // Device
+        // Timer (Live countdown indicator and amber active underline)
+        val isTimerActive = sleepTimerRemainingMs != null && sleepTimerRemainingMs > 0
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier
-                .clickable(onClick = onDevice)
+                .clickable(onClick = onTimer)
                 .padding(horizontal = 8.dp, vertical = 2.dp)
         ) {
             Icon(
-                imageVector = Icons.Default.Cast,
-                contentDescription = "Device",
-                tint = Color(0xFF9E98AB),
+                imageVector = Icons.Outlined.Timer,
+                contentDescription = "Sleep Timer",
+                tint = if (isTimerActive) Color(0xFFFBBF24) else Color(0xFF9E98AB),
                 modifier = Modifier.size(20.dp)
             )
             Spacer(modifier = Modifier.height(4.dp))
-            Text("Device", fontSize = 11.sp, color = Color(0xFF9E98AB))
+            Text(
+                text = if (isTimerActive) {
+                    val remM = (sleepTimerRemainingMs / 60000)
+                    if (remM > 0) "${remM + 1}m" else "${sleepTimerRemainingMs / 1000}s"
+                } else "Timer",
+                fontSize = 11.sp,
+                fontWeight = if (isTimerActive) FontWeight.Bold else FontWeight.Normal,
+                color = if (isTimerActive) Color(0xFFFBBF24) else Color(0xFF9E98AB)
+            )
             Spacer(modifier = Modifier.height(4.dp))
-            Box(Modifier.height(2.5.dp).width(16.dp))
+            Box(
+                Modifier
+                    .height(2.5.dp)
+                    .width(18.dp)
+                    .clip(CircleShape)
+                    .background(if (isTimerActive) Color(0xFFFBBF24) else Color.Transparent)
+            )
         }
 
         // More
@@ -804,32 +820,14 @@ internal fun FullPlayerOverlays(
     }
 
     if (showTimerDialog) {
-        AlertDialog(
-            onDismissRequest = onDismissTimer,
-            containerColor = SonexaCardDark,
-            title = { Text("Sleep Timer", color = SonexaTextWhite, fontWeight = FontWeight.Bold) },
-            text = {
-                Column {
-                    listOf(null to "Off", 5 to "5 min", 15 to "15 min", 30 to "30 min", 45 to "45 min", 60 to "1 hour")
-                        .forEach { (mins, label) ->
-                            Text(
-                                text = label,
-                                color = SonexaTextWhite,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable {
-                                        playbackViewModel.setSleepTimerMinutes(mins)
-                                        Toast.makeText(context, "Sleep timer: $label", Toast.LENGTH_SHORT).show()
-                                        onDismissTimer()
-                                    }
-                                    .padding(vertical = 10.dp)
-                            )
-                        }
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = onDismissTimer) { Text("Close", color = PlayerGreen) }
-            }
+        val remTrackMs = (playbackState.durationMs - playbackState.positionMs).coerceAtLeast(0L)
+        val remTrackMins = (remTrackMs / 60000).toInt().coerceAtLeast(1)
+        com.sonexa.app.ui.components.PremiumSleepTimerBottomSheet(
+            sleepTimerRemainingMs = playbackState.sleepTimerRemainingMs,
+            onSetTimerMinutes = { mins -> playbackViewModel.setSleepTimerMinutes(mins) },
+            onDismiss = onDismissTimer,
+            endOfContentMinutes = remTrackMins,
+            endOfContentLabel = "End of Current Song"
         )
     }
 

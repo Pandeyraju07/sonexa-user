@@ -73,8 +73,14 @@ data class AudiobookDto(
                 chapterNumber = 1,
                 title = "Chapter 1",
                 durationSec = totalDurationSec / chapterCount.coerceAtLeast(1),
-                streamUrl = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"
+                streamUrl = "https://archive.org/download/YatharthGeetaHindiAudio/02Chapter1.mp3"
             )
+
+        val resolvedAudioUrl = if (chapter.streamUrl.isBlank() || chapter.streamUrl.contains("soundhelix.com", ignoreCase = true)) {
+            com.sonexa.app.data.repository.AudiobookRepository.resolveSpokenStreamUrl(id, chapterIndex)
+        } else {
+            chapter.streamUrl
+        }
 
         return TrackDto(
             id = chapter.id,
@@ -82,7 +88,7 @@ data class AudiobookDto(
             artist = "$author • Narrated by $narrator",
             album = title,
             coverUrl = coverUrl,
-            audioUrl = chapter.streamUrl,
+            audioUrl = resolvedAudioUrl,
             durationMs = chapter.durationMs,
             provider = "audiobook",
             providerType = "audiobook_chapter",

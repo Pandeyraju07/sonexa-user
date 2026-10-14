@@ -9,7 +9,7 @@ const userRouter = require('./routes/user');
 const { router: musicRouter, buildHomeFeed } = require('./routes/music');
 const aiRouter = require('./routes/ai');
 const configRouter = require('./routes/config');
-const { tracks, liveEvents } = require('./data/catalog');
+const { tracks, artists, playlists, podcasts, liveEvents } = require('./data/catalog');
 
 const app = express();
 const PORT = process.env.PORT || 8080;
@@ -73,10 +73,12 @@ app.use(['/api/v1/events', '/api/events'], eventsRouter);
 app.use(['/api/v1/admin', '/api/admin'], adminRouter);
 
 app.use('/api/v1/auth', authRouter);
-app.use('/api/v1/user', userRouter);
+app.use(['/api/v1/user', '/api/v1/me', '/api/user'], userRouter);
 app.use('/api/v1/music', musicRouter);
 app.use('/api/v1/ai', aiRouter);
 app.use('/api/v1/config', configRouter);
+app.use(['/api/v1/alexa', '/alexa'], require('./routes/alexa'));
+app.use(['/api/v1/voice', '/voice'], require('./routes/voice'));
 
 // Flat fallback routes for compatibility
 app.use('/api/v1/home', (req, res) => res.json({ success: true, data: buildHomeFeed() }));
@@ -90,6 +92,69 @@ app.get('/api/v1/live-events/:id', (req, res) => {
   const event = liveEvents.find(e => e.id === req.params.id) || liveEvents[0];
   res.json({ success: true, data: event });
 });
+
+// Standard REST Catalog Endpoints (/api/v1/tracks, artists, albums, playlists, podcasts)
+app.get(['/api/v1/tracks/:id', '/api/tracks/:id'], (req, res) => {
+  const track = tracks.find(t => t.id === req.params.id) || tracks[0];
+  res.json({ success: true, data: track });
+});
+
+app.get(['/api/v1/artists', '/api/artists'], (req, res) => {
+  res.json({ success: true, data: artists });
+});
+
+app.get(['/api/v1/artists/:id', '/api/artists/:id'], (req, res) => {
+  const artist = artists.find(a => a.id === req.params.id) || artists[0];
+  const artistTracks = tracks.filter(t => t.artists?.includes(artist.name) || t.artist?.includes(artist.name));
+  res.json({
+    success: true,
+    data: {
+      ...artist,
+      tracks: artistTracks.length ? artistTracks : tracks.slice(0, 4)
+    }
+  });
+});
+
+app.get(['/api/v1/albums/:id', '/api/albums/:id'], (req, res) => {
+  const albumTracks = tracks.filter(t => t.albumId === req.params.id || t.album?.toLowerCase().includes(req.params.id.toLowerCase()));
+  const albumTitle = albumTracks[0]?.album || 'Album';
+  res.json({
+    success: true,
+    data: {
+      id: req.params.id,
+      title: albumTitle,
+      artist: albumTracks[0]?.artist || 'Zynera Artist',
+      coverUrl: albumTracks[0]?.coverUrl || tracks[0].coverUrl,
+      tracks: albumTracks.length ? albumTracks : tracks.slice(0, 5)
+    }
+  });
+});
+
+app.get(['/api/v1/playlists', '/api/playlists'], (req, res) => {
+  res.json({ success: true, data: playlists });
+});
+
+app.get(['/api/v1/playlists/:id', '/api/playlists/:id'], (req, res) => {
+  const playlist = playlists.find(p => p.id === req.params.id) || playlists[0];
+  const resolvedTracks = tracks.filter(t => playlist.tracks?.includes(t.id));
+  res.json({
+    success: true,
+    data: {
+      ...playlist,
+      tracks: resolvedTracks.length ? resolvedTracks : tracks
+    }
+  });
+});
+
+app.get(['/api/v1/podcasts', '/api/podcasts'], (req, res) => {
+  res.json({ success: true, data: podcasts });
+});
+
+app.get(['/api/v1/podcasts/:id', '/api/podcasts/:id'], (req, res) => {
+  const podcast = podcasts.find(p => p.id === req.params.id) || podcasts[0];
+  res.json({ success: true, data: podcast });
+});
+
 
 // Recommendations top-level aliases
 app.get('/api/v1/recommendations', (req, res) => res.json({ success: true, data: tracks }));

@@ -1,0 +1,131 @@
+{
+  "interactionModel": {
+    "languageModel": {
+      "invocationName": "zynera audio",
+      "intents": [
+        {
+          "name": "PlayContentIntent",
+          "slots": [
+            {
+              "name": "query",
+              "type": "AMAZON.SearchQuery"
+            },
+            {
+              "name": "contentType",
+              "type": "AMAZON.Genre"
+            },
+            {
+              "name": "artist",
+              "type": "AMAZON.MusicArtist"
+            }
+          ],
+          "samples": [
+            "play {query}",
+            "play song {query}",
+            "play music by {artist}",
+            "play songs by {artist}",
+            "play {query} gana",
+            "bajao {query}",
+            "chalao {query}",
+            "play some bollywood music",
+            "play hindi songs",
+            "play punjabi songs",
+            "play relaxing hindi songs",
+            "play my audiobook",
+            "play audiobook {query}",
+            "play podcast {query}",
+            "play trending tracks",
+            "gana bajao"
+          ]
+        },
+        {
+          "name": "SearchContentIntent",
+          "slots": [
+            {
+              "name": "query",
+              "type": "AMAZON.SearchQuery"
+            }
+          ],
+          "samples": [
+            "search for {query}",
+            "find music {query}",
+            "find songs by {query}",
+            "dhundho {query}",
+            "search tracks for {query}"
+          ]
+        },
+        {
+          "name": "PlayPlaylistIntent",
+          "slots": [
+            {
+              "name": "playlist",
+              "type": "AMAZON.SearchQuery"
+            }
+          ],
+          "samples": [
+            "play my playlist {playlist}",
+            "play playlist {playlist}",
+            "play liked songs",
+            "play my favorites",
+            "pasandeeda gane bajao"
+          ]
+        },
+        {
+          "name": "AMAZON.PauseIntent",
+          "samples": [
+            "ruk",
+            "roko",
+            "pause music"
+          ]
+        },
+        {
+          "name": "AMAZON.ResumeIntent",
+          "samples": [
+            "chalao",
+            "resume music",
+            "continue playback"
+          ]
+        },
+        {
+          "name": "AMAZON.NextIntent",
+          "samples": [
+            "agla gana",
+            "next song",
+            "skip karo"
+          ]
+        },
+        {
+          "name": "AMAZON.PreviousIntent",
+          "samples": [
+            "pichhla gana",
+            "previous song",
+            "go back"
+          ]
+        },
+        {
+          "name": "AMAZON.StopIntent",
+          "samples": [
+            "band karo",
+            "stop"
+          ]
+        },
+        {
+          "name": "AMAZON.CancelIntent",
+          "samples": []
+        },
+        {
+          "name": "AMAZON.HelpIntent",
+          "samples": [
+            "madad karo",
+            "help"
+          ]
+        },
+        {
+          "name": "AMAZON.FallbackIntent",
+          "samples": []
+        }
+      ],
+      "types": []
+    }
+  }
+}

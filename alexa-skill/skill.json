@@ -1,0 +1,79 @@
+{
+  "manifest": {
+    "publishingInformation": {
+      "locales": {
+        "en-US": {
+          "name": "Zynera Audio",
+          "summary": "Stream high fidelity music, trending playlists, and audiobooks on Zynera.",
+          "description": "Zynera Audio connects your Amazon Echo and Alexa devices directly to Zynera's audio catalogue. Enjoy uninterrupted music playback, curated playlists, and public domain classic audiobooks. Control playback hands-free using natural voice commands.",
+          "examplePhrases": [
+            "Alexa, open Zynera Audio",
+            "Alexa, ask Zynera Audio to play relaxing music",
+            "Alexa, ask Zynera Audio to play my audiobook"
+          ],
+          "keywords": [
+            "music",
+            "audiobook",
+            "podcast",
+            "zynera",
+            "streaming",
+            "audius",
+            "radio"
+          ]
+        },
+        "en-IN": {
+          "name": "Zynera Audio",
+          "summary": "Stream Bollywood, Hindi, Punjabi, and International music on Zynera.",
+          "description": "Zynera Audio delivers premium music and audiobook streaming for Alexa users in India. Request songs by title, artist, mood, or genre with high-speed playback.",
+          "examplePhrases": [
+            "Alexa, open Zynera Audio",
+            "Alexa, ask Zynera Audio to play Kesariya",
+            "Alexa, ask Zynera Audio to play Hindi songs"
+          ],
+          "keywords": [
+            "bollywood",
+            "hindi songs",
+            "punjabi songs",
+            "zynera",
+            "music player",
+            "audiobooks"
+          ]
+        }
+      },
+      "isAvailableWorldwide": true,
+      "testingInstructions": "Test with audio playback commands like 'Alexa, ask Zynera Audio to play Kesariya' or 'Alexa, ask Zynera Audio to play trending songs'. Ensure AudioPlayer is enabled.",
+      "category": "STREAMING_SERVICE",
+      "distributionCountries": []
+    },
+    "apis": {
+      "custom": {
+        "endpoint": {
+          "uri": "https://api.zynera.app/api/v1/alexa"
+        },
+        "interfaces": [
+          {
+            "type": "AUDIO_PLAYER"
+          }
+        ]
+      }
+    },
+    "manifestVersion": "1.0",
+    "privacyAndCompliance": {
+      "allowsPurchases": false,
+      "usesPersonalInfo": false,
+      "isChildDirected": false,
+      "isExportCompliant": true,
+      "containsAds": false,
+      "locales": {
+        "en-US": {
+          "privacyPolicyUrl": "https://zynera.app/privacy",
+          "termsOfUseUrl": "https://zynera.app/terms"
+        },
+        "en-IN": {
+          "privacyPolicyUrl": "https://zynera.app/privacy",
+          "termsOfUseUrl": "https://zynera.app/terms"
+        }
+      }
+    }
+  }
+}

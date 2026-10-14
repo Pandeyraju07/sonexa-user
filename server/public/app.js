@@ -54,10 +54,10 @@ let audiobooksCatalog = [
     vibe: "📖 Munshi Premchand • Hindi Classic",
     description: "The seminal masterpiece of modern Hindi-Urdu literature portraying rural life, peasant dignity, and human resilience.",
     chapters: [
-      { id: "ch1", title: "अध्याय 1: होरी का सपना (Hori's Dream)", streamUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-5.mp3" },
-      { id: "ch2", title: "अध्याय 2: गाय का आगमन (Arrival of the Cow)", streamUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-6.mp3" },
-      { id: "ch3", title: "अध्याय 3: भोला और गोबर (Bhola & Gobar)", streamUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-7.mp3" },
-      { id: "ch4", title: "अध्याय 4: धनिया का संघर्ष (Dhaniya's Resilience)", streamUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3" }
+      { id: "ch1", title: "अध्याय 1: होरी का सपना व आत्माराम", streamUrl: "https://archive.org/download/AtmaramByPremchand/Premchand-Atmaram_64kb.mp3" },
+      { id: "ch2", title: "अध्याय 2: भोला से भेंट व गुल्ली डंडा", streamUrl: "https://archive.org/download/GulliDandaByPremchand/Premchand-GulliDanda_64kb.mp3" },
+      { id: "ch3", title: "अध्याय 3: धनिया की चिंता व कायर", streamUrl: "https://archive.org/download/Kayar/pc-kayar-ac.mp3" },
+      { id: "ch4", title: "अध्याय 4: गोबर का विद्रोह व अनाथ लड़की", streamUrl: "https://archive.org/download/AnathLadkiPremchand/Anath%20Ladki%20-%20Premchand.mp3" }
     ]
   },
   {
@@ -72,17 +72,17 @@ let audiobooksCatalog = [
     vibe: "🕵️ Sherlock Holmes • Mystery Classic",
     description: "Sherlock Holmes and Dr. Watson investigate the terrifying curse of a spectral hound roaming Dartmoor's mist-shrouded moors.",
     chapters: [
-      { id: "ch1", title: "Chapter 1: Mr. Sherlock Holmes", streamUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-9.mp3" },
-      { id: "ch2", title: "Chapter 2: The Curse of the Baskervilles", streamUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-10.mp3" },
-      { id: "ch3", title: "Chapter 3: The Problem", streamUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-11.mp3" },
-      { id: "ch4", title: "Chapter 4: Sir Henry Baskerville", streamUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-12.mp3" }
+      { id: "ch1", title: "Chapter 1: Mr. Sherlock Holmes", streamUrl: "https://archive.org/download/hound_baskervilles_librivox/houndofbaskervilles_01_doyle_64kb.mp3" },
+      { id: "ch2", title: "Chapter 2: The Curse of the Baskervilles", streamUrl: "https://archive.org/download/hound_baskervilles_librivox/houndofbaskervilles_02_doyle_64kb.mp3" },
+      { id: "ch3", title: "Chapter 3: The Problem", streamUrl: "https://archive.org/download/hound_baskervilles_librivox/houndofbaskervilles_03_doyle_64kb.mp3" },
+      { id: "ch4", title: "Chapter 4: Sir Henry Baskerville", streamUrl: "https://archive.org/download/hound_baskervilles_librivox/houndofbaskervilles_04_doyle_64kb.mp3" }
     ]
   },
   {
     id: "ab_kabuliwala",
     title: "Kabuliwala & Selected Stories",
     author: "Rabindranath Tagore",
-    narrator: "Soumitra Chatterjee",
+    narrator: "Tagore Audio Archive",
     language: "Bengali / Hindi",
     category: "Nobel Laureate Classics",
     durationText: "4h 15m",
@@ -90,16 +90,16 @@ let audiobooksCatalog = [
     vibe: "🕊️ Rabindranath Tagore • Nobel Classic",
     description: "An unforgettable tale of unconditional fatherly affection between an Afghan dry-fruit seller and young Mini in Calcutta.",
     chapters: [
-      { id: "ch1", title: "Story 1: Kabuliwala (काबुलीवाला)", streamUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-13.mp3" },
-      { id: "ch2", title: "Story 2: The Postmaster (पोस्टमास्टर)", streamUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-14.mp3" },
-      { id: "ch3", title: "Story 3: Subha (सुभा)", streamUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-15.mp3" }
+      { id: "ch1", title: "Story 1: Kabuliwala (काबुलीवाला)", streamUrl: "https://archive.org/download/KABULIWALA_201501/KABULIWALA.mp3" },
+      { id: "ch2", title: "Story 2: Atmaram (आत्माराम)", streamUrl: "https://archive.org/download/AtmaramByPremchand/Premchand-Atmaram_64kb.mp3" },
+      { id: "ch3", title: "Story 3: Kayar (कायर)", streamUrl: "https://archive.org/download/Kayar/pc-kayar-ac.mp3" }
     ]
   },
   {
     id: "ab_pride",
     title: "Pride and Prejudice",
     author: "Jane Austen",
-    narrator: "Elizabeth Klett",
+    narrator: "Annie Coleman",
     language: "English",
     category: "Classic Fiction",
     durationText: "11h 35m",
@@ -107,42 +107,44 @@ let audiobooksCatalog = [
     vibe: "👑 Jane Austen • Timeless Romance",
     description: "The sharp-witted Elizabeth Bennet clashes with the reserved and wealthy Fitzwilliam Darcy across 19th-century England.",
     chapters: [
-      { id: "ch1", title: "Chapter 1: Longbourn Estate", streamUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-16.mp3" },
-      { id: "ch2", title: "Chapter 2: The Meryton Assembly", streamUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3" },
-      { id: "ch3", title: "Chapter 3: Jane and Bingley", streamUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3" }
+      { id: "ch1", title: "Chapters 1-3: Longbourn Estate", streamUrl: "https://archive.org/download/pride_and_prejudice_librivox/prideandprejudice_01-03_austen_64kb.mp3" },
+      { id: "ch2", title: "Chapters 4-5: The Meryton Assembly", streamUrl: "https://archive.org/download/pride_and_prejudice_librivox/prideandprejudice_04-05_austen_64kb.mp3" },
+      { id: "ch3", title: "Chapter 6: Jane and Bingley", streamUrl: "https://archive.org/download/pride_and_prejudice_librivox/prideandprejudice_06_austen_64kb.mp3" }
     ]
   },
   {
     id: "ab_gita",
-    title: "Shrimad Bhagavad Gita (श्रीमद्भगवद्गीता)",
+    title: "Sampoorna Shrimad Bhagavad Gita (सम्पूर्ण श्रीमद्भगवद्गीता)",
     author: "Maharishi Ved Vyasa",
-    narrator: "Acharya Prashant Audio",
+    narrator: "Shailendra Bharti / यथार्थ गीता",
     language: "Sanskrit / Hindi",
     category: "Philosophy & Spirituality",
-    durationText: "8h 45m",
+    durationText: "18h 00m",
     coverUrl: "https://images.unsplash.com/photo-1506126613408-eca07ce68773?w=600&auto=format&fit=crop&q=80",
     vibe: "🪔 Ved Vyasa • Eternal Wisdom",
     description: "The timeless philosophical dialogue between Lord Krishna and Arjuna on dharma, karma, and inner mastery.",
     chapters: [
-      { id: "ch1", title: "अध्याय 1: अर्जुनविषादयोग (Arjuna's Dilemma)", streamUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3" },
-      { id: "ch2", title: "अध्याय 2: सांख्ययोग (Yoga of Knowledge)", streamUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3" },
-      { id: "ch3", title: "अध्याय 3: कर्मयोग (Yoga of Action)", streamUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-5.mp3" }
+      { id: "ch1", title: "अध्याय 1: अर्जुनविषादयोग (Arjuna's Dilemma)", streamUrl: "https://archive.org/download/YatharthGeetaHindiAudio/02Chapter1.mp3" },
+      { id: "ch2", title: "अध्याय 2: सांख्ययोग (Yoga of Knowledge)", streamUrl: "https://archive.org/download/YatharthGeetaHindiAudio/03Chapter2.mp3" },
+      { id: "ch3", title: "अध्याय 3: कर्मयोग (Yoga of Action)", streamUrl: "https://archive.org/download/YatharthGeetaHindiAudio/04Chapter3.mp3" },
+      { id: "ch4", title: "अध्याय 4: ज्ञानकर्मसंन्यासयोग (Wisdom in Action)", streamUrl: "https://archive.org/download/YatharthGeetaHindiAudio/05Chapter4.mp3" },
+      { id: "ch18", title: "अध्याय 18: मोक्षसंन्यासयोग (Liberation)", streamUrl: "https://archive.org/download/YatharthGeetaHindiAudio/19Chapter18.mp3" }
     ]
   },
   {
-    id: "ab_war_worlds",
-    title: "The War of the Worlds",
-    author: "H.G. Wells",
-    narrator: "Bob Neufeld",
+    id: "ab_art_of_war",
+    title: "The Art of War (रणनीति)",
+    author: "Sun Tzu",
+    narrator: "Moira Fogarty",
     language: "English",
-    category: "Science Fiction",
-    durationText: "6h 10m",
+    category: "Philosophy & Strategy",
+    durationText: "4h 30m",
     coverUrl: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=600&auto=format&fit=crop&q=80",
-    vibe: "🚀 H.G. Wells • Sci-Fi Pioneer",
-    description: "Martian tripods land on Earth with devastating heat-rays in the foundational masterpiece of science fiction.",
+    vibe: "⚔️ Sun Tzu • Timeless Strategy",
+    description: "Master Sun's timeless principles on positioning, calculation, and winning without fighting.",
     chapters: [
-      { id: "ch1", title: "Chapter 1: The Eve of the War", streamUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-6.mp3" },
-      { id: "ch2", title: "Chapter 2: The Falling Star", streamUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-7.mp3" }
+      { id: "ch1", title: "Part 1: Laying Plans & Waging War", streamUrl: "https://archive.org/download/art_of_war_librivox/art_of_war_01-02_sun_tzu_64kb.mp3" },
+      { id: "ch2", title: "Part 2: Attack by Stratagem & Tactical Dispositions", streamUrl: "https://archive.org/download/art_of_war_librivox/art_of_war_03-04_sun_tzu_64kb.mp3" }
     ]
   }
 ];
