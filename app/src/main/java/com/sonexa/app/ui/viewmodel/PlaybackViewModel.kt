@@ -197,7 +197,20 @@ class PlaybackViewModel : AndroidViewModel {
 
     fun play(track: TrackDto, sourceTitle: String = track.album) {
         val mappedTrack = com.sonexa.app.data.local.LikedSongsStore.withLikedStatus(track) ?: track
+        autoplayManager.recordPlayed(mappedTrack)
         playQueue(listOf(mappedTrack), 0, sourceTitle.ifBlank { mappedTrack.album })
+        // Spotify-Grade Song Radio: Instantly prefetch infinite similar tracks
+        viewModelScope.launch {
+            val radioTracks = autoplayManager.fetchNextAutoplayTracks(
+                currentTrack = mappedTrack,
+                limit = 10,
+                fallbackPool = listOf(mappedTrack)
+            )
+            if (radioTracks.isNotEmpty()) {
+                val updated = _uiState.value.queue + radioTracks
+                _uiState.update { it.copy(queue = updated) }
+            }
+        }
     }
 
     fun playTrack(track: TrackDto?, queue: List<TrackDto> = emptyList(), sourceTitle: String = "") {
@@ -213,6 +226,7 @@ class PlaybackViewModel : AndroidViewModel {
             return
         }
         val mappedTracks = com.sonexa.app.data.local.LikedSongsStore.withLikedStatus(tracks)
+        autoplayManager.recordQueue(mappedTracks)
         originalQueue = mappedTracks
         val index = startIndex.coerceIn(0, mappedTracks.lastIndex)
         val ordered = if (_uiState.value.shuffle && mappedTracks.size > 1) {
@@ -610,17 +624,42 @@ class PlaybackViewModel : AndroidViewModel {
         }
     }
 
+    private var isPrefetchingAutoplay: Boolean = false
+
+    private fun prefetchInfiniteQueue(current: TrackDto) {
+        if (isPrefetchingAutoplay) return
+        isPrefetchingAutoplay = true
+        viewModelScope.launch {
+            try {
+                val nextBatch = autoplayManager.fetchNextAutoplayTracks(
+                    currentTrack = current,
+                    limit = 8,
+                    fallbackPool = _uiState.value.queue
+                )
+                if (nextBatch.isNotEmpty()) {
+                    val updated = _uiState.value.queue + nextBatch
+                    _uiState.update { it.copy(queue = updated) }
+                }
+            } catch (_: Exception) {
+            } finally {
+                isPrefetchingAutoplay = false
+            }
+        }
+    }
+
     fun triggerAutoplay() {
         val current = _uiState.value.track ?: return
         viewModelScope.launch {
             val nextAutoplay = autoplayManager.fetchNextAutoplayTracks(
                 currentTrack = current,
-                fallbackPool = originalQueue
+                limit = 8,
+                fallbackPool = _uiState.value.queue
             )
             if (nextAutoplay.isNotEmpty()) {
+                val nextIndex = _uiState.value.queue.size
                 val updated = _uiState.value.queue + nextAutoplay
                 _uiState.update { it.copy(queue = updated) }
-                startTrackAt(_uiState.value.queueIndex + 1)
+                startTrackAt(nextIndex)
             }
         }
     }
@@ -652,7 +691,13 @@ class PlaybackViewModel : AndroidViewModel {
         val rawTrack = queue[index]
         val track = com.sonexa.app.data.local.LikedSongsStore.withLikedStatus(rawTrack) ?: rawTrack
 
+        autoplayManager.recordPlayed(track)
         recommendationTracker.onTrackStarted(track)
+
+        // Spotify Preemptive Queue Refill: Keep queue infinitely supplied
+        if (index >= queue.size - 2) {
+            prefetchInfiniteQueue(track)
+        }
 
         _elapsedMs.value = 0L
         _uiState.update {

@@ -49,6 +49,14 @@ data class HeroSlideData(
     val onClick: () -> Unit
 )
 
+data class CuratedSectionCard(
+    val id: String,
+    val title: String,
+    val subtitle: String,
+    val coverUrl: String,
+    val tracks: List<TrackDto>
+)
+
 @Composable
 fun HomeFeedContent(
     avatarInitial: String,
@@ -82,25 +90,13 @@ fun HomeFeedContent(
     val context = LocalContext.current
     var selectedMood by remember { mutableStateOf("Chill") }
 
-    // Curated dynamic lists for "Made For You" and "Popular Playlists"
+    // Curated dynamic lists for "Made For You" and "Popular Playlists" with distinct Spotify-grade track pools
     val madeForYouList = remember(allTrending, continueListening) {
-        val pool = (continueListening + allTrending).distinctBy { it.id }
-        listOf(
-            Triple("Your Daily Mix", "Songs picked just for you", pool.firstOrNull()?.effectiveCoverUrl ?: "https://images.unsplash.com/photo-1518609878373-06d740f60d8b?w=500"),
-            Triple("Chill Vibes", "Relax & Unwind", pool.getOrNull(1)?.effectiveCoverUrl ?: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=500"),
-            Triple("Workout", "High Energy", pool.getOrNull(2)?.effectiveCoverUrl ?: "https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=500"),
-            Triple("Romantic Hits", "Feel the Love", pool.getOrNull(3)?.effectiveCoverUrl ?: "https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?w=500")
-        )
+        getCuratedMadeForYouCards(allTrending, continueListening)
     }
 
     val popularPlaylistsList = remember(allTrending) {
-        listOf(
-            Triple("Bollywood Bop", "Top High-Energy Hits", "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=600&auto=format&fit=crop&q=80"),
-            Triple("Bollywood Action India", "Adrenaline Blockbusters", "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=600&auto=format&fit=crop&q=80"),
-            Triple("Bollywood CyberPunk", "Futuristic Synth Desi", "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=600&auto=format&fit=crop&q=80"),
-            Triple("Masala Hits", "Crowd Pleasing Anthems", "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=600&auto=format&fit=crop&q=80"),
-            Triple("Lo-Fi India", "Midnight Mellow Vibes", "https://images.unsplash.com/photo-1518609878373-06d740f60d8b?w=600&auto=format&fit=crop&q=80")
-        )
+        getCuratedPopularPlaylistCards(allTrending)
     }
 
     Box(
@@ -364,6 +360,8 @@ fun HomeFeedContent(
             // ── 4. Multi-Slide Hero Discovery Carousel (Section 4.D) ───────────
             var heroSlideIndex by remember { mutableIntStateOf(0) }
             val heroSlides = remember(allTrending) {
+                val romanticMix = getCuratedTracksForMood("Romantic")
+                val indieMix = getCuratedTracksForMood("Chill")
                 listOf(
                     HeroSlideData(
                         prefix = "Music for",
@@ -373,8 +371,8 @@ fun HomeFeedContent(
                         imageUrl = allTrending.firstOrNull()?.effectiveCoverUrl ?: "https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?w=600",
                         gradient = listOf(Color(0xFF1E0B38), Color(0xFF2E1065), Color(0xFF1E1B4B), Color(0xFF0F172A)),
                         onClick = {
-                            val topSong = allTrending.firstOrNull() ?: continueListening.firstOrNull()
-                            onPlayTrack(topSong, allTrending, "Music for Every Mood")
+                            val topSong = romanticMix.firstOrNull() ?: allTrending.firstOrNull()
+                            onPlayTrack(topSong, romanticMix, "Music for Every Mood")
                         }
                     ),
                     HeroSlideData(
@@ -395,7 +393,7 @@ fun HomeFeedContent(
                         gradient = listOf(Color(0xFF1F1235), Color(0xFF1E1B4B), Color(0xFF0F172A), Color(0xFF080810)),
                         onClick = {
                             val topSong = allTrending.firstOrNull()
-                            onPlayTrack(topSong, allTrending, "Trending Now")
+                            onPlayTrack(topSong, allTrending, "Trending Across India")
                         }
                     ),
                     HeroSlideData(
@@ -415,8 +413,8 @@ fun HomeFeedContent(
                         imageUrl = "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=600",
                         gradient = listOf(Color(0xFF1B1B3A), Color(0xFF1E1B4B), Color(0xFF0F172A), Color(0xFF080810)),
                         onClick = {
-                            val topSong = allTrending.getOrNull(2) ?: allTrending.firstOrNull()
-                            onPlayTrack(topSong, allTrending, "New Voices")
+                            val topSong = indieMix.firstOrNull()
+                            onPlayTrack(topSong, indieMix, "Discover New Voices")
                         }
                     )
                 )
@@ -704,26 +702,37 @@ fun HomeFeedContent(
             // ── 6. "Made for You" Section ────────────────────────────────────────
             AppleSectionHeader(
                 title = "Made for You",
-                actionText = "See All",
-                onActionClick = { onOpenLikedPlaylist() }
+                actionText = "Play Mix",
+                onActionClick = {
+                    val firstCard = madeForYouList.firstOrNull()
+                    if (firstCard != null) {
+                        onPlayTrack(firstCard.tracks.firstOrNull(), firstCard.tracks, firstCard.title)
+                    }
+                }
             )
 
             LazyRow(
                 contentPadding = PaddingValues(horizontal = 16.dp),
                 horizontalArrangement = Arrangement.spacedBy(14.dp)
             ) {
-                items(madeForYouList) { (title, subtitle, coverUrl) ->
+                items(madeForYouList) { card ->
+                    val isCurrentlyPlaying = card.tracks.any { it.id == playbackState.track?.id } && playbackState.isPlaying
                     AppleMediaCard(
-                        title = title,
-                        subtitle = subtitle,
-                        imageUrl = coverUrl,
+                        title = card.title,
+                        subtitle = card.subtitle,
+                        imageUrl = card.coverUrl,
+                        isPlaying = isCurrentlyPlaying,
                         onClick = {
-                            val track = allTrending.firstOrNull()
-                            onPlayTrack(track, allTrending, title)
+                            val track = card.tracks.firstOrNull() ?: allTrending.firstOrNull()
+                            onPlayTrack(track, card.tracks, card.title)
                         },
                         onPlayClick = {
-                            val track = allTrending.firstOrNull()
-                            onPlayTrack(track, allTrending, title)
+                            if (isCurrentlyPlaying) {
+                                onTogglePlayPause()
+                            } else {
+                                val track = card.tracks.firstOrNull() ?: allTrending.firstOrNull()
+                                onPlayTrack(track, card.tracks, card.title)
+                            }
                         }
                     )
                 }
@@ -770,26 +779,37 @@ fun HomeFeedContent(
             // ── 8. "Popular Playlists" Section ───────────────────────────────────
             AppleSectionHeader(
                 title = "Popular Playlists",
-                actionText = "See All",
-                onActionClick = { onOpenLikedPlaylist() }
+                actionText = "Play Mix",
+                onActionClick = {
+                    val firstCard = popularPlaylistsList.firstOrNull()
+                    if (firstCard != null) {
+                        onPlayTrack(firstCard.tracks.firstOrNull(), firstCard.tracks, firstCard.title)
+                    }
+                }
             )
 
             LazyRow(
                 contentPadding = PaddingValues(horizontal = 16.dp),
                 horizontalArrangement = Arrangement.spacedBy(14.dp)
             ) {
-                items(popularPlaylistsList) { (title, subtitle, coverUrl) ->
+                items(popularPlaylistsList) { card ->
+                    val isCurrentlyPlaying = card.tracks.any { it.id == playbackState.track?.id } && playbackState.isPlaying
                     AppleMediaCard(
-                        title = title,
-                        subtitle = subtitle,
-                        imageUrl = coverUrl,
+                        title = card.title,
+                        subtitle = card.subtitle,
+                        imageUrl = card.coverUrl,
+                        isPlaying = isCurrentlyPlaying,
                         onClick = {
-                            val track = allTrending.firstOrNull()
-                            onPlayTrack(track, allTrending, title)
+                            val track = card.tracks.firstOrNull() ?: allTrending.firstOrNull()
+                            onPlayTrack(track, card.tracks, card.title)
                         },
                         onPlayClick = {
-                            val track = allTrending.firstOrNull()
-                            onPlayTrack(track, allTrending, title)
+                            if (isCurrentlyPlaying) {
+                                onTogglePlayPause()
+                            } else {
+                                val track = card.tracks.firstOrNull() ?: allTrending.firstOrNull()
+                                onPlayTrack(track, card.tracks, card.title)
+                            }
                         }
                     )
                 }
@@ -1855,5 +1875,333 @@ private fun getCuratedTracksForMood(mood: String): List<TrackDto> {
 
         else -> emptyList()
     }
+}
+
+private fun getCuratedMadeForYouCards(
+    allTrending: List<TrackDto>,
+    continueListening: List<TrackDto>
+): List<CuratedSectionCard> {
+    val chillPool = getCuratedTracksForMood("Chill")
+    val workoutPool = getCuratedTracksForMood("Workout")
+    val romanticPool = getCuratedTracksForMood("Romantic")
+    val sadPool = getCuratedTracksForMood("Sad")
+    val happyPool = getCuratedTracksForMood("Happy")
+
+    val dailyMixTracks = listOfNotNull(
+        sadPool.firstOrNull(), // Channa Mereya
+        happyPool.firstOrNull(), // Levitating
+        chillPool.firstOrNull(), // Husn
+        workoutPool.firstOrNull(), // Starboy
+        romanticPool.getOrNull(1), // Apna Bana Le
+        chillPool.getOrNull(1), // Dooron Dooron
+        romanticPool.firstOrNull() // Kesariya
+    )
+
+    val chillVibesTracks = chillPool + listOf(
+        TrackDto(
+            id = "cur_chl_extra_1",
+            title = "Alag Aasmaan",
+            artist = "Anuv Jain",
+            album = "Alag Aasmaan - Single",
+            durationMs = 212000L,
+            coverUrl = "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=500",
+            audioUrl = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3",
+            mood = "Chill",
+            moods = listOf("Chill", "Indie"),
+            acousticness = 0.85,
+            energy = 0.30
+        ),
+        TrackDto(
+            id = "cur_chl_extra_2",
+            title = "Kho Gaye Hum Kahan",
+            artist = "Jasleen Royal, Prateek Kuhad",
+            album = "Baar Baar Dekho",
+            durationMs = 213000L,
+            coverUrl = "https://images.unsplash.com/photo-1518609878373-06d740f60d8b?w=600",
+            audioUrl = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3",
+            mood = "Chill",
+            moods = listOf("Chill", "Mellow"),
+            acousticness = 0.80,
+            energy = 0.36
+        )
+    )
+
+    val workoutTracks = workoutPool + listOf(
+        TrackDto(
+            id = "cur_wrk_extra_1",
+            title = "Malhari",
+            artist = "Vishal Dadlani",
+            album = "Bajirao Mastani",
+            durationMs = 245000L,
+            coverUrl = "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=600",
+            audioUrl = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3",
+            mood = "Workout",
+            moods = listOf("Workout", "Victory"),
+            energy = 0.94,
+            bpm = 148.0
+        ),
+        TrackDto(
+            id = "cur_wrk_extra_2",
+            title = "Believer",
+            artist = "Imagine Dragons",
+            album = "Evolve",
+            durationMs = 204000L,
+            coverUrl = "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=600",
+            audioUrl = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-5.mp3",
+            mood = "Workout",
+            moods = listOf("Workout", "Anthem"),
+            energy = 0.88,
+            bpm = 125.0
+        )
+    )
+
+    val romanticTracks = romanticPool + listOf(
+        TrackDto(
+            id = "cur_rom_extra_1",
+            title = "O Maahi",
+            artist = "Arijit Singh, Pritam",
+            album = "Dunki",
+            durationMs = 233000L,
+            coverUrl = "https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?w=600",
+            audioUrl = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3",
+            mood = "Romantic",
+            moods = listOf("Romantic", "Melody"),
+            acousticness = 0.52,
+            energy = 0.60
+        )
+    )
+
+    return listOf(
+        CuratedSectionCard(
+            id = "sec_daily_mix",
+            title = "Your Daily Mix",
+            subtitle = "Personalized Daily Rotation",
+            coverUrl = "https://images.unsplash.com/photo-1518609878373-06d740f60d8b?w=600",
+            tracks = dailyMixTracks
+        ),
+        CuratedSectionCard(
+            id = "sec_chill_vibes",
+            title = "Chill Vibes",
+            subtitle = "Relax & Unwind",
+            coverUrl = "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=600",
+            tracks = chillVibesTracks
+        ),
+        CuratedSectionCard(
+            id = "sec_workout",
+            title = "Workout Energy",
+            subtitle = "High BPM & Adrenaline",
+            coverUrl = "https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=600",
+            tracks = workoutTracks
+        ),
+        CuratedSectionCard(
+            id = "sec_romantic",
+            title = "Romantic Hits",
+            subtitle = "Feel the Love",
+            coverUrl = "https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?w=600",
+            tracks = romanticTracks
+        )
+    )
+}
+
+private fun getCuratedPopularPlaylistCards(allTrending: List<TrackDto>): List<CuratedSectionCard> {
+    val happyPool = getCuratedTracksForMood("Happy")
+    val focusPool = getCuratedTracksForMood("Focus")
+    val chillPool = getCuratedTracksForMood("Chill")
+    val workoutPool = getCuratedTracksForMood("Workout")
+
+    val bollywoodBopTracks = listOf(
+        TrackDto(
+            id = "pop_bop_1",
+            title = "Tauba Tauba",
+            artist = "Karan Aujla",
+            album = "Bad Newz",
+            durationMs = 214000L,
+            coverUrl = "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=600",
+            audioUrl = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
+            mood = "Party",
+            moods = listOf("Party", "Dance"),
+            danceability = 0.92,
+            energy = 0.90
+        )
+    ) + happyPool.filter { it.title.contains("Badtameez") || it.title.contains("Gallan") || it.title.contains("London") } +
+    listOf(
+        TrackDto(
+            id = "pop_bop_5",
+            title = "Kar Gayi Chull",
+            artist = "Badshah, Neha Kakkar",
+            album = "Kapoor & Sons",
+            durationMs = 187000L,
+            coverUrl = "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=600",
+            audioUrl = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3",
+            mood = "Party",
+            moods = listOf("Party", "Banger"),
+            danceability = 0.90,
+            energy = 0.88
+        ),
+        TrackDto(
+            id = "pop_bop_6",
+            title = "Kala Chashma",
+            artist = "Amar Arshi, Badshah, Neha Kakkar",
+            album = "Baar Baar Dekho",
+            durationMs = 194000L,
+            coverUrl = "https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?w=600",
+            audioUrl = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-5.mp3",
+            mood = "Party",
+            moods = listOf("Party", "Wedding"),
+            danceability = 0.95,
+            energy = 0.92
+        )
+    )
+
+    val actionIndiaTracks = listOfNotNull(
+        workoutPool.find { it.title.contains("Arjan") },
+        workoutPool.find { it.title.contains("Zinda") },
+        workoutPool.find { it.title.contains("Sultan") },
+        TrackDto(
+            id = "pop_act_4",
+            title = "Malhari",
+            artist = "Vishal Dadlani",
+            album = "Bajirao Mastani",
+            durationMs = 245000L,
+            coverUrl = "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=600",
+            audioUrl = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3",
+            mood = "Workout",
+            energy = 0.94
+        ),
+        TrackDto(
+            id = "pop_act_5",
+            title = "Dhoom Again",
+            artist = "Vishal Dadlani",
+            album = "Dhoom 2",
+            durationMs = 302000L,
+            coverUrl = "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=600",
+            audioUrl = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
+            mood = "Workout",
+            energy = 0.91
+        )
+    )
+
+    val cyberPunkTracks = listOf(
+        TrackDto(
+            id = "pop_cyb_1",
+            title = "Starboy (Cyber Synthwave)",
+            artist = "The Weeknd, Daft Punk",
+            album = "Starboy Synth",
+            durationMs = 230000L,
+            coverUrl = "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=600",
+            audioUrl = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
+            mood = "Party",
+            energy = 0.85
+        ),
+        TrackDto(
+            id = "pop_cyb_2",
+            title = "Blinding Lights (Neon Club)",
+            artist = "The Weeknd",
+            album = "After Hours Club",
+            durationMs = 200000L,
+            coverUrl = "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=600",
+            audioUrl = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3",
+            mood = "Party",
+            energy = 0.91
+        ),
+        TrackDto(
+            id = "pop_cyb_3",
+            title = "Midnight Cyber Varanasi",
+            artist = "Zynera Sound Lab",
+            album = "Desi Cyber Vol. 1",
+            durationMs = 240000L,
+            coverUrl = "https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?w=600",
+            audioUrl = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3",
+            mood = "Focus",
+            energy = 0.70
+        ),
+        TrackDto(
+            id = "pop_cyb_4",
+            title = "Neon Mumbai 2099",
+            artist = "Desi Synth Collective",
+            album = "Cyber India",
+            durationMs = 215000L,
+            coverUrl = "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=600",
+            audioUrl = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3",
+            mood = "Party",
+            energy = 0.78
+        )
+    )
+
+    val masalaHitsTracks = listOf(
+        TrackDto(
+            id = "pop_msl_1",
+            title = "Chaiyya Chaiyya",
+            artist = "Sukhwinder Singh, Sapna Awasthi",
+            album = "Dil Se..",
+            durationMs = 392000L,
+            coverUrl = "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=600",
+            audioUrl = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
+            mood = "Party",
+            energy = 0.88
+        ),
+        TrackDto(
+            id = "pop_msl_2",
+            title = "Senorita",
+            artist = "Farhan Akhtar, Hrithik Roshan, Abhay Deol",
+            album = "Zindagi Na Milegi Dobara",
+            durationMs = 231000L,
+            coverUrl = "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=600",
+            audioUrl = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3",
+            mood = "Happy",
+            energy = 0.82
+        ),
+        TrackDto(
+            id = "pop_msl_3",
+            title = "Mauja Hi Mauja",
+            artist = "Mika Singh",
+            album = "Jab We Met",
+            durationMs = 244000L,
+            coverUrl = "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=600",
+            audioUrl = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-6.mp3",
+            mood = "Party",
+            energy = 0.90
+        )
+    ) + happyPool.filter { it.title.contains("Gallan") || it.title.contains("London") }
+
+    val loFiIndiaTracks = focusPool + chillPool.filter { it.title.contains("Husn") || it.title.contains("Dooron") || it.title.contains("Baarishein") }
+
+    return listOf(
+        CuratedSectionCard(
+            id = "sec_bop",
+            title = "Bollywood Bop",
+            subtitle = "Top High-Energy Hits",
+            coverUrl = "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=600&auto=format&fit=crop&q=80",
+            tracks = bollywoodBopTracks
+        ),
+        CuratedSectionCard(
+            id = "sec_action",
+            title = "Bollywood Action India",
+            subtitle = "Adrenaline Blockbusters",
+            coverUrl = "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=600&auto=format&fit=crop&q=80",
+            tracks = actionIndiaTracks
+        ),
+        CuratedSectionCard(
+            id = "sec_cyber",
+            title = "Bollywood CyberPunk",
+            subtitle = "Futuristic Synth Desi",
+            coverUrl = "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=600&auto=format&fit=crop&q=80",
+            tracks = cyberPunkTracks
+        ),
+        CuratedSectionCard(
+            id = "sec_masala",
+            title = "Masala Hits",
+            subtitle = "Crowd Pleasing Anthems",
+            coverUrl = "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=600&auto=format&fit=crop&q=80",
+            tracks = masalaHitsTracks
+        ),
+        CuratedSectionCard(
+            id = "sec_lofi",
+            title = "Lo-Fi India",
+            subtitle = "Midnight Mellow Vibes",
+            coverUrl = "https://images.unsplash.com/photo-1518609878373-06d740f60d8b?w=600&auto=format&fit=crop&q=80",
+            tracks = loFiIndiaTracks
+        )
+    )
 }
 
